@@ -1,0 +1,542 @@
+<!--
+To change this template, choose Tools | Templates
+and open the template in the editor.
+-->
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+    <head>
+        <title>Eckhardt Optics Kanban Board</title>
+        <link type="text/css" href="jquery-ui-1.8.20.custom.css" rel="stylesheet" />
+        <link type="text/css" href="demos.css" rel="stylesheet" />
+        <link type="text/css" href="menu_black.css" rel="stylesheet" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <script type="text/javascript" src="jquery-1.7.2.js"></script>
+        <script type="text/javascript" src="jquery.ui.core.js"></script>
+        <script type="text/javascript" src="jquery.ui.widget.js"></script>
+        <script type="text/javascript" src="jquery.ui.mouse.js"></script>
+        <script type="text/javascript" src="jquery.ui.sortable.js"></script>
+        <script type="text/javascript" src="jquery.ui.button.js"></script>
+        <script type="text/javascript" src="jquery.ui.draggable.js"></script>
+        <script type="text/javascript" src="jquery.ui.position.js"></script>
+        <script type="text/javascript" src="jquery.ui.resizable.js"></script>
+        <script type="text/javascript" src="jquery.ui.dialog.js"></script>
+        <script type="text/javascript" src="jquery.ui.datepicker.js"></script>
+        <script type="text/javascript" src="jquery.ui.tabs.js"></script>
+        <script type="text/javascript" src="mbMenu.js"></script>
+        <script type="text/javascript" src="jquery.metadata.js"></script>
+        <script type="text/javascript" src="jquery.hoverIntent.js"></script>
+        <link type="text/css" href="index.css" rel="stylesheet" />
+
+
+        <script type="text/javascript">
+            $(document).ready(function() {
+                
+                //Enables the sortable behavior that allows the reordering of the cards
+                $( ".column,.tablists" ).sortable({
+                    connectWith: ".column,.tablists",
+                    placeholder: "ui-state-highlight",
+                    forcePlaceholderSize: true,
+                    tolerance: 'pointer',
+                    cursorAt: { top: 15 }
+                }).disableSelection();
+                
+                //Initially diables the sorting of tabbed items
+                $(".tablists").sortable("disable");
+                
+                //Prevents the banners from being selctable or sortable
+                $(".column").sortable({
+                    cancel:".banners",
+                    items: "li:not(.banners)"
+                });
+                
+                
+                //Method that opens, closes, and switches the tabs appropriately
+                function handleTabLists(tablist){
+                    
+                    if ($(tablist).is(":visible"))
+                        $(tablist).hide(1000).sortable( "disable" ); 
+                    else
+                    {
+                        $(".tablists").each(function(){
+                            if ($(this).is(":visible"))
+                                $(this).hide().sortable( "disable" );
+                        });
+                        $(tablist).show().sortable( "enable" );
+                    }
+                    
+                }
+                
+                function closeContextMenu(){
+                    $.fn.removeMbMenu($.mbMenu.options.actualMenuOpener);
+                }
+                
+                
+                $("#btnBacklog").click(function(){
+                    handleTabLists("#Backlog");
+                });
+                
+                $("#btnArchive").click(function(){
+                    handleTabLists("#Archive");
+                });
+                
+                $("#btnAddCard").click(function(){
+                    addCard();
+                });                              
+                                
+                    
+                                        
+                $(".card").live( "dblclick", function () { 
+                    $( "#edit-tabs" ).tabs("select", 0);
+                    editCard($(this).attr("id"));
+                });
+                  
+                
+                //Card creation function, adds the card to the page, eventually will handle database entry? Used a variable to allow access outside of (document).ready
+                createCard = {
+                    go: function(col,title){ 
+                        var newCard = $('<div id="'+title.replace(/\s+/g, '')+'" class="card ">'+title+'</div>');
+                    
+                        newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}");
+                    
+                        var newLi = $('<li></li>').append(newCard);
+                                                                       
+                        $("#"+col.replace(/\s+/g, '')).append(newLi);
+                    
+                        newCard.data({
+                            "title": $("#title").val(),
+                            "jobtype": $("#jobtype").val(),
+                            "user": $("#user").val(),
+                            "priority": $("#priority").val(),
+                            "whichColumn": $("#whichColumn").val(),
+                            "dueDate": $("#dueDate").val(),
+                            "size": $("#size").val(),
+                            "description": $("#description").val()
+                        
+                        });
+                    
+                        $(document).buildContextualMenu(
+                        {
+                            menuWidth:200,
+                            overflow:2,
+                            menuSelector: ".menuContainer",
+                            iconPath:"ico/",
+                            hasImages:false,
+
+                            fadeInTime:200,
+
+                            fadeOutTime:100,
+
+                            adjustLeft:0,
+                            adjustTop:0,
+                            opacity:.99,
+                            shadow:true,
+                            onContextualMenu:function(o,e){}
+
+                        });
+                    
+                        //Add Database data entry here, need to pass in all parameters  
+                    
+                    } 
+                };
+                
+                $( "#dialogInvalid" ).dialog({
+                    autoOpen: false,
+                    show: "blind",
+                    hide: "explode",
+                    show: "blind",
+                    hide: "explode",
+                    
+                    modal: true,
+                    buttons: {
+                        Cancel: function() {
+                            $( this ).dialog( "close" );
+                        }
+                    }
+                });
+                
+               
+                
+                //Creates the edit dialog box
+                $( "#dialogAddEditCard" ).dialog({
+                    autoOpen: false,
+                    minHeight: 500,
+                    minWidth: 750,
+                    height: 500,
+                    width: 750,
+                    show: "blind",
+                    hide: "explode",
+                    modal: true,
+                    buttons: {
+                        "Save Card": function() {
+                            
+                            //Will need to add data editing code here later
+                            $( this ).dialog( "close" );
+                                                                                
+                        },
+                        Cancel: function() {
+                            $( this ).dialog( "close" );
+                        }    
+                    },
+                    
+                    //Resets all the feilds to null to allow a fresh dialog window each time
+                    close: function() {
+                        $("#Details input, #Details textarea, #Details select").val("");
+                    }
+                    
+                });
+                
+                //Allows calendar plugin
+                $( ".Dates" ).datepicker();                                  
+                
+                //Allows the tabs on the edit dialog
+                $( "#edit-tabs" ).tabs();
+     
+                
+                $(document).buildContextualMenu(
+                {
+                    menuWidth:200,
+                    overflow:2,
+                    menuSelector: ".menuContainer",
+                    iconPath:"ico/",
+                    hasImages:false,                    
+                    closeOnMouseOut: true,
+                    fadeInTime:200,
+
+                    fadeOutTime:100,
+
+                    adjustLeft:0,
+                    adjustTop:0,
+                    opacity:.99,
+                    shadow:true,
+                    onContextualMenu:function(o,e){}
+
+                });
+                
+                //Handles the moveallCards submenu 
+                $("#moveAllCards a").click( function(){
+                    //Finds and saves the column that was right clicked
+                    var startCol = $($.mbMenu.lastContextMenuEl).attr("id");                
+                    var endCol = $(this).html();
+               
+                    //Cycles through each card in the specified column and moves them into the ending column
+                    $("#"+startCol+" .card").each(function(){
+                        var newLi = $('<li></li>').append(this);
+                        $("#"+endCol).append(newLi);     
+                    });
+                    closeContextMenu(); 
+                });
+                
+                //Handles the moveCardTo submenu moveCardTo
+                $("#moveCardTo a").click(  function(){
+                    var card = $($.mbMenu.lastContextMenuEl).parent();
+                    var newLi = $('<li></li>').append(card);
+                    var column = $(this).html();
+                    $("#"+column).append(newLi); 
+                    closeContextMenu(); 
+                });
+                
+                //Sets the priority of the card 
+                $("#setPriority a").click( function(){
+                    //Grabs the anchor's text
+                    var prio = $(this).html();
+                    //Finds which card was right clicked
+                    var card = $.mbMenu.lastContextMenuEl;
+                    //Stores the selected priority as the cards priority
+                    $(card).data({"priority": prio});
+                    displayHandler($(card))
+                    closeContextMenu(); 
+                })
+                
+            });
+            
+            
+            
+            
+            function editCard(cardId) {
+                var card = $('#'+cardId);
+            
+                //Populates the feilds
+                $("#title").val(card.data("title"));
+                $("#jobtype").val(card.data("jobtype"));
+                $("#user").val(card.data("user"));
+                $("#priority").val(card.data("priority"));
+                $("#whichColumn").val(card.data("whichColumn"));
+                $("#dueDate").val(card.data("dueDate"));
+                $("#size").val(card.data("size"));
+                $("#description").val(card.data("description"));
+                
+                //Adds edit specifc dialog properties
+                $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
+                $("#edit-tabs ul li").show();
+                $("label[for=whichColumn],#whichColumn").hide();
+                
+                $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
+                    "Save Card": function() {
+                        
+                        
+                        card.data({
+                            "title": $("#title").val(),
+                            "jobtype": $("#jobtype").val(),
+                            "user": $("#user").val(),
+                            "priority": $("#priority").val(),
+                            "dueDate": $("#dueDate").val(),
+                            "size": $("#size").val(),
+                            "description": $("#description").val()
+                        });
+                        
+                        card.html($("#title").val());
+                        displayHandler(card); 
+                        $( this ).dialog( "close" );    
+                    },
+                    Cancel: function() {
+                        $( this ).dialog( "close" );
+                    }   
+                });
+                
+                $( "#dialogAddEditCard" ).dialog( "open" );
+            
+            }
+            
+            function addCard() {
+                //Adds add card specifc dialog properties
+                $("#edit-tabs ul li:not(:first-child)").hide();
+                $( "#edit-tabs" ).tabs("select", 0);
+                $("label[for=whichColumn],#whichColumn").show();
+                $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );
+                    
+                $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Save Card": function() {
+                        if($( "#title" ).val()=="")
+                        {
+                            $("#dialogInvalid").dialog("open");
+                        }
+                        else{                        
+                            //Calls my card creation method, physically adds the card to the page with proper name and location(for now).
+                            createCard.go($("#whichColumn").val(), $("#title").val()); 
+                            displayHandler($("#"+$("#title").val()));   
+                            $( this ).dialog( "close" ); 
+                        } 
+                    },
+                    Cancel: function() {
+                        $( this ).dialog( "close" );
+                    }   
+                });
+                    
+                $( "#dialogAddEditCard" ).dialog( "open" );
+            }                    
+            
+            function deleteCard(){
+                //Handles the removal of the card from the page(and eventually from the database)
+                $($.mbMenu.lastContextMenuEl).parent().remove();
+                
+                //Insert database interfacing here
+                
+            }
+            
+            function editCardContextMenu() {
+                
+                editCard($($.mbMenu.lastContextMenuEl).attr("id"));
+            }           
+            
+            function addCardToCol() {
+                //Finds and saves the column that was right clicked
+                var startCol = $($.mbMenu.lastContextMenuEl).attr("id"); 
+                
+                //Presets the form to open with the correct column selected                
+                $("#whichColumn").val(startCol);
+                addCard();
+            }
+            
+            function editView(index){
+                $( "#edit-tabs" ).tabs("select", index);
+                editCardContextMenu();
+            }
+            
+            function displayHandler(card) {
+                //Finds the card's value    
+                var job = card.data("jobtype");
+                var prio = card.data("priority");
+                //alert(card.css());    
+                //The below works as a simplified if else statement toggling between all the classes
+                card.toggleClass("task", job=="Task");
+                card.toggleClass("defect", job=="Defect");
+                card.toggleClass("improvement", job=="Improvement");
+                card.toggleClass("feature", job=="Feature");
+                
+                /*
+                card.toggleClass("normal", prio=="Normal");
+                card.toggleClass("critical", prio=="Critical");
+                card.toggleClass("high", prio=="High");
+                card.toggleClass("low", prio=="Low");*/
+            }
+                
+
+            
+            
+           
+            /*$.ajax({
+                url: "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi",
+                type: "POST",
+                data: { 
+                    "Bugzilla_login": "dr.ecksk@gmail.com",
+                       "Bugzilla_password": "kanban",
+                       "method": "Bug.get",
+                       "ids": [4111],
+                       "params": [ { "ids": [4111], "names": ["user@domain.com"] } ]
+                   },
+                dataType: "jsonp"
+            });*/
+            
+            $.ajax({
+                url: "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi?method=User.get&params=%5B+%7B+%22ids%22%3A+%5B1%2C2%5D%2C+%22names%22%3A+%5B%22user%40domain.com%22%5D+%7D+%5D",
+                type: "POST",
+                data: { 
+                    "method": "User.get",
+                    "params": [ { "ids": [1,2], "names": ["user@domain.com"] } ]
+                },
+                dataType: "jsonp"
+            });
+            
+            //User.get&params=[ { "ids": [1,2], "names": ["user@domain.com"] } ]
+            //src="http://bugzilla.example.com/jsonrpc.cgi?method=Bugzilla.time&amp;callback=foo"
+            
+        </script>
+    </head>
+    <body>
+        <div id="dialogInvalid" class="ui-dialog-content ui-widget-content"  title="Invalid Input" >
+            <p>Must Specify the Card's Title!!!</p>
+        </div>
+
+        <div id="dialogAddEditCard" class="ui-dialog-content ui-widget-content"  title="Edit" >
+
+            <div id="edit-tabs" class="ui-tabs ui-widget ui-widget-content ui-corner-all">
+                <ul>
+                    <li><a href="#Details">Details</a></li>
+                    <li><a href="#Comments">Comments</a></li>
+                    <li><a href="#Attachments">Attachments</a></li>
+                </ul>
+                <div id="Details">
+                    <form>
+                        <fieldset>
+                            <div style="float:top; max-height: 80px;">
+                                <label for="title">Title:</label>
+                                <textarea  name="title" id="title" class="text ui-widget-content ui-corner-all" style="width:95%; height: 40px; max-height: 60px;"  ></textarea>
+                            </div>
+                            <div style="float: left;">
+                                <label for="jobtype">Job Type:</label>
+                                <select  name="jobtype" id="jobtype"  class="text ui-widget-content ui-corner-all" >
+                                    <option>Task</option>
+                                    <option>Defect</option>
+                                    <option>Improvement</option>
+                                    <option>Feature</option>
+                                </select>
+                                <label for="user">Assigned User:</label>
+                                <select  name="user" id="user"  class="text ui-widget-content ui-corner-all" >   
+                                    <option></option>
+                                    <option>User 1</option>
+                                    <option>User 2</option>
+                                    <option>User 3</option>
+                                    <option>User 4</option>
+                                </select>
+                                <label for="priority">Priority:</label>
+                                <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all" >    
+                                    <option>Normal</option>
+                                    <option>Critical</option>
+                                    <option>High</option>
+                                    <option>Low</option>
+                                </select>
+                                <label for="whichColumn">Into Column:</label>
+                                <select  name="whichColumn" id="whichColumn"  class="text ui-widget-content ui-corner-all" >     
+                                    <option>To Do</option>
+                                    <option>Doing</option>
+                                    <option>Done</option> 
+                                    <option>Backlog</option> 
+                                    <option>Archive</option>                            
+                                </select>
+                                <div>
+                                    <div style="float: left;">
+                                        <label for="dueDate">Due Date:</label>
+                                        <input type="text" name="dueDate" id="dueDate" class="Dates text ui-widget-content ui-corner-all" style="width:100px;"/>
+                                    </div>
+                                    <div style="float: left; margin-left: 10px;">
+                                        <label for="size">Size:</label>
+                                        <input type="number" name="size" id="size" class="text ui-widget-content ui-corner-all" style="width:100px;" min="1"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="float: left; margin-left: 10px; width: 50%; height: 200px;">
+                                <span style="width: 75%;">
+                                    <label for="description">Description:</label>
+                                    <textarea  name="description" id="description" class="text ui-widget-content ui-corner-all" style="width:95%; height: 95%; max-height: 100%; max-width: 100%;"  ></textarea> 
+                                </span>
+                            </div>
+                        </fieldset>
+                    </form>
+                </div>
+                <div id="Comments">
+                    <span>
+                        <label for="comments">Comments</label>
+                        <textarea  name="comments" id="comments"  class="text ui-widget-content ui-corner-all" style="width:95%; height: 95%; max-height: 100%; max-width: 100%;"  ></textarea>
+                    </span>
+                </div>
+                <div id="Attachments">
+                    <p>These are attachments</p>
+                </div>
+            </div>
+        </div>   
+
+        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Backlog" > </ul> 
+        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Archive" style=" background-color:red;"></ul>     
+        <div class="toolbar">                
+            <button id="btnBacklog">Backlog</button>
+            <button id="btnArchive">Archive</button>
+            <button id="btnAddCard">Add Card</button>
+        </div>
+
+        <ul id="ToDo" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="banners">To Do</li>                        
+        </ul>
+        <ul id="Doing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="banners">Doing</li>
+            <li><div id="existingcard" class="card cmVoice {cMenu:'contextMenuCard'}"><div class="cardText">Existing Card</div><div class="iconBar"><img id="theImg" src="browser.png" style="float:right; height: 100%;" /></div></div>  </li> 
+        </ul>
+        <ul id="Done" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="banners">Done</li>
+        </ul>
+        <div class="mbmenu" id="contextMenuCard">
+            <a action="editView(0)">View Card Details</a>
+            <a action="editView(1)">View Card Comments</a>
+            <a action="editView(2)">View Card Attachments</a>
+            <a rel="separator"> </a>
+            <a class="{menu:'moveCardTo'}">Move Card to</a>
+            <a class="{menu:'setPriority'}">Set Priority</a>
+            <a rel="separator"> </a>
+            <a action="deleteCard()">Delete Card</a>
+        </div>
+        <div id="moveCardTo" class="mbmenu">
+            <a>ToDo</a>
+            <a>Doing</a>
+            <a>Done</a>
+            <a>Backlog</a>
+            <a>Archive</a>
+        </div>
+        <div id="moveAllCards" class="mbmenu">
+            <a>ToDo</a>
+            <a>Doing</a>
+            <a>Done</a>
+            <a>Backlog</a>
+            <a>Archive</a>
+        </div>
+        <div id="setPriority" class="mbmenu">
+            <a>Normal</a>
+            <a>Critical</a>
+            <a>High</a>
+            <a>Low</a>
+        </div>
+        <div class="mbmenu" id="contextMenuColumn">            
+            <a class="{menu:'moveAllCards'}">Move All Cards to</a>
+            <a rel="separator"> </a>
+            <a action="addCardToCol()">Add Card</a>
+        </div>
+    </body>
+</html>
+
