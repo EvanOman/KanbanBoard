@@ -25,6 +25,7 @@ and open the template in the editor. This is new Code padgdsgs
         <script type="text/javascript" src="mbMenu.js"></script>
         <script type="text/javascript" src="jquery.metadata.js"></script>
         <script type="text/javascript" src="jquery.hoverIntent.js"></script>
+        <script type="text/javascript" src="jquery.json-2.3.js"></script>
         <link type="text/css" href="index.css" rel="stylesheet" />
 
 
@@ -91,53 +92,6 @@ and open the template in the editor. This is new Code padgdsgs
                 });
                   
                 
-                //Card creation function, adds the card to the page, eventually will handle database entry? Used a variable to allow access outside of (document).ready
-                createCard = {
-                    go: function(col,title){ 
-                        var newCard = $('<div id="'+title.replace(/\s+/g, '')+'" class="card ">'+title+'</div>');
-                    
-                        newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}");
-                    
-                        var newLi = $('<li></li>').append(newCard);
-                                                                       
-                        $("#"+col.replace(/\s+/g, '')).append(newLi);
-                    
-                        newCard.data({
-                            "title": $("#title").val(),
-                            "jobtype": $("#jobtype").val(),
-                            "user": $("#user").val(),
-                            "priority": $("#priority").val(),
-                            "whichColumn": $("#whichColumn").val(),
-                            "dueDate": $("#dueDate").val(),
-                            "size": $("#size").val(),
-                            "description": $("#description").val()
-                        
-                        });
-                    
-                        $(document).buildContextualMenu(
-                        {
-                            menuWidth:200,
-                            overflow:2,
-                            menuSelector: ".menuContainer",
-                            iconPath:"ico/",
-                            hasImages:false,
-
-                            fadeInTime:200,
-
-                            fadeOutTime:100,
-
-                            adjustLeft:0,
-                            adjustTop:0,
-                            opacity:.99,
-                            shadow:true,
-                            onContextualMenu:function(o,e){}
-
-                        });
-                    
-                        //Add Database data entry here, need to pass in all parameters  
-                    
-                    } 
-                };
                 
                 $( "#dialogInvalid" ).dialog({
                     autoOpen: false,
@@ -311,7 +265,7 @@ and open the template in the editor. This is new Code padgdsgs
                         }
                         else{                        
                             //Calls my card creation method, physically adds the card to the page with proper name and location(for now).
-                            createCard.go($("#whichColumn").val(), $("#title").val()); 
+                            createCard($("#whichColumn").val(), $("#title").val()); 
                             displayHandler($("#"+$("#title").val()));   
                             $( this ).dialog( "close" ); 
                         } 
@@ -365,9 +319,9 @@ and open the template in the editor. This is new Code padgdsgs
                 card.toggleClass("feature", job=="Feature");
                 
                 if (prio != "Normal" && $(cardRef + " .prioBack").length == 0)
-                    {
-                        $(cardRef+ " .iconBar").append("<div class=\"prioBack\"><div class=\"prioIcon\"></div></div>");
-                    }
+                {
+                    $(cardRef+ " .iconBar").append("<div class=\"prioBack\"><div class=\"prioIcon\"></div></div>");
+                }
                 $("#priority option").each(function(){                    
                     $(cardRef+" .iconBar .prioIcon").removeClass($(this).val());
                 });
@@ -379,35 +333,128 @@ and open the template in the editor. This is new Code padgdsgs
             }
                 
 
+            //Card creation function, adds the card to the page, eventually will handle database entry? Used a variable to allow access outside of (document).ready
+            function  createCard(col,title){ 
+                   
+                   
+                var newCard = $('<div id="'+title.replace(/\s+/g, '')+'" class="card ">'+title+'</div>');
+                    
+                newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}");
+                    
+                var newLi = $('<li></li>').append(newCard);
+                                                                       
+                $("#"+col.replace(/\s+/g, '')).append(newLi);
+                    
+                newCard.data({
+                    "title": $("#title").val(),
+                    "jobtype": $("#jobtype").val(),
+                    "user": $("#user").val(),
+                    "priority": $("#priority").val(),
+                    "whichColumn": $("#whichColumn").val(),
+                    "dueDate": $("#dueDate").val(),
+                    "size": $("#size").val(),
+                    "description": $("#description").val()
+                        
+                });
+                    
+                $(document).buildContextualMenu(
+                {
+                    menuWidth:200,
+                    overflow:2,
+                    menuSelector: ".menuContainer",
+                    iconPath:"ico/",
+                    hasImages:false,
+
+                    fadeInTime:200,
+
+                    fadeOutTime:100,
+
+                    adjustLeft:0,
+                    adjustTop:0,
+                    opacity:.99,
+                    shadow:true,
+                    onContextualMenu:function(o,e){}
+
+                });
+                    
+                //Add Database data entry here, need to pass in all parameters  
+                    
+            } 
+                
             
             
            
             /*$.ajax({
-                url: "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi",
+                url: "ajax_get_single_bug.php",
                 type: "POST",
                 data: { 
-                    "Bugzilla_login": "dr.ecksk@gmail.com",
-                       "Bugzilla_password": "kanban",
-                       "method": "Bug.get",
-                       "ids": [4111],
-                       "params": [ { "ids": [4111], "names": ["user@domain.com"] } ]
+                   "bug_id": 4111
                    },
-                dataType: "jsonp"
+                dataType: "json",
+                success: function(data, status){
+                    //alert(data.result.bugs[0].summary);
+                    var bug = data.result.bugs[0];
+                    createCard("Done", bug.summary);
+                }
+            });*/
+            
+            /*$.ajax({
+                url: "ajax_modify_bug.php",
+                type: "POST",
+                data: { 
+                    "bug_id": 4111,
+                    "summary": "This is a new summary"
+                },
+                dataType: "json",
+                success: function(data, status){
+                
+                    if (data.error)
+                    {
+                        alert(data.error.message);
+                    }
+                    else if (!data.result)
+                    {
+                        alert("Something is wrong");
+                    }
+                    else 
+                    {
+                        alert("We're in");
+                        var bug = data.result.bugs[0];
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown){
+                    alert("There was an error:" + textStatus);
+                }
             });*/
             
             $.ajax({
-                url: "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi?method=User.get&params=%5B+%7B+%22ids%22%3A+%5B1%2C2%5D%2C+%22names%22%3A+%5B%22user%40domain.com%22%5D+%7D+%5D",
+                url: "ajax_get_field_values.php",
                 type: "POST",
                 data: { 
-                    "method": "User.get",
-                    "params": [ { "ids": [1,2], "names": ["user@domain.com"] } ]
+                    "name": "Severity"
                 },
-                dataType: "jsonp"
+                dataType: "json",
+                success: function(data, status){
+                
+                    if (data.error)
+                    {
+                        alert(data.error.message);
+                    }
+                    else if (!data.result)
+                    {
+                        alert("Something is wrong");
+                    }
+                    else 
+                    {
+                        
+                        alert("We're in");
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown){
+                    alert("There was an error:" + textStatus);
+                }
             });
-            
-            //User.get&params=[ { "ids": [1,2], "names": ["user@domain.com"] } ]
-            //src="http://bugzilla.example.com/jsonrpc.cgi?method=Bugzilla.time&amp;callback=foo"
-            
+                      
         </script>
     </head>
     <body>
