@@ -139,39 +139,36 @@ div#users-contain table td, div#users-contain table th {
     border-top-width: 0;
 
 }
-.task{
+.Task{
     background-color: khaki;  
 }
 
-.defect{
+.Defect{
     background-color: indianred;  
 }
 
-.improvement{
+.Improvement{
     background-color: powderblue;
 }
 
-.feature{
+.Feature{
     background-color:yellowgreen; 
 }
 
-.normal{
-    background-color: white;  
+
+
+.Critical{
+    background-image: url('Critical.png');
 }
 
-.critical{
-    background-color: red;  
+.High{
+    background-image: url('High.png');
 }
 
-.high{
-    background-color: purple;
-}
-
-.low{
-    background-color: blue; 
+.Low{
+    background-image: url('Low.png');
 }
 .iconBar{
-    /*float: top;*/
     width:140px;
     height: 40px;
     float: top;
@@ -186,4 +183,15 @@ div#users-contain table td, div#users-contain table th {
     padding: 5px;
     font-family: sans-serif;
     font-size: 12px;
+}
+.prioBack{
+    height: 30px;
+    width: 30px;
+    float: right;
+    margin: 5px;
+}
+.prioIcon{
+    height: 30px;
+    width: 30px;
+
 }

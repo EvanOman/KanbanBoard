@@ -352,22 +352,30 @@ and open the template in the editor. This is new Code padgdsgs
             }
             
             function displayHandler(card) {
-                //Finds the card's value    
+                //Finds the card's values    
+                var cardRef = "#"+card.attr("id");
                 var job = card.data("jobtype");
                 var prio = card.data("priority");
-                //alert(card.css());    
+
+                
                 //The below works as a simplified if else statement toggling between all the classes
                 card.toggleClass("task", job=="Task");
                 card.toggleClass("defect", job=="Defect");
                 card.toggleClass("improvement", job=="Improvement");
                 card.toggleClass("feature", job=="Feature");
                 
+                if (prio != "Normal" && $(cardRef + " .prioBack").length == 0)
+                    {
+                        $(cardRef+ " .iconBar").append("<div class=\"prioBack\"><div class=\"prioIcon\"></div></div>");
+                    }
+                $("#priority option").each(function(){                    
+                    $(cardRef+" .iconBar .prioIcon").removeClass($(this).val());
+                });
                 
+                $(cardRef+" .iconBar .prioIcon").addClass(prio);
                 
-                card.toggleClass("normal", prio=="Normal");
-                card.toggleClass("critical", prio=="Critical");
-                card.toggleClass("high", prio=="High");
-                card.toggleClass("low", prio=="Low");
+                if (prio == "Normal")
+                    $(cardRef+" .iconBar .prioIcon").remove();
             }
                 
 
@@ -498,7 +506,7 @@ and open the template in the editor. This is new Code padgdsgs
         </ul>
         <ul id="Doing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
             <li class="banners">Doing</li>
-            <li><div id="existingcard" class="card cmVoice {cMenu:'contextMenuCard'}"><div class="cardText">Existing Card</div><div class="iconBar"><img id="theImg" src="browser.png" style="float:right; height: 100%;" /></div></div>  </li> 
+            <li><div id="existingcard" class="card cmVoice {cMenu:'contextMenuCard'}"><div class="cardText">Existing Card</div><div class="iconBar"></div></div>  </li> 
         </ul>
         <ul id="Done" class="column cmVoice {cMenu: 'contextMenuColumn'}">
             <li class="banners">Done</li>
