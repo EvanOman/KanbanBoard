@@ -20,7 +20,6 @@ body{
 .card{ 
     color: black;
     display: block;
-    background-color:khaki; 
     width: 140px;
     height: 100px;
     border: 1px  solid black;
@@ -49,7 +48,7 @@ body{
     border: black 2px solid;
     background-color: darkgrey; 
 }
-.banners{
+.banners, .bigBanners{
     display: block;
     width: 184px;
     height: 25px;
@@ -63,6 +62,9 @@ body{
     margin-bottom: 5px;
     float: top;
     list-style-type: none;
+}
+.bigBanners{
+    width: 602px;
 }
 .tablists{
     width: 600px;
@@ -81,10 +83,6 @@ body{
 
 .tablists li {
     float: left;
-}
-.closeCardButtons{
-    float: right;
-
 }
 
 body { 
@@ -155,18 +153,16 @@ div#users-contain table td, div#users-contain table th {
     background-color:yellowgreen; 
 }
 
-
-
 .Critical{
-    background-image: url('Critical.png');
+    background-image: url('images/Critical.png');
 }
 
 .High{
-    background-image: url('High.png');
+    background-image: url('images/High.png');
 }
 
 .Low{
-    background-image: url('Low.png');
+    background-image: url('images/Low.png');
 }
 .iconBar{
     width:140px;
@@ -184,14 +180,27 @@ div#users-contain table td, div#users-contain table th {
     font-family: sans-serif;
     font-size: 12px;
 }
-.prioBack{
+.prioBack, .calBack, .sizeBack{
     height: 30px;
     width: 30px;
     float: right;
     margin: 5px;
 }
-.prioIcon{
-    height: 30px;
-    width: 30px;
-
+.prioIcon, .calIcon, .sizeIcon{
+    height: 100%;
+    width: 100%;
+}
+.calIcon, .sizeIcon{
+    background-image: url('images/Calendar.png');
+    background-size: 100%;
+    text-align: center;
+    line-height: 35px;
+}
+.calIconWeek{
+    background-image: url('images/CalendarWeek.png') !important;
+}
+.sizeIcon{
+    background-image: url('images/Size.png') !important;
+    color: white;
+    overflow: hidden;
 }

@@ -45,9 +45,9 @@ and open the template in the editor. This is new Code padgdsgs
                 $(".tablists").sortable("disable");
                 
                 //Prevents the banners from being selctable or sortable
-                $(".column").sortable({
-                    cancel:".banners",
-                    items: "li:not(.banners)"
+                $(".column, .tablists").sortable({
+                    cancel:".banners, .bigBanners",
+                    items: "li:not(.banners, .bigBanners)"
                 });
                 
                 
@@ -64,7 +64,6 @@ and open the template in the editor. This is new Code padgdsgs
                         });
                         $(tablist).show().sortable( "enable" );
                     }
-                    
                 }
                 
                 function closeContextMenu(){
@@ -201,6 +200,54 @@ and open the template in the editor. This is new Code padgdsgs
                     closeContextMenu(); 
                 })
                 
+                
+                //setup the dialog with the proper field values for the jobtype dropdown
+                //Evan, go ahead and do the same for other dropdowns.  You might be able to find a way to get
+                //MULTIPLE fields in one ajax call;  make an array out of the names field.
+                //then parse the results --> handle each field's values
+                //Hint: you'll have to wrap a foreach(to handle fields) around the foreach(to handle field's values) that I wrote.
+                //And then also find some way to associate their field's name with this page's select dropdowns. (id or name maybe?)
+                //also, note, I put this in the document.ready so that I'd be sure that the dialog code exists before I try to modify it.
+                $.ajax({
+                    url: "ajax_get_field_values.php",
+                    type: "POST",
+                    data: { 
+                        "name": "bug_severity"
+                    },
+                    dataType: "json",
+                    success: function(data, status){
+                        if (data.error)
+                        {
+                            alert(data.error.message);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {
+                            //remove all <option>s from the jobtype select
+                            $("#Details select[name=jobtype]").empty();
+
+                            //iterate through all the allowed values for this field
+                            for (var i in data.result.fields[0].values) {
+                                //get the value
+                                var name = data.result.fields[0].values[i].name;
+
+                                //create an option element with a value and the inner html being the name
+                                var option = $("<option>").val(name).html(name);
+
+                                //append the option to the <select>
+                                $("#Details select[name=jobtype]").append(option);
+                            }
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });
+                
+                
             });
             
             
@@ -237,8 +284,7 @@ and open the template in the editor. This is new Code padgdsgs
                             "size": $("#size").val(),
                             "description": $("#description").val()
                         });
-                        
-                        card.html($("#title").val());
+                        $('#'+cardId+" .cardText").html($("#title").val());
                         displayHandler(card); 
                         $( this ).dialog( "close" );    
                     },
@@ -310,37 +356,100 @@ and open the template in the editor. This is new Code padgdsgs
                 var cardRef = "#"+card.attr("id");
                 var job = card.data("jobtype");
                 var prio = card.data("priority");
+                var dueDate = card.data("dueDate");
+                var date = new Date(dueDate);
+                var size =  card.data("size")
 
                 
                 //The below works as a simplified if else statement toggling between all the classes
-                card.toggleClass("task", job=="Task");
-                card.toggleClass("defect", job=="Defect");
-                card.toggleClass("improvement", job=="Improvement");
-                card.toggleClass("feature", job=="Feature");
+                if (job != null)
+                {
+                    $("#jobtype option").each(function(){
+                    
+                        $(cardRef).removeClass($(this).val());
+                    })
+                    $(cardRef).addClass(job).attr({"title": job});
+                }
                 
+                
+                //This section adds and switches the priority icon
                 if (prio != "Normal" && $(cardRef + " .prioBack").length == 0)
                 {
                     $(cardRef+ " .iconBar").append("<div class=\"prioBack\"><div class=\"prioIcon\"></div></div>");
                 }
-                $("#priority option").each(function(){                    
-                    $(cardRef+" .iconBar .prioIcon").removeClass($(this).val());
-                });
+                if (prio != "Normal")
+                {
+                    $("#priority option").each(function(){                    
+                        $(cardRef+" .iconBar .prioBack .prioIcon").removeClass($(this).val());
+                    });
                 
-                $(cardRef+" .iconBar .prioIcon").addClass(prio);
+                    $(cardRef+" .iconBar .prioBack .prioIcon").addClass(prio).attr({"title": prio + " Priority"});
+                }
+                else if (prio == "Normal")
+                {
+                    $(cardRef+" .iconBar .prioBack ").remove();
+                }
                 
-                if (prio == "Normal")
-                    $(cardRef+" .iconBar .prioIcon").remove();
+                
+                //This section handles the calendar icon
+                if (dueDate != null && $(cardRef + " .iconBar .calBack").length == 0)
+                {
+                    $(cardRef+ " .iconBar").append("<div class=\"calBack\"><div class=\"calIcon\"></div></div>"); 
+                }
+                if (dueDate == null || dueDate == "")
+                {
+                    $(cardRef+ " .iconBar .calBack").remove(); 
+                }
+                var day = date.getDate();
+                var month = date.getMonth(); 
+                var year = date.getFullYear();
+                var until = daysUntil(year, month, day);
+                $(cardRef+ " .iconBar .calBack .calIcon").html(day).attr({"title": "Due: "+ dueDate + " ("+until+" days from today)"});
+                if (until <= 7)
+                {
+                    $(cardRef+ " .iconBar .calBack .calIcon").addClass("calIconWeek");
+                }
+                else
+                {
+                    $(cardRef+ " .iconBar .calBack .calIcon").removeClass("calIconWeek");    
+                }
+                if (until == 0)
+                {
+                    $(cardRef+ " .iconBar .calBack .calIcon").attr({"title": "Due: "+ dueDate + " (Today)"});
+                }
+                
+                
+                //This section handles the size icon
+                if (size != null && $(cardRef + " .iconBar .sizeBack").length ==0)
+                {
+                    $(cardRef+ " .iconBar").append("<div class=\"sizeBack\"><div class=\"sizeIcon\"></div></div>"); 
+                }
+                if (size == null || size == 0 || size == "")
+                {
+                    $(cardRef+ " .iconBar .sizeBack").remove();
+                }
+                $(cardRef+ " .iconBar .sizeBack .sizeIcon").html(size).attr({"title": "Size: "+ size});
+                
             }
                 
+            function daysUntil(year, month, day) {
+                var now = new Date(),
+                dateEnd = new Date(year, month, day), // months are zero-based
+                days = (dateEnd - now) / 1000/60/60/24;   // convert milliseconds to days
 
-            //Card creation function, adds the card to the page, eventually will handle database entry? Used a variable to allow access outside of (document).ready
+                return Math.round(days);
+            }
+
+           
+            
+            //Card creation function, adds the card to the page, eventually will handle database entry? 
             function  createCard(col,title){ 
                    
                    
-                var newCard = $('<div id="'+title.replace(/\s+/g, '')+'" class="card ">'+title+'</div>');
+                var newCard = $('<div id="'+title.replace(/\s+/g, '')+'" class="card "><div class="cardText">'+title+'</div><div class="iconBar"></div></div>');
                     
                 newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}");
-                    
+                //<div class="cardText">Existing Card</div><div class="iconBar"></div></div>   
                 var newLi = $('<li></li>').append(newCard);
                                                                        
                 $("#"+col.replace(/\s+/g, '')).append(newLi);
@@ -427,34 +536,6 @@ and open the template in the editor. This is new Code padgdsgs
                 }
             });*/
             
-            $.ajax({
-                url: "ajax_get_field_values.php",
-                type: "POST",
-                data: { 
-                    "name": "bug_severity"
-                },
-                dataType: "json",
-                success: function(data, status){
-                
-                    if (data.error)
-                    {
-                        alert(data.error.message);
-                    }
-                    else if (!data.result)
-                    {
-                        alert("Something is wrong");
-                    }
-                    else 
-                    {
-                        
-                        alert("We're in");
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown){
-                    alert("There was an error:" + textStatus);
-                }
-            });
-                      
         </script>
     </head>
     <body>
@@ -540,8 +621,12 @@ and open the template in the editor. This is new Code padgdsgs
             </div>
         </div>   
 
-        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Backlog" > </ul> 
-        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Archive" style=" background-color:red;"></ul>     
+        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Backlog" > 
+            <li class="bigBanners">Backlog</li>      
+        </ul> 
+        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Archive">
+            <li class="bigBanners">Archive</li>      
+        </ul>     
         <div class="toolbar">                
             <button id="btnBacklog">Backlog</button>
             <button id="btnArchive">Archive</button>
@@ -553,7 +638,7 @@ and open the template in the editor. This is new Code padgdsgs
         </ul>
         <ul id="Doing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
             <li class="banners">Doing</li>
-            <li><div id="existingcard" class="card cmVoice {cMenu:'contextMenuCard'}"><div class="cardText">Existing Card</div><div class="iconBar"></div></div>  </li> 
+            <li><div id="existingcard" class="card cmVoice {cMenu:'contextMenuCard'} Task"><div class="cardText">Existing Card</div><div class="iconBar"></div></div>  </li> 
         </ul>
         <ul id="Done" class="column cmVoice {cMenu: 'contextMenuColumn'}">
             <li class="banners">Done</li>
