@@ -1,6 +1,6 @@
 <!--
 To change this template, choose Tools | Templates
-and open the template in the editor. This is new Code padgdsgs
+and open the template in the editor. 
 -->
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
@@ -26,6 +26,7 @@ and open the template in the editor. This is new Code padgdsgs
         <script type="text/javascript" src="jquery.metadata.js"></script>
         <script type="text/javascript" src="jquery.hoverIntent.js"></script>
         <script type="text/javascript" src="jquery.json-2.3.js"></script>
+        <script type="text/javascript" src="tiny_mce/tiny_mce.js"></script>
         <link type="text/css" href="index.css" rel="stylesheet" />
 
 
@@ -113,10 +114,10 @@ and open the template in the editor. This is new Code padgdsgs
                 $( "#dialogAddEditCard" ).dialog({
                     autoOpen: false,
                     minHeight: 500,
-                    minWidth: 750,
+                    minWidth: 1060,
                     height: 500,
-                    width: 750,
-                    show: "blind",
+                    width: 1060,
+                    show: { effect: 'blind', complete: function() { $("#title").focus();}},
                     hide: "explode",
                     modal: true,
                     buttons: {
@@ -196,9 +197,46 @@ and open the template in the editor. This is new Code padgdsgs
                     var card = $.mbMenu.lastContextMenuEl;
                     //Stores the selected priority as the cards priority
                     $(card).data({"priority": prio});
-                    displayHandler($(card))
+                    displayHandler($(card));
                     closeContextMenu(); 
                 })
+                
+                
+                $("#jobtype").change(function () {
+                    var job = $(this).val();
+                    $("#jobtype option").each(function(){
+                        $("#Details").removeClass($(this).val());
+                    });
+                    $("#Details").addClass(job);
+                });
+                
+                //Initializes the TinyMCE Richtext editior
+                tinyMCE.init({
+                    // General options
+                    mode : "exact",
+                    elements: "comments, description",
+                    theme : "advanced",
+                    plugins : "pagebreak,style,layer,table,save,advhr,advimage,advlink,emotions,iespell,inlinepopups,insertdatetime,preview,media,searchreplace,print,contextmenu,paste,directionality,fullscreen,noneditable,visualchars,nonbreaking,xhtmlxtras,template",
+
+                    // Theme options
+                    theme_advanced_buttons1 : "save,newdocument,|,bold,italic,underline,strikethrough,|,justifyleft,justifycenter,justifyright,justifyfull,|,styleselect,formatselect,fontselect,fontsizeselect",
+                    theme_advanced_buttons2 : "cut,copy,paste,pastetext,pasteword,|,search,replace,|,bullist,numlist,|,outdent,indent,blockquote,|,undo,redo,|,link,unlink,anchor,image,cleanup,help,code,|,insertdate,inserttime,preview,|,forecolor,backcolor",
+                    theme_advanced_toolbar_location : "top",
+                    theme_advanced_toolbar_align : "left",
+                    theme_advanced_statusbar: "bottom",
+                    theme_advanced_resizing : true,
+
+                    // Example content CSS (should be your site CSS)
+                    content_css : "index.css",
+
+                    // Drop lists for link/image/media/template dialogs
+                    template_external_list_url : "js/template_list.js",
+                    external_link_list_url : "js/link_list.js",
+                    external_image_list_url : "js/image_list.js",
+                    media_external_list_url : "js/media_list.js"
+
+                    
+                });
                 
                 
                 //setup the dialog with the proper field values for the jobtype dropdown
@@ -270,6 +308,7 @@ and open the template in the editor. This is new Code padgdsgs
                 $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
                 $("#edit-tabs ul li").show();
                 $("label[for=whichColumn],#whichColumn").hide();
+                dialogDisplay(card.data("jobtype"));
                 
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
                     "Save Card": function() {
@@ -303,6 +342,7 @@ and open the template in the editor. This is new Code padgdsgs
                 $( "#edit-tabs" ).tabs("select", 0);
                 $("label[for=whichColumn],#whichColumn").show();
                 $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );
+                dialogDisplay(null);
                     
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Save Card": function() {
                         if($( "#title" ).val()=="")
@@ -312,7 +352,7 @@ and open the template in the editor. This is new Code padgdsgs
                         else{                        
                             //Calls my card creation method, physically adds the card to the page with proper name and location(for now).
                             createCard($("#whichColumn").val(), $("#title").val()); 
-                            displayHandler($("#"+$("#title").val()));   
+                            displayHandler($("#"+$("#title").val().replace(/\s+/g, '')));   
                             $( this ).dialog( "close" ); 
                         } 
                     },
@@ -369,8 +409,21 @@ and open the template in the editor. This is new Code padgdsgs
                         $(cardRef).removeClass($(this).val());
                     })
                     $(cardRef).addClass(job).attr({"title": job});
+                    
+                    $("#jobtype option").each(function(){
+                        $("#Details").removeClass($(this).val());
+                    });
+                    $("#Details").addClass(job);
                 }
-                
+                if (job == null)
+                {
+                    $("#jobtype option").each(function(){
+                        $("#Details").removeClass($(this).val());
+                    });
+                    $("#Details").addClass("Task");
+                    $(cardRef).addclass("Task");
+                    
+                }
                 
                 //This section adds and switches the priority icon
                 if (prio != "Normal" && $(cardRef + " .prioBack").length == 0)
@@ -440,7 +493,19 @@ and open the template in the editor. This is new Code padgdsgs
                 return Math.round(days);
             }
 
-           
+            function dialogDisplay(job){
+                $("#jobtype option").each(function(){
+                    $("#Details").removeClass($(this).val());
+                });
+                if (job == null)
+                {
+                    $("#Details").addClass("Task");
+                }
+                else
+                {
+                    $("#Details").addClass(job);
+                }
+            }
             
             //Card creation function, adds the card to the page, eventually will handle database entry? 
             function  createCard(col,title){ 
@@ -556,7 +621,7 @@ and open the template in the editor. This is new Code padgdsgs
                         <fieldset>
                             <div style="float:top; max-height: 80px;">
                                 <label for="title">Title:</label>
-                                <textarea  name="title" id="title" class="text ui-widget-content ui-corner-all" style="width:95%; height: 40px; max-height: 60px;"  ></textarea>
+                                <textarea  name="title" id="title" class="text ui-widget-content ui-corner-all" style="width:960px; height: 40px; max-height: 60px;"  ></textarea>
                             </div>
                             <div style="float: left;">
                                 <label for="jobtype">Job Type:</label>

@@ -138,31 +138,31 @@ div#users-contain table td, div#users-contain table th {
 
 }
 .Task{
-    background-color: khaki;  
+    background-color: khaki !important;  
 }
 
 .Defect{
-    background-color: indianred;  
+    background-color: indianred !important;  
 }
 
 .Improvement{
-    background-color: powderblue;
+    background-color: powderblue !important;
 }
 
 .Feature{
-    background-color:yellowgreen; 
+    background-color:yellowgreen !important; 
 }
 
 .Critical{
-    background-image: url('images/Critical.png');
+    background-image: url('images/Critical.png')  !important;
 }
 
 .High{
-    background-image: url('images/High.png');
+    background-image: url('images/High.png')  !important;
 }
 
 .Low{
-    background-image: url('images/Low.png');
+    background-image: url('images/Low.png')  !important;
 }
 .iconBar{
     width:140px;
