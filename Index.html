@@ -246,44 +246,76 @@ and open the template in the editor.
                 //Hint: you'll have to wrap a foreach(to handle fields) around the foreach(to handle field's values) that I wrote.
                 //And then also find some way to associate their field's name with this page's select dropdowns. (id or name maybe?)
                 //also, note, I put this in the document.ready so that I'd be sure that the dialog code exists before I try to modify it.
-                $.ajax({
-                    url: "ajax_get_field_values.php",
-                    type: "POST",
-                    data: { 
-                        "name": "bug_severity"
-                    },
-                    dataType: "json",
-                    success: function(data, status){
-                        if (data.error)
-                        {
-                            alert(data.error.message);
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                        }
-                        else 
-                        {
-                            //remove all <option>s from the jobtype select
-                            $("#Details select[name=jobtype]").empty();
-
-                            //iterate through all the allowed values for this field
-                            for (var i in data.result.fields[0].values) {
-                                //get the value
-                                var name = data.result.fields[0].values[i].name;
-
-                                //create an option element with a value and the inner html being the name
-                                var option = $("<option>").val(name).html(name);
-
-                                //append the option to the <select>
-                                $("#Details select[name=jobtype]").append(option);
+                
+                
+               
+                //var fieldarray = [{"name": "priority"},{"name": "severity"},{"name": "op_sys"} ];    "name": ["priority","severity","op_sys"]
+                var formFields = ["priority", "op_sys", "remaining_time","bug_severity", "product"];
+                //var datasend = {"name": fields };
+                for (var k in formFields)
+                {
+                    $.ajax({
+                        url: "ajax_get_field_values.php",
+                        type: "POST",
+                        data: {"name": formFields[k]},    
+                        dataType: "json",
+                    
+                        success: function(data, status){
+                        
+                      
+                            if (data.error)
+                            {
+                            
+                                alert(data.error.message+ " Data.error is false");
                             }
+                            else if (!data.result)
+                            {
+                                alert("Something is wrong");
+                            }
+                            else 
+                            {
+                                
+                                var fieldName = data.result.fields[0].name;
+                                if (fieldName == "bug_severity")
+                                {
+                                    //The way our Bugzilla is set up is that Severity=>Job Type
+                                    fieldName="jobtype";
+                                }
+                                if (fieldName == "product")
+                                {
+                                    alert(fieldName);
+                                    for (var i in data.result.fields[0].values) 
+                                    {    
+                                        //get the value
+                                        var name = data.result.fields[0].values[i].name;
+                                   
+                                       alert(name);
+                                    }   
+                                }
+                                //remove all <option>s from the specified select
+                                $("#Details select[name="+fieldName+"]").empty();
+                                
+
+                                //iterate through all the allowed values for this field
+                                for (var i in data.result.fields[0].values) 
+                                {    
+                                    //get the value
+                                    var name = data.result.fields[0].values[i].name;
+                                   
+                                    //create an option element with a value and the inner html being the name
+                                    var option = $("<option>").val(name).html(name);
+
+                                    //append the option to the <select>
+                                    $("#Details select[name="+fieldName+"]").append(option);
+                                }
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown){
+                            alert("(Fields)There was an error:" + textStatus);
                         }
-                    },
-                    error: function(jqXHR, textStatus, errorThrown){
-                        alert("There was an error:" + textStatus);
-                    }
-                });
+                    }); 
+                    var fieldName = null;
+                }
                 
                 
             });
@@ -624,12 +656,18 @@ and open the template in the editor.
                                 <textarea  name="title" id="title" class="text ui-widget-content ui-corner-all" style="width:960px; height: 40px; max-height: 60px;"  ></textarea>
                             </div>
                             <div style="float: left;">
+                                <label for="product">Product:</label>
+                                <select  name="product" id="product"  class="text ui-widget-content ui-corner-all" >
+                                </select>
+                                <label for="component">Component:</label>
+                                <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" >
+                                </select>
                                 <label for="jobtype">Job Type:</label>
                                 <select  name="jobtype" id="jobtype"  class="text ui-widget-content ui-corner-all" >
-                                    <option>Task</option>
+                                    <!--option>Task</option>
                                     <option>Defect</option>
                                     <option>Improvement</option>
-                                    <option>Feature</option>
+                                    <option>Feature</option-->
                                 </select>
                                 <label for="user">Assigned User:</label>
                                 <select  name="user" id="user"  class="text ui-widget-content ui-corner-all" >   
@@ -641,10 +679,10 @@ and open the template in the editor.
                                 </select>
                                 <label for="priority">Priority:</label>
                                 <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all" >    
-                                    <option>Normal</option>
+                                    <!--option>Normal</option>
                                     <option>Critical</option>
                                     <option>High</option>
-                                    <option>Low</option>
+                                    <option>Low</option!-->
                                 </select>
                                 <label for="whichColumn">Into Column:</label>
                                 <select  name="whichColumn" id="whichColumn"  class="text ui-widget-content ui-corner-all" >     
@@ -703,7 +741,6 @@ and open the template in the editor.
         </ul>
         <ul id="Doing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
             <li class="banners">Doing</li>
-            <li><div id="existingcard" class="card cmVoice {cMenu:'contextMenuCard'} Task"><div class="cardText">Existing Card</div><div class="iconBar"></div></div>  </li> 
         </ul>
         <ul id="Done" class="column cmVoice {cMenu: 'contextMenuColumn'}">
             <li class="banners">Done</li>
@@ -742,6 +779,11 @@ and open the template in the editor.
             <a class="{menu:'moveAllCards'}">Move All Cards to</a>
             <a rel="separator"> </a>
             <a action="addCardToCol()">Add Card</a>
+        </div>
+        <div>
+            <table id="table1">
+
+            </table>
         </div>
     </body>
 </html>
