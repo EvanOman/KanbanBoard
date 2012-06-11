@@ -250,7 +250,7 @@ and open the template in the editor.
                 
                
                 //var fieldarray = [{"name": "priority"},{"name": "severity"},{"name": "op_sys"} ];    "name": ["priority","severity","op_sys"]
-                var formFields = ["priority", "op_sys", "remaining_time","bug_severity", "product"];
+                var formFields = ["priority", "op_sys", "remaining_time","bug_severity", "version"];
                 //var datasend = {"name": fields };
                 for (var k in formFields)
                 {
@@ -289,7 +289,7 @@ and open the template in the editor.
                                         //get the value
                                         var name = data.result.fields[0].values[i].name;
                                    
-                                       alert(name);
+                                        alert(name);
                                     }   
                                 }
                                 //remove all <option>s from the specified select
@@ -318,10 +318,71 @@ and open the template in the editor.
                 }
                 
                 
+                $.ajax({
+                    url: "ajax_get_product_list.php",
+                    type: "POST",  
+                    data:{},
+                    dataType: "json",
+                    success: function(data){
+                        
+                        if (data.error)
+                        {
+                            
+                            alert(data.error.message+ " Data.error is false");
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        
+                        var productIds = data.result.ids;
+                        getNames(productIds);
+                        
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });
+                
+                function getNames(productIds){
+                    
+                    
+                        $.ajax({
+                            url: "ajax_get_product_props.php",
+                            type: "POST",  
+                            data:{"ids": productIds},
+                            dataType: "json",
+                            success: function(data){
+                        
+                                if (data.error)
+                                {
+                            
+                                    alert(data.error.message+ " Data.error is false");
+                                }
+                                else if (!data.result)
+                                {
+                                    alert("Something is wrong");
+                                }
+                        
+                                var name = data.result[0].products[0].name;
+                                   
+                                //create an option element with a value and the inner html being the name
+                                var option = $("<option>").val(name).html(name);
+
+                                //append the option to the <select>
+                                $("#Details select[name=product]").append(option);
+                                
+                                
+                        
+                            },
+                            error: function(jqXHR, textStatus, errorThrown){
+                                alert("There was an error:" + textStatus);
+                            }
+                        });
+                    
+                };
             });
-            
-            
-            
+                
             
             function editCard(cardId) {
                 var card = $('#'+cardId);
@@ -661,6 +722,9 @@ and open the template in the editor.
                                 </select>
                                 <label for="component">Component:</label>
                                 <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" >
+                                </select>
+                                <label for="version">version</label>
+                                <select  name="version" id="version"  class="text ui-widget-content ui-corner-all" >
                                 </select>
                                 <label for="jobtype">Job Type:</label>
                                 <select  name="jobtype" id="jobtype"  class="text ui-widget-content ui-corner-all" >
