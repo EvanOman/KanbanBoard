@@ -252,9 +252,6 @@ and open the template in the editor.
                 //Hint: you'll have to wrap a foreach(to handle fields) around the foreach(to handle field's values) that I wrote.
                 //And then also find some way to associate their field's name with this page's select dropdowns. (id or name maybe?)
                 //also, note, I put this in the document.ready so that I'd be sure that the dialog code exists before I try to modify it.
-                
-                
-               
                 //The Array of fields that we want to find values for
                 var formFields = ["priority","bug_severity"];
             
@@ -311,10 +308,11 @@ and open the template in the editor.
                         alert("(Fields)There was an error:" + textStatus);
                     }
                 }); 
-                var fieldName = null;
+
                 
                 
-                //An Ajax call that finds all accessible product ids. Very slow, consider revision
+                //An Ajax call that finds all accessible product ids. 
+                //TODO: Very slow, consider revision
                 $.ajax({
                     url: "ajax_get_product_list.php",
                     type: "POST",  
@@ -386,68 +384,25 @@ and open the template in the editor.
                 };
                 
                 
-                //Retrieves all of the available components and versions for a given product. Very slow, consider revision
-                function getCompsVers(name){
-                    $.ajax({
-                        url: "ajax_get_field_values.php",
-                        type: "POST",
-                        data: {
-                            //"ids": id,
-                            "name": ["component", "version"],
-                            "value_field": "product"
-                            /*"visibility_field": "Sam's Widget",
-                            "values": {"visibility_values": ["Sam's Widget"]}*/
-                        },    
-                        dataType: "json",
-                    
-                        success: function(data, status){
-                        
-                      
-                            if (data.error)
-                            {
-                            
-                                alert(data.error.message+ " Data.error is false");
-                            }
-                            else if (!data.result)
-                            {
-                                alert("Something is wrong");
-                            }
-                            else 
-                            {   
-                                
-                                for (var j in data.result.fields)
-                                { 
-                                    var fieldName = data.result.fields[j].name;
-                                
-                                    //remove all <option>s from the specified select
-                                    $("#Details select[name="+fieldName+"]").empty();
-                                
-                                    //iterate through all the allowed values for this field
-                                    for (var i in data.result.fields[j].values) 
-                                    {   
-                                        //get the value
-                                        var visval =  data.result.fields[j].values[i].visibility_values[0];
-                                        
-                                        //This is a crude method of weeding out which values should be displayed based off of the product name
-                                        if (visval == name)
-                                        {                                        
-                                            var comp = data.result.fields[j].values[i].name; //create an option element with a value and the inner html being the name
-                                            var option = $("<option>").val(name).html(comp);
-
-                                            //append the option to the <select>
-                                            $("#Details select[name="+fieldName+"]").append(option);
-                                        }                                    
-                                    
-                                    
-                                    }
-                                }
-                            }
-                        },
-                        error: function(jqXHR, textStatus, errorThrown){
-                            alert("(Fields)There was an error:" + textStatus);
+           
+                var bugArray = [4111,5001,9003,9215,13213,5202];
+                //Adds existing cards to the page  
+                $.ajax({
+                    url: "ajax_get_single_bug.php",
+                    type: "POST",
+                    data: { 
+                        "bug_id": bugArray
+                    },
+                    dataType: "json",
+                    success: function(data, status){
+                        //alert(data.result.bugs[0].summary);
+                        for (var i in data.result.bugs)
+                        {
+                            var bug = data.result.bugs[i];
+                            createCard("Done", bug.component, bug.id, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, 10, "Test");
                         }
-                    });
-                };
+                    }
+                });
                 
             });
               
@@ -455,51 +410,119 @@ and open the template in the editor.
               
             /*--------------------End Document.Ready------------------------*/
             
-            
+        
+        
+        
+            //Retrieves all of the available components and versions for a given product. Very slow, consider revision
+            function getCompsVers(name){
+                $.ajax({
+                    //Need this to be completed before other actions occur:
+                    async: false,
+                    url: "ajax_get_field_values.php",
+                    type: "POST",
+                    data: {
+                        //"ids": id,
+                        "name": ["component", "version"],
+                        "value_field": "product"
+                        /*"visibility_field": "Sam's Widget",
+                            "values": {"visibility_values": ["Sam's Widget"]}*/
+                    },    
+                    dataType: "json",
+                    
+                    success: function(data, status){
+                        
+                      
+                        if (data.error)
+                        {
+                            
+                            alert(data.error.message+ " Data.error is false");
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {   
+                                
+                            for (var j in data.result.fields)
+                            { 
+                                var fieldName = data.result.fields[j].name;
+                                
+                                //remove all <option>s from the specified select
+                                $("#Details select[name="+fieldName+"]").empty();
+                                
+                                //iterate through all the allowed values for this field
+                                for (var i in data.result.fields[j].values) 
+                                {   
+                                    //get the value
+                                    var visval =  data.result.fields[j].values[i].visibility_values[0];
+                                        
+                                    //This is a crude method of weeding out which values should be displayed based off of the product name
+                                    if (visval == name)
+                                    {                                        
+                                        var comp = data.result.fields[j].values[i].name; //create an option element with a value and the inner html being the name
+                                        var option = $("<option>").val(name).html(comp);
+
+                                        //append the option to the <select>
+                                        $("#Details select[name="+fieldName+"]").append(option);
+                                    }                                    
+                                    
+                                    
+                                }
+                            }
+                        }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("(Fields)There was an error:" + textStatus);
+                    }
+                });
+            };
             
             function editCard(cardId) {
                 var card = $('#'+cardId);
-            
-                //Populates the fields
-                $("#title").val(card.data("title"));
-                $("#jobtype").val(card.data("jobtype"));
-                $("#user").val(card.data("user"));
-                $("#priority").val(card.data("priority"));
-                $("#whichColumn").val(card.data("whichColumn"));
-                $("#dueDate").val(card.data("dueDate"));
-                $("#size").val(card.data("size"));
-                $("#description").val(card.data("description"));
+                getCompsVers(card.data("product"));
+                    //Changes the edit dialog to have the correct fields for the selected card's Product. 
+                    // TODO: The component and version retrieval is too slow and it changes after the dialog is opened and therefore removes the proper component and version selection
+                    //Bugzilla solves this by allowing the product to change without component update and then upon save a new page is opened confirming the change and prompting new version and component values
                 
-                //Adds edit specifc dialog properties
-                $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
-                $("#edit-tabs ul li").show();
-                $("label[for=whichColumn],#whichColumn").hide();
-                dialogDisplay(card.data("jobtype"));
+                    // TODO: Create and new dialog if the the product name is changed  
+                    //Populates the fields
+                    $("#title").val(card.data("title"));
+                    $("#jobtype").val(card.data("jobtype"));
+                    $("#user").val(card.data("user"));
+                    $("#priority").val(card.data("priority"));
+                    $("#whichColumn").val(card.data("whichColumn"));
+                    $("#dueDate").val(card.data("dueDate"));
+                    $("#size").val(card.data("size"));
+                    $("#description").val(card.data("description"));
+                    $("#product").val(card.data("product"));  
+                    $("#version").val(card.data("version"));
+                    $("#component").val(card.data("component"));
+              
                 
-                $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
-                    "Save Card": function() {
+                    //Adds edit specifc dialog properties
+                    $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
+                    $("#edit-tabs ul li").show();
+                    $("label[for=whichColumn],#whichColumn").hide();
+                    dialogDisplay(card.data("jobtype"));
+                
+                    $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
+                        "Save Card": function() {
                         
-                        
-                        card.data({
-                            "title": $("#title").val(),
-                            "jobtype": $("#jobtype").val(),
-                            "user": $("#user").val(),
-                            "priority": $("#priority").val(),
-                            "dueDate": $("#dueDate").val(),
-                            "size": $("#size").val(),
-                            "description": $("#description").val()
-                        });
-                        $('#'+cardId+" .cardText").html($("#title").val());
-                        displayHandler(card); 
-                        $( this ).dialog( "close" );    
-                    },
-                    Cancel: function() {
-                        $( this ).dialog( "close" );
-                    }   
-                });
+                            $('#'+cardId+" .cardText").html($("#title").val());
+                            displayHandler(card); 
+                            // TODO: Will need to send this info to the PHP file with modify function
+                            ajaxEditBug($("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#jobtype").val(), $("#title").val(), $("#component").val(),$("#user").val(),$("#whichColumn").val(),$("#dueDate").val(), $("#size").val(), $("#description").val()); 
+                         
+                            $( this ).dialog( "close" );    
+                        },
+                        Cancel: function() {
+                            $( this ).dialog( "close" );
+                        }   
+                    });
                 
-                $( "#dialogAddEditCard" ).dialog( "open" );
-            
+                    $( "#dialogAddEditCard" ).dialog( "open" );
+                
             }
             
             function addCard() {
@@ -528,6 +551,7 @@ and open the template in the editor.
                 });
                     
                 $( "#dialogAddEditCard" ).dialog( "open" );
+                
             }                    
             
             function deleteCard(){
@@ -567,8 +591,8 @@ and open the template in the editor.
                 var size =  card.data("size")
 
                 
-                //The below works as a simplified if else statement toggling between all the classes
-                if (job != null)
+                // TODO: The below works as a simplified if else statement toggling between all the classes, need to adapt to the new names
+                /*if (job != null)
                 {
                     $("#jobtype option").each(function(){
                     
@@ -589,9 +613,11 @@ and open the template in the editor.
                     $("#Details").addClass("Task");
                     $(cardRef).addclass("Task");
                     
-                }
+                }*/
+        
+                //$(cardRef).addclass("Task");
                 
-                //This section adds and switches the priority icon
+                //This section adds and switches the priority icon. TODO need to find new method taking the P# classification used by bugzilla
                 if (prio != "Normal" && $(cardRef + " .prioBack").length == 0)
                 {
                     $(cardRef+ " .iconBar").append("<div class=\"prioBack\"><div class=\"prioIcon\"></div></div>");
@@ -674,26 +700,32 @@ and open the template in the editor.
             }
             
             //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, Jobtype, priority
-            function  createCard(col,title){ 
+            function  createCard(col, component, id, priority, product, severity, summary, version, user, dueDate, size, description){ 
                    
-                   
-                var newCard = $('<div id="'+title.replace(/\s+/g, '')+'" class="card "><div class="cardText">'+title+'</div><div class="iconBar"></div></div>');
+                 
+                var newCard = $('<div id="'+id+'" class="card "><div class="cardText">'+summary+'</div><div class="iconBar"></div></div>');
                     
-                newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}");
+                newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}, Task");
                 //<div class="cardText">Existing Card</div><div class="iconBar"></div></div>   
                 var newLi = $('<li></li>').append(newCard);
                                                                        
                 $("#"+col.replace(/\s+/g, '')).append(newLi);
                     
+                // var summary = $("#title").val();
+                //ajaxEditBug(4111, summary);
+                    
                 newCard.data({
-                    "title": $("#title").val(),
-                    "jobtype": $("#jobtype").val(),
-                    "user": $("#user").val(),
-                    "priority": $("#priority").val(),
-                    "whichColumn": $("#whichColumn").val(),
-                    "dueDate": $("#dueDate").val(),
-                    "size": $("#size").val(),
-                    "description": $("#description").val()
+                    "title": summary,
+                    "jobtype": severity,
+                    "priority": priority,
+                    "product": product,
+                    "component": component,
+                    "version": version,
+                    "user": user,
+                    "whichColumn": col,
+                    "dueDate": dueDate,
+                    "size": size,
+                    "description": description
                         
                 });
                     
@@ -704,11 +736,8 @@ and open the template in the editor.
                     menuSelector: ".menuContainer",
                     iconPath:"ico/",
                     hasImages:false,
-
                     fadeInTime:200,
-
                     fadeOutTime:100,
-
                     adjustLeft:0,
                     adjustTop:0,
                     opacity:.99,
@@ -719,9 +748,63 @@ and open the template in the editor.
                     
                 //Add Database data entry here, need to pass in all parameters  
                     
-            } 
-                
+            }
             
+            // <editor-fold>
+            //...any code...
+            //</editor-fold>
+            
+            
+            // TODO: Need to find a way to store the column info on the Bugzilla server. Make a new field? Use an existing one that is otherwise rarely utilized? 
+            function ajaxEditBug(col, component, id, priority, product, severity, summary, version, user, dueDate, size, description){
+                $.ajax({
+                    url: "ajax_modify_bug.php",
+                    type: "POST",
+                    data: { 
+                        "bug_id": id,
+                        "component": component,
+                        "priority": priority,
+                        "product": product,
+                        "severity": severity,
+                        "summary": summary,
+                        "version": version
+                    },
+                    dataType: "json",
+                    success: function(data, status){
+                
+                        if (data.error)
+                        {
+                            alert(data.error.message);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {}
+                        alert("We're in");
+                        $("#"+id).data({
+                            "title": summary,
+                            "jobtype": severity,
+                            "priority": priority,
+                            "product": product,
+                            "component": component,
+                            "version": version,
+                            "user": user,
+                            "whichColumn": col,
+                            "dueDate": dueDate,
+                            "size": size,
+                            "description": description
+                        
+                        });
+                        
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });
+            }
+               
             
            
             /*$.ajax({

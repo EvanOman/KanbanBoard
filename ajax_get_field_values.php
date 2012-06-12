@@ -30,7 +30,7 @@ if (!function_exists('curl_init')) {
 $ch = curl_init();
 
 // Now set some options (most are optional)
-// Set URL to download
+// Set URL to download http://software-pc/jsonrpc.cgi
 curl_setopt($ch, CURLOPT_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
 
 

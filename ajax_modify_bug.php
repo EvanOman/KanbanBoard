@@ -2,9 +2,16 @@
 //bugzilla_login();
 
 $bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
+$component = filter_input(INPUT_POST, "component", FILTER_SANITIZE_STRING);
+$priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
+$product = filter_input(INPUT_POST, "product", FILTER_SANITIZE_STRING);
+$severity = filter_input(INPUT_POST, "severity", FILTER_SANITIZE_STRING);
 $summary = filter_input(INPUT_POST, "summary", FILTER_SANITIZE_STRING);
+// TODO This field is sometimes a field and sometimes an int, need to figure out how to sanitize
+$version = filter_input(INPUT_POST, "version");
 
-$params = array(array("ids" => $bugId, "summary" => $summary, "Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban"));
+$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban","ids" => $bugId, "summary" => $summary,"component" => $component, 
+    "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));
 
 
 $params = json_encode($params);
@@ -20,8 +27,8 @@ if (!function_exists('curl_init')) {
 $ch = curl_init();
 
 // Now set some options (most are optional)
-// Set URL to download http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi
-curl_setopt($ch, CURLOPT_URL, "http://eckop.com/evan/post_check.php");
+// Set URL to download  http://software-pc/jsonrpc.cgihttp://eckop.com/evan/post_check.php 
+curl_setopt($ch, CURLOPT_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
 
 
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
