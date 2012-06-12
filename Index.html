@@ -210,6 +210,12 @@ and open the template in the editor.
                     $("#Details").addClass(job);
                 });
                 
+                //Populates the components field based off of the selected product
+                $("#product").change(function () {
+                
+                    var name = $(this).val();
+                    getCompsVers(name);
+                });
                 //Initializes the TinyMCE Richtext editior
                 tinyMCE.init({
                     // General options
@@ -249,58 +255,48 @@ and open the template in the editor.
                 
                 
                
-                //var fieldarray = [{"name": "priority"},{"name": "severity"},{"name": "op_sys"} ];    "name": ["priority","severity","op_sys"]
-                var formFields = ["priority", "op_sys", "remaining_time","bug_severity", "version"];
-                //var datasend = {"name": fields };
-                for (var k in formFields)
-                {
-                    $.ajax({
-                        url: "ajax_get_field_values.php",
-                        type: "POST",
-                        data: {"name": formFields[k]},    
-                        dataType: "json",
+                //The Array of fields that we want to find values for
+                var formFields = ["priority","bug_severity"];
+            
+                //A single Ajax call that finds all the specified field option values                
+                $.ajax({
+                    url: "ajax_get_field_values.php",
+                    type: "POST",
+                    data: {"name": formFields},    
+                    dataType: "json",
                     
-                        success: function(data, status){
+                    success: function(data, status){
                         
                       
-                            if (data.error)
-                            {
+                        if (data.error)
+                        {
                             
-                                alert(data.error.message+ " Data.error is false");
-                            }
-                            else if (!data.result)
+                            alert(data.error.message+ " Data.error is false");
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {
+                            for (var j in data.result.fields)
                             {
-                                alert("Something is wrong");
-                            }
-                            else 
-                            {
-                                
-                                var fieldName = data.result.fields[0].name;
+                                var fieldName = data.result.fields[j].name;
                                 if (fieldName == "bug_severity")
                                 {
                                     //The way our Bugzilla is set up is that Severity=>Job Type
                                     fieldName="jobtype";
                                 }
-                                if (fieldName == "product")
-                                {
-                                    alert(fieldName);
-                                    for (var i in data.result.fields[0].values) 
-                                    {    
-                                        //get the value
-                                        var name = data.result.fields[0].values[i].name;
-                                   
-                                        alert(name);
-                                    }   
-                                }
+                               
                                 //remove all <option>s from the specified select
                                 $("#Details select[name="+fieldName+"]").empty();
                                 
 
                                 //iterate through all the allowed values for this field
-                                for (var i in data.result.fields[0].values) 
+                                for (var i in data.result.fields[j].values) 
                                 {    
                                     //get the value
-                                    var name = data.result.fields[0].values[i].name;
+                                    var name = data.result.fields[j].values[i].name;
                                    
                                     //create an option element with a value and the inner html being the name
                                     var option = $("<option>").val(name).html(name);
@@ -309,15 +305,16 @@ and open the template in the editor.
                                     $("#Details select[name="+fieldName+"]").append(option);
                                 }
                             }
-                        },
-                        error: function(jqXHR, textStatus, errorThrown){
-                            alert("(Fields)There was an error:" + textStatus);
                         }
-                    }); 
-                    var fieldName = null;
-                }
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("(Fields)There was an error:" + textStatus);
+                    }
+                }); 
+                var fieldName = null;
                 
                 
+                //An Ajax call that finds all accessible product ids. Very slow, consider revision
                 $.ajax({
                     url: "ajax_get_product_list.php",
                     type: "POST",  
@@ -344,50 +341,126 @@ and open the template in the editor.
                     }
                 });
                 
+                //A function that finds the name associated with each each id that is passed in. Very slow, consider revision
                 function getNames(productIds){
-                    
-                    
-                        $.ajax({
-                            url: "ajax_get_product_props.php",
-                            type: "POST",  
-                            data:{"ids": productIds},
-                            dataType: "json",
-                            success: function(data){
+                    $.ajax({
+                        url: "ajax_get_product_props.php",
+                        type: "POST",  
+                        data:{"ids": productIds},
+                        dataType: "json",
+                        success: function(data){
                         
-                                if (data.error)
-                                {
+                            if (data.error)
+                            {
                             
-                                    alert(data.error.message+ " Data.error is false");
-                                }
-                                else if (!data.result)
-                                {
-                                    alert("Something is wrong");
-                                }
-                        
-                                var name = data.result[0].products[0].name;
-                                   
-                                //create an option element with a value and the inner html being the name
-                                var option = $("<option>").val(name).html(name);
-
-                                //append the option to the <select>
-                                $("#Details select[name=product]").append(option);
-                                
-                                
-                        
-                            },
-                            error: function(jqXHR, textStatus, errorThrown){
-                                alert("There was an error:" + textStatus);
+                                alert(data.error.message+ " Data.error is false");
                             }
-                        });
+                            else if (!data.result)
+                            {
+                                alert("Something is wrong");
+                            }
+                            else
+                            {
+                                for (var i in data.result.products)
+                                {
+                                    var name = data.result.products[i].name;
+                                
+                                    //create an option element with a value and the inner html being the name
+                                    var option = $("<option>").val(name).html(name);
+
+                                    //append the option to the <select>
+                                    $("#Details select[name=product]").append(option);
+                                } 
+                                //Automatically populates the components and version fields based off of the first(default) product
+                                var firstProduct = $("#Details select[name=product] option").first().html(); 
+                                getCompsVers(firstProduct);
+                            }
+                                
+                        
+                        },
+                        error: function(jqXHR, textStatus, errorThrown){
+                            alert("There was an error:" + textStatus);
+                        }
+                    });
                     
                 };
-            });
                 
+                
+                //Retrieves all of the available components and versions for a given product. Very slow, consider revision
+                function getCompsVers(name){
+                    $.ajax({
+                        url: "ajax_get_field_values.php",
+                        type: "POST",
+                        data: {
+                            //"ids": id,
+                            "name": ["component", "version"],
+                            "value_field": "product"
+                            /*"visibility_field": "Sam's Widget",
+                            "values": {"visibility_values": ["Sam's Widget"]}*/
+                        },    
+                        dataType: "json",
+                    
+                        success: function(data, status){
+                        
+                      
+                            if (data.error)
+                            {
+                            
+                                alert(data.error.message+ " Data.error is false");
+                            }
+                            else if (!data.result)
+                            {
+                                alert("Something is wrong");
+                            }
+                            else 
+                            {   
+                                
+                                for (var j in data.result.fields)
+                                { 
+                                    var fieldName = data.result.fields[j].name;
+                                
+                                    //remove all <option>s from the specified select
+                                    $("#Details select[name="+fieldName+"]").empty();
+                                
+                                    //iterate through all the allowed values for this field
+                                    for (var i in data.result.fields[j].values) 
+                                    {   
+                                        //get the value
+                                        var visval =  data.result.fields[j].values[i].visibility_values[0];
+                                        
+                                        //This is a crude method of weeding out which values should be displayed based off of the product name
+                                        if (visval == name)
+                                        {                                        
+                                            var comp = data.result.fields[j].values[i].name; //create an option element with a value and the inner html being the name
+                                            var option = $("<option>").val(name).html(comp);
+
+                                            //append the option to the <select>
+                                            $("#Details select[name="+fieldName+"]").append(option);
+                                        }                                    
+                                    
+                                    
+                                    }
+                                }
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown){
+                            alert("(Fields)There was an error:" + textStatus);
+                        }
+                    });
+                };
+                
+            });
+              
+              
+              
+            /*--------------------End Document.Ready------------------------*/
+            
+            
             
             function editCard(cardId) {
                 var card = $('#'+cardId);
             
-                //Populates the feilds
+                //Populates the fields
                 $("#title").val(card.data("title"));
                 $("#jobtype").val(card.data("jobtype"));
                 $("#user").val(card.data("user"));
@@ -600,7 +673,7 @@ and open the template in the editor.
                 }
             }
             
-            //Card creation function, adds the card to the page, eventually will handle database entry? 
+            //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, Jobtype, priority
             function  createCard(col,title){ 
                    
                    

@@ -1,9 +1,11 @@
 <?php
 
-$ids = filter_input_array(INPUT_POST, "ids");
-$outputArray = array();
-/*foreach ($ids as &$value) {
-    $params = array(array("ids" => $value));
+$ids =  $_REQUEST['ids'];
+
+foreach ($ids as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_NUMBER_INT);
+}
+    $params = array(array("ids" => $ids));
 
     $params = json_encode($params);
 
@@ -42,8 +44,8 @@ $outputArray = array();
 
     // Close the cURL resource, and free system resources
     curl_close($ch);
+
     
-    array_push($outputArray, $output);
-}*/
-echo $ids;
+
+echo $output;
 ?>
