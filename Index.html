@@ -1,7 +1,3 @@
-<!--
-To change this template, choose Tools | Templates
-and open the template in the editor. 
--->
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
     <head>
@@ -113,9 +109,9 @@ and open the template in the editor.
                 //Creates the edit dialog box
                 $( "#dialogAddEditCard" ).dialog({
                     autoOpen: false,
-                    minHeight: 500,
+                    minHeight: 560,
                     minWidth: 1060,
-                    height: 500,
+                    height: 560,
                     width: 1060,
                     show: { effect: 'blind', complete: function() { $("#title").focus();}},
                     hide: "explode",
@@ -171,12 +167,20 @@ and open the template in the editor.
                     //Finds and saves the column that was right clicked
                     var startCol = $($.mbMenu.lastContextMenuEl).attr("id");                
                     var endCol = $(this).html();
-               
+                    
                     //Cycles through each card in the specified column and moves them into the ending column
                     $("#"+startCol+" .card").each(function(){
+                        
                         var newLi = $('<li></li>').append(this);
-                        $("#"+endCol).append(newLi);     
+                        $("#"+endCol).append(newLi); 
+                        var cardId = $(this).attr("id");
+                        updatePosition(endCol, cardId);
+                        
                     });
+                    
+                    //Previously the moveall method moved the cards but left all of the <li>s behind. This removes those(except the first: The banner)
+                    $("#"+startCol+" li:not(:first-child)").remove();
+                    
                     closeContextMenu(); 
                 });
                 
@@ -185,7 +189,11 @@ and open the template in the editor.
                     var card = $($.mbMenu.lastContextMenuEl).parent();
                     var newLi = $('<li></li>').append(card);
                     var column = $(this).html();
-                    $("#"+column).append(newLi); 
+                    $("#"+column).append(newLi);
+                    var cardId = $($.mbMenu.lastContextMenuEl).attr("id");
+                    
+                    updatePosition(column, cardId);
+                                       
                     closeContextMenu(); 
                 });
                 
@@ -201,7 +209,7 @@ and open the template in the editor.
                     closeContextMenu(); 
                 })
                 
-                
+                //Handles the edit dialog background color change based off of user selection
                 $("#jobtype").change(function () {
                     var job = $(this).val();
                     $("#jobtype option").each(function(){
@@ -216,6 +224,18 @@ and open the template in the editor.
                     var name = $(this).val();
                     getCompsVers(name);
                 });
+                
+                //Updates the cards position whenever it is moved
+                $( ".column, .tablists" ).sortable({
+                    receive: function(event, ui) { 
+                        
+                        var col = $(this).attr("id");
+                        updatePosition1(col);
+                    }
+                });
+                
+                
+                
                 //Initializes the TinyMCE Richtext editior
                 tinyMCE.init({
                     // General options
@@ -253,7 +273,7 @@ and open the template in the editor.
                 //And then also find some way to associate their field's name with this page's select dropdowns. (id or name maybe?)
                 //also, note, I put this in the document.ready so that I'd be sure that the dialog code exists before I try to modify it.
                 //The Array of fields that we want to find values for
-                var formFields = ["priority","bug_severity"];
+                var formFields = ["priority","bug_severity", "bug_status"];
             
                 //A single Ajax call that finds all the specified field option values                
                 $.ajax({
@@ -385,7 +405,7 @@ and open the template in the editor.
                 
                 
            
-                var bugArray = [4111,5001,9003,9215,13213,5202];
+                var bugArray = [772,1294,9003,9215,13213,5202];
                 //Adds existing cards to the page  
                 $.ajax({
                     url: "ajax_get_single_bug.php",
@@ -399,10 +419,43 @@ and open the template in the editor.
                         for (var i in data.result.bugs)
                         {
                             var bug = data.result.bugs[i];
-                            createCard("Done", bug.component, bug.id, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, 10, "Test");
+                            createCard(bug.id,"Done", bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, 10, "Test", bug.status);
                         }
                     }
                 });
+                
+                
+                $.ajax({
+                    url: "ajax_modify_bug.php",
+                    type: "POST",
+                    data: { 
+                        "bug_id": 1294,
+                       
+                        "priority": "P3"
+                        
+                    },
+                    dataType: "json",
+                    success: function(data, status){
+                
+                        if (data.error)
+                        {
+                            alert(data.error.message);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {
+                            //Will eventually hold the card.data map below. Need to make the Bug.Update work first
+                        }
+                        
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                }); 
+                
                 
             });
               
@@ -459,9 +512,10 @@ and open the template in the editor.
                                         
                                     //This is a crude method of weeding out which values should be displayed based off of the product name
                                     if (visval == name)
-                                    {                                        
-                                        var comp = data.result.fields[j].values[i].name; //create an option element with a value and the inner html being the name
-                                        var option = $("<option>").val(name).html(comp);
+                                    {    
+                                        //create an option element with a value and the inner html being the name                                     
+                                        var comp = data.result.fields[j].values[i].name;
+                                        var option = $("<option>").val(comp).html(comp);
 
                                         //append the option to the <select>
                                         $("#Details select[name="+fieldName+"]").append(option);
@@ -481,47 +535,52 @@ and open the template in the editor.
             function editCard(cardId) {
                 var card = $('#'+cardId);
                 getCompsVers(card.data("product"));
-                    //Changes the edit dialog to have the correct fields for the selected card's Product. 
-                    // TODO: The component and version retrieval is too slow and it changes after the dialog is opened and therefore removes the proper component and version selection
-                    //Bugzilla solves this by allowing the product to change without component update and then upon save a new page is opened confirming the change and prompting new version and component values
+                //Changes the edit dialog to have the correct fields for the selected card's Product. 
+                // TODO: The component and version retrieval is too slow and it changes after the dialog is opened and therefore removes the proper component and version selection
+                //Bugzilla solves this by allowing the product to change without component update and then upon save a new page is opened confirming the change and prompting new version and component values
                 
-                    // TODO: Create and new dialog if the the product name is changed  
-                    //Populates the fields
-                    $("#title").val(card.data("title"));
-                    $("#jobtype").val(card.data("jobtype"));
-                    $("#user").val(card.data("user"));
-                    $("#priority").val(card.data("priority"));
-                    $("#whichColumn").val(card.data("whichColumn"));
-                    $("#dueDate").val(card.data("dueDate"));
-                    $("#size").val(card.data("size"));
-                    $("#description").val(card.data("description"));
-                    $("#product").val(card.data("product"));  
-                    $("#version").val(card.data("version"));
-                    $("#component").val(card.data("component"));
+                // TODO: Create and new dialog if the the product name is changed  
+                //Populates the fields
+                $("#title").val(card.data("title"));
+                $("#jobtype").val(card.data("jobtype"));
+                $("#user").val(card.data("user"));
+                $("#priority").val(card.data("priority"));
+                //$("#whichColumn").val(card.data("whichColumn"));
+                $("#dueDate").val(card.data("dueDate"));
+                $("#size").val(card.data("size"));
+                $("#description").val(card.data("description"));
+                $("#product").val(card.data("product"));  
+                $("#version").val(card.data("version"));
+                $("#component").val(card.data("component"));
+                $("#bug_status").val(card.data("status"));
               
                 
-                    //Adds edit specifc dialog properties
-                    $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
-                    $("#edit-tabs ul li").show();
-                    $("label[for=whichColumn],#whichColumn").hide();
-                    dialogDisplay(card.data("jobtype"));
+                //Adds edit specifc dialog properties
+                $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
+                $("#edit-tabs ul li").show();
+                $("label[for=whichColumn],#whichColumn").hide();
+                dialogDisplay(card.data("jobtype"));
                 
-                    $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
-                        "Save Card": function() {
+                $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
+                    "Save Card": function() {
                         
-                            $('#'+cardId+" .cardText").html($("#title").val());
-                            displayHandler(card); 
-                            // TODO: Will need to send this info to the PHP file with modify function
-                            ajaxEditBug($("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#jobtype").val(), $("#title").val(), $("#component").val(),$("#user").val(),$("#whichColumn").val(),$("#dueDate").val(), $("#size").val(), $("#description").val()); 
+                        $('#'+cardId+" .cardText").html($("#title").val());
+                        displayHandler(card); 
+                        
+                        //Finds the current column of the selected card
+                        var col = card.parent().parent().attr("id");
+                        
+                        //TODO: Will need to send this info to the PHP file with modify function                    //Severity            //Summary
+                        ajaxEditBug(col, $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#jobtype").val(), $("#title").val(), $("#version").val(),$("#user").val(),$("#dueDate").val(), $("#size").val(), $("#description").val()); 
                          
-                            $( this ).dialog( "close" );    
-                        },
-                        Cancel: function() {
-                            $( this ).dialog( "close" );
-                        }   
-                    });
+                        $( this ).dialog( "close" );    
+                    },
+                    Cancel: function() {
+                        $( this ).dialog( "close" );
+                    }   
+                });
                 
-                    $( "#dialogAddEditCard" ).dialog( "open" );
+                $( "#dialogAddEditCard" ).dialog( "open" );
                 
             }
             
@@ -540,7 +599,7 @@ and open the template in the editor.
                         }
                         else{                        
                             //Calls my card creation method, physically adds the card to the page with proper name and location(for now).
-                            createCard($("#whichColumn").val(), $("#title").val()); 
+                            // createCard($("#whichColumn").val(), $("#title").val()); 
                             displayHandler($("#"+$("#title").val().replace(/\s+/g, '')));   
                             $( this ).dialog( "close" ); 
                         } 
@@ -558,7 +617,7 @@ and open the template in the editor.
                 //Handles the removal of the card from the page(and eventually from the database)
                 $($.mbMenu.lastContextMenuEl).parent().remove();
                 
-                //Insert database interfacing here
+                //Insert bugzilla interfacing here
                 
             }
             
@@ -581,6 +640,7 @@ and open the template in the editor.
                 editCardContextMenu();
             }
             
+            /*<editor-fold>*/
             function displayHandler(card) {
                 //Finds the card's values    
                 var cardRef = "#"+card.attr("id");
@@ -676,7 +736,9 @@ and open the template in the editor.
                 $(cardRef+ " .iconBar .sizeBack .sizeIcon").html(size).attr({"title": "Size: "+ size});
                 
             }
-                
+            /*</editor-fold>*/  
+            
+            
             function daysUntil(year, month, day) {
                 var now = new Date(),
                 dateEnd = new Date(year, month, day), // months are zero-based
@@ -699,10 +761,49 @@ and open the template in the editor.
                 }
             }
             
-            //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, Jobtype, priority
-            function  createCard(col, component, id, priority, product, severity, summary, version, user, dueDate, size, description){ 
+            //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, Jobtype, priority. 
+            //Note: Id has been added for testing purposes
+            function  createCard(/**TEST ONLY**/ id,col, component,   priority, product, severity, summary, version, user, dueDate, size, description, status){ 
                    
-                 
+                /*$.ajax({
+                    url: "ajax_create_bug.php",
+                    type: "POST",
+                    data: {    
+                        /*"whichColumn": col
+                        "component": component,
+                        "priority": priority,
+                        "product": product,
+                        "severity": severity,
+                        "summary": summary,
+                        "version": version
+                        /*"component": component,
+                    },
+                    dataType: "json",
+                    success: function(data, status){
+                
+                        if (data.error)
+                        {
+                            alert(data.error.message);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {
+                            //Card creation logic will be placed here as soon as the Bug.create/Bug.update issues have been resolved
+                        }
+                        
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });*/
+                //TODO All of the follwing creation code needs to be moved up into the final else: Only want to append a new card if one is successfully stored on Bugzilla
+                
+                //The Bugzilla Documentation said that the create method will only return the new ID upon completion
+                //var id = data.result.id[0];
+                           
                 var newCard = $('<div id="'+id+'" class="card "><div class="cardText">'+summary+'</div><div class="iconBar"></div></div>');
                     
                 newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}, Task");
@@ -711,9 +812,8 @@ and open the template in the editor.
                                                                        
                 $("#"+col.replace(/\s+/g, '')).append(newLi);
                     
-                // var summary = $("#title").val();
-                //ajaxEditBug(4111, summary);
-                    
+                //TODO Move this into the success block of the AJAX call because we only want the local data to change if a new card i successfully created
+                //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
                 newCard.data({
                     "title": summary,
                     "jobtype": severity,
@@ -725,7 +825,8 @@ and open the template in the editor.
                     "whichColumn": col,
                     "dueDate": dueDate,
                     "size": size,
-                    "description": description
+                    "description": description,
+                    "status": status
                         
                 });
                     
@@ -745,18 +846,12 @@ and open the template in the editor.
                     onContextualMenu:function(o,e){}
 
                 });
-                    
-                //Add Database data entry here, need to pass in all parameters  
-                    
+                
             }
-            
-            // <editor-fold>
-            //...any code...
-            //</editor-fold>
-            
+
             
             // TODO: Need to find a way to store the column info on the Bugzilla server. Make a new field? Use an existing one that is otherwise rarely utilized? 
-            function ajaxEditBug(col, component, id, priority, product, severity, summary, version, user, dueDate, size, description){
+            function ajaxEditBug(col, component, id, priority, product, severity, summary, version, user, dueDate, size, description, status){
                 $.ajax({
                     url: "ajax_modify_bug.php",
                     type: "POST",
@@ -767,10 +862,11 @@ and open the template in the editor.
                         "product": product,
                         "severity": severity,
                         "summary": summary,
-                        "version": version
+                        "version": version,
+                        "status": status
                     },
                     dataType: "json",
-                    success: function(data, status){
+                    success: function(data){
                 
                         if (data.error)
                         {
@@ -781,32 +877,91 @@ and open the template in the editor.
                             alert("Something is wrong");
                         }
                         else 
-                        {}
-                        alert("We're in");
-                        $("#"+id).data({
-                            "title": summary,
-                            "jobtype": severity,
-                            "priority": priority,
-                            "product": product,
-                            "component": component,
-                            "version": version,
-                            "user": user,
-                            "whichColumn": col,
-                            "dueDate": dueDate,
-                            "size": size,
-                            "description": description
-                        
-                        });
+                        {
+                            //Will eventually hold the card.data map below. Need to make the Bug.Update work first
+                        }
                         
                     },
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("There was an error:" + textStatus);
                     }
                 });
+                
+                //TODO Move this into the success block of the AJAX call because we only want the local data to change if the database data is changed
+                //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
+                $("#"+id).data({
+                    "whichColumn": col,
+                    "component": component,                   
+                    "product": product,
+                    "priority": priority,
+                    "jobtype": severity,
+                    "title": summary,
+                    "version": version,
+                    "user": user,
+                    "dueDate": dueDate,
+                    "size": size,
+                    "description": description,
+                    "status": status
+                });
+            }
+            
+            //An update function that stores a card position when called
+            function updatePosition(column, cardId)
+            {
+                //Automatically updates the card's position both in local data and server data. Waiting on Bug.update Resolution
+                
+                /*
+                 *
+                 *$.ajax({
+                 *  url: "ajax_modify_bug.php",
+                 *  type: "POST",
+                 *  data: { 
+                 *       "bug_id": cardId
+                 *      //TODO Need to add the below field to the Bugzilla field options
+                 *      /*"whichColumn": column
+                 *  },
+                 *  dataType: "json",
+                 *  success: function(data, status){
+                 *
+                 *      if (data.error)
+                 *      {
+                 *          alert(data.error.message);
+                 *      }
+                 *      else if (!data.result)
+                 *      {
+                 *          alert("Something is wrong");
+                 *      }
+                 *      else 
+                 *      {
+                 *          //Will eventually hold the card.data map below. Need to make the Bug.Update work first
+                 *      }
+                 *      
+                 *  },
+                 *  error: function(jqXHR, textStatus, errorThrown){
+                 *      alert("There was an error:" + textStatus);
+                 *  }
+                 *   });
+                 */
+                
+                $("#"+cardId).data({
+                    "whichColumn": column
+                });
+                    
             }
                
+            //A function that updates the whichColumn field of every card in a column
+            /*TODO I feel like this is very inefficient, also need to figure out how to OVERLOAD!! */
+            function updatePosition1(col)
+            {
+                $("#"+col+" .card").each(function(){
+                    var cardId = $(this).attr("id");
+                    updatePosition(col, cardId);
+                });
+            }
             
-           
+            function fileBug(component, priority, product, severity, summary, version){
+               
+            }
             /*$.ajax({
                 url: "ajax_get_single_bug.php",
                 type: "POST",
@@ -853,6 +1008,7 @@ and open the template in the editor.
         </script>
     </head>
     <body>
+
         <div id="dialogInvalid" class="ui-dialog-content ui-widget-content"  title="Invalid Input" >
             <p>Must Specify the Card's Title!!!</p>
         </div>
@@ -874,45 +1030,53 @@ and open the template in the editor.
                             </div>
                             <div style="float: left;">
                                 <label for="product">Product:</label>
-                                <select  name="product" id="product"  class="text ui-widget-content ui-corner-all" >
-                                </select>
+                                <select  name="product" id="product"  class="text ui-widget-content ui-corner-all" ></select>
                                 <label for="component">Component:</label>
-                                <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" >
-                                </select>
-                                <label for="version">version</label>
-                                <select  name="version" id="version"  class="text ui-widget-content ui-corner-all" >
-                                </select>
-                                <label for="jobtype">Job Type:</label>
-                                <select  name="jobtype" id="jobtype"  class="text ui-widget-content ui-corner-all" >
-                                    <!--option>Task</option>
-                                    <option>Defect</option>
-                                    <option>Improvement</option>
-                                    <option>Feature</option-->
-                                </select>
-                                <label for="user">Assigned User:</label>
-                                <select  name="user" id="user"  class="text ui-widget-content ui-corner-all" >   
-                                    <option></option>
-                                    <option>User 1</option>
-                                    <option>User 2</option>
-                                    <option>User 3</option>
-                                    <option>User 4</option>
-                                </select>
-                                <label for="priority">Priority:</label>
-                                <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all" >    
-                                    <!--option>Normal</option>
-                                    <option>Critical</option>
-                                    <option>High</option>
-                                    <option>Low</option!-->
-                                </select>
-                                <label for="whichColumn">Into Column:</label>
-                                <select  name="whichColumn" id="whichColumn"  class="text ui-widget-content ui-corner-all" >     
-                                    <option>To Do</option>
-                                    <option>Doing</option>
-                                    <option>Done</option> 
-                                    <option>Backlog</option> 
-                                    <option>Archive</option>                            
-                                </select>
-                                <div>
+                                <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" ></select>
+                                <div style="float: top">
+                                    <div style="float: left;">
+                                        <label for="version">version</label>
+                                        <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all, half">    </select>
+                                    </div>
+                                    <div style="float: left; margin-left: 10px;">
+                                        <label for="jobtype">Job Type:</label>
+                                        <select  name="jobtype" id="jobtype"  class=" text ui-widget-content ui-corner-all, half" ></select>
+                                    </div>
+                                </div>
+                                <div style="float: top">
+                                    <div style="float: left;">
+                                        <label for="bug_status">Status:</label>
+                                        <select  name="bug_status" id="bug_status"  class="text ui-widget-content ui-corner-all, half" ></select>
+                                    </div>
+                                    <div style="float: left; margin-left: 10px;">
+                                        <label for="user">Assigned User:</label>
+                                        <select  name="user" id="user"  class="text ui-widget-content ui-corner-all, half" >   
+                                            <option></option>
+                                            <option>User 1</option>
+                                            <option>User 2</option>
+                                            <option>User 3</option>
+                                            <option>User 4</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="float: top">
+                                    <div style="float: left;">
+                                        <label for="priority">Priority:</label>
+                                        <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all, half">    </select>
+
+                                    </div>
+                                    <div style="float: left; margin-left: 10px;">
+                                        <label for="whichColumn">Into Column:</label>
+                                        <select  name="whichColumn" id="whichColumn"  class="text ui-widget-content ui-corner-all, half" >     
+                                            <option>To Do</option>
+                                            <option>Doing</option>
+                                            <option>Done</option> 
+                                            <option>Backlog</option> 
+                                            <option>Archive</option>                            
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="float: left;">
                                     <div style="float: left;">
                                         <label for="dueDate">Due Date:</label>
                                         <input type="text" name="dueDate" id="dueDate" class="Dates text ui-widget-content ui-corner-all" style="width:100px;"/>
@@ -923,7 +1087,7 @@ and open the template in the editor.
                                     </div>
                                 </div>
                             </div>
-                            <div style="float: left; margin-left: 10px; width: 50%; height: 200px;">
+                            <div style="float: left; margin-left: 10px; width: 50%; height: 680px;">
                                 <span style="width: 75%;">
                                     <label for="description">Description:</label>
                                     <textarea  name="description" id="description" class="text ui-widget-content ui-corner-all" style="width:95%; height: 95%; max-height: 100%; max-width: 100%;"  ></textarea> 
@@ -932,6 +1096,7 @@ and open the template in the editor.
                         </fieldset>
                     </form>
                 </div>
+
                 <div id="Comments">
                     <span>
                         <label for="comments">Comments</label>

@@ -204,3 +204,6 @@ div#users-contain table td, div#users-contain table th {
     color: white;
     overflow: hidden;
 }
+.half{
+   width:135px !important; 
+}
