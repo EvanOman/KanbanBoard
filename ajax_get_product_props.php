@@ -1,4 +1,5 @@
 <?php
+include "config.php";
 
 $ids =  $_REQUEST['ids'];
 
@@ -21,7 +22,7 @@ foreach ($ids as $value) {
 
     // Now set some options (most are optional)
     // Set URL to download
-    curl_setopt($ch, CURLOPT_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
+    curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
 
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);

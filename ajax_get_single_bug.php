@@ -1,4 +1,5 @@
 <?php
+include "config.php";
 
 $bugId = $_REQUEST['bug_id'];
 foreach ($bugId as $value) {
@@ -11,6 +12,7 @@ $params = json_encode($params);
 
 $data = array("method" => "Bug.get", "params" => $params);
 
+
 // is cURL installed yet?
 if (!function_exists('curl_init')) {
     die('Sorry cURL is not installed!');
@@ -20,8 +22,8 @@ if (!function_exists('curl_init')) {
 $ch = curl_init();
 
 // Now set some options (most are optional)
-// Set URL to download
-curl_setopt($ch, CURLOPT_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
+// Set URL to download 
+curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 

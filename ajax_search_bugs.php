@@ -2,22 +2,23 @@
 include "config.php";
 //bugzilla_login();
 
-
+/*$bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
 $component = filter_input(INPUT_POST, "component", FILTER_SANITIZE_STRING);
 $priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
 $product = filter_input(INPUT_POST, "product", FILTER_SANITIZE_STRING);
 $severity = filter_input(INPUT_POST, "severity", FILTER_SANITIZE_STRING);
 $summary = filter_input(INPUT_POST, "summary", FILTER_SANITIZE_STRING);
 // TODO This field is sometimes a field and sometimes an int, need to figure out how to sanitize
-$version = filter_input(INPUT_POST, "version");
-
-$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "summary" => $summary,"component" => $component, 
-    "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));
-
+$version = filter_input(INPUT_POST, "version");*/
+$bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
+$priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
+/*$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban","ids" => $bugId, "summary" => $summary,"component" => $component, 
+    "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));*/
+$params = array(array("login" => "dr.ecksk@gmail.com", "password" => "kanban"));
 
 $params = json_encode($params);
 
-$data = array("method" => "Bug.create", "params" => $params);
+$data = array("method" => "User.login", "params" => $params);
 
 /* TODO Need to enable cookies, recieve cookies from the bugzilla server upon login, and somehow send them with each modify call*/
 
@@ -31,6 +32,8 @@ if (!function_exists('curl_init')) {
 $ch = curl_init();
 
 // Now set some options (most are optional)
+// Set URL to download  
+
 curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
 
@@ -60,10 +63,10 @@ else
 {
     echo $output;
 }
-//<editor-fold>
+
 // Close the cURL resource, and free system resources
 curl_close($ch);
-//</editor-fold>
+
 
 
 

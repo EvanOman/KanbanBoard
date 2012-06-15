@@ -13,12 +13,13 @@ $bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
 $priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
 /*$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban","ids" => $bugId, "summary" => $summary,"component" => $component, 
     "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));*/
-$params = array(array("login" => "dr.ecksk@gmail.com", "password" => "kanban"));
+//$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "ids"=>$bugId, "priority"=>"priority"));
+$params = array(array("method" => "Bug.update", "Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "ids"=>$bugId, "priority"=>"priority"));
 
 $params = json_encode($params);
 
-$data = array("method" => "User.login", "params" => $params);
-
+//$data = array("method" => "Bug.update", "params" => $params);
+  $data = $params;
 /* TODO Need to enable cookies, recieve cookies from the bugzilla server upon login, and somehow send them with each modify call*/
 
 

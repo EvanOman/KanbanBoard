@@ -1,6 +1,6 @@
 <?php
-
-$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban"));
+include "config.php";
+$params = array(array("Bugzilla_login" => "evan.oman@blc.edu", "Bugzilla_password" => "password"));
 
 $params = json_encode($params);
 
@@ -15,8 +15,8 @@ if (!function_exists('curl_init')) {
 $ch = curl_init();
 
 // Now set some options (most are optional)
-// Set URL to download http://software-pc/jsonrpc.cgi
-curl_setopt($ch, CURLOPT_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
+// Set URL to download
+curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
 
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -37,8 +37,14 @@ curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 // Download the given URL, and return output
 $output = curl_exec($ch);
 
+if($output === false)
+{
+    echo 'Curl error: ' . curl_error($ch);
+}
+
+
 // Close the cURL resource, and free system resources
 curl_close($ch);
 
-echo $output;
+echo var_dump($output);
 ?>

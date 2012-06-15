@@ -2,26 +2,15 @@
 
 var request = require('request');
 request({
-    url:'http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi', 
-    method: 'POST', 
-    followAllRedirects: true, 
-    json:{ 
-        "Bugzilla_login": "dr.ecksk@gmail.com",
-        "Bugzilla_password": "kanban",
-        "method": "Bug.get",
-        "ids": [4111],
-        "params": [ {
-            "ids": [4111], 
-            "names": ["user@domain.com"]
-        } ]
+    method: 'POST',
+    url: 'http://software-pc/PhpProject4/test_file.php',
+    json: true,
+    headers: {'Content-type': 'application/json'},
+    body: {
+        user: "hello"
     }
-}, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-        console.log(body) // Print the google web page.
-    }
-    else 
-    {
-        console.log(response.statusCode);
-    }
+},
+function(error, response, data) {
+    console.log(data);
+});
 
-})

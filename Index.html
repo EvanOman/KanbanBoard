@@ -67,15 +67,17 @@
                     $.fn.removeMbMenu($.mbMenu.options.actualMenuOpener);
                 }
                 
-                
-                $("#btnBacklog").click(function(){
-                    handleTabLists("#Backlog");
+                //Handles the tab buttons dynamically
+                $(".toolbar .btnTab").click(function(){
+                    var tab =  $(this).html();
+                   
+                    handleTabLists("#"+tab);
                 });
                 
-                $("#btnArchive").click(function(){
+                /*$("#btnArchive").click(function(){
                     handleTabLists("#Archive");
-                });
-                
+                });*/
+               
                 $("#btnAddCard").click(function(){
                     addCard();
                 });                              
@@ -308,7 +310,21 @@
                                 //remove all <option>s from the specified select
                                 $("#Details select[name="+fieldName+"]").empty();
                                 
+                                if (fieldName == "priority")
+                                {
+                                    //Populates the priority context menu as well
+                                    for (var i in data.result.fields[j].values) 
+                                    {    
+                                        //get the value
+                                        var name = data.result.fields[j].values[i].name;
+                                   
+                                        //create an option element with a value and the inner html being the name
+                                        var a = $("<a>").html(name);
 
+                                        //append the option to the <select>
+                                        $("#setPriority").append(a);
+                                    }  
+                                }
                                 //iterate through all the allowed values for this field
                                 for (var i in data.result.fields[j].values) 
                                 {    
@@ -403,7 +419,14 @@
                     
                 };
                 
-                
+                $("body ul").each(function(){
+                    var col = $(this).attr("id");
+                    
+                    var option = $("<a>").html(col);
+
+                    //append the option to the <select>
+                    $("#moveAllCards, #moveCardTo").append(option);
+                });
            
                 var bugArray = [772,1294,9003,9215,13213,5202];
                 //Adds existing cards to the page  
@@ -415,17 +438,30 @@
                     },
                     dataType: "json",
                     success: function(data, status){
-                        //alert(data.result.bugs[0].summary);
-                        for (var i in data.result.bugs)
+                        
+                        if (data.error)
                         {
-                            var bug = data.result.bugs[i];
-                            createCard(bug.id,"Done", bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, 10, "Test", bug.status);
+                            
+                            alert(data.error.message+ " Data.error is false");
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else
+                        {
+                            //alert(data.result.bugs[0].summary);
+                            for (var i in data.result.bugs)
+                            {
+                                var bug = data.result.bugs[i];
+                                createCard(bug.id,"Done", bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, 10, "Test", bug.status);
+                            }
                         }
                     }
                 });
                 
                 
-                $.ajax({
+                /*$.ajax({
                     url: "ajax_modify_bug.php",
                     type: "POST",
                     data: { 
@@ -454,7 +490,7 @@
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("There was an error:" + textStatus);
                     }
-                }); 
+                }); */
                 
                 
             });
@@ -464,72 +500,76 @@
             /*--------------------End Document.Ready------------------------*/
             
         
-        
+            var componentData = null;
         
             //Retrieves all of the available components and versions for a given product. Very slow, consider revision
             function getCompsVers(name){
-                $.ajax({
-                    //Need this to be completed before other actions occur:
-                    async: false,
-                    url: "ajax_get_field_values.php",
-                    type: "POST",
-                    data: {
-                        //"ids": id,
-                        "name": ["component", "version"],
-                        "value_field": "product"
-                        /*"visibility_field": "Sam's Widget",
+                if (componentData == null)
+                {
+                    $.ajax({
+                        //Need this to be completed before other actions occur:
+                        //async: false,
+                        url: "ajax_get_field_values.php",
+                        type: "POST",
+                        data: {
+                            //"ids": id,
+                            "name": ["component", "version"],
+                            "value_field": "product"
+                            /*"visibility_field": "Sam's Widget",
                             "values": {"visibility_values": ["Sam's Widget"]}*/
-                    },    
-                    dataType: "json",
+                        },    
+                        dataType: "json",
                     
-                    success: function(data, status){
+                        success: function(data, status){
                         
                       
-                        if (data.error)
-                        {
+                            if (data.error)
+                            {
                             
-                            alert(data.error.message+ " Data.error is false");
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                        }
-                        else 
-                        {   
-                                
-                            for (var j in data.result.fields)
-                            { 
-                                var fieldName = data.result.fields[j].name;
-                                
-                                //remove all <option>s from the specified select
-                                $("#Details select[name="+fieldName+"]").empty();
-                                
-                                //iterate through all the allowed values for this field
-                                for (var i in data.result.fields[j].values) 
-                                {   
-                                    //get the value
-                                    var visval =  data.result.fields[j].values[i].visibility_values[0];
-                                        
-                                    //This is a crude method of weeding out which values should be displayed based off of the product name
-                                    if (visval == name)
-                                    {    
-                                        //create an option element with a value and the inner html being the name                                     
-                                        var comp = data.result.fields[j].values[i].name;
-                                        var option = $("<option>").val(comp).html(comp);
-
-                                        //append the option to the <select>
-                                        $("#Details select[name="+fieldName+"]").append(option);
-                                    }                                    
-                                    
-                                    
-                                }
+                                alert(data.error.message+ " Data.error is false");
                             }
+                            else if (!data.result)
+                            {
+                                alert("Something is wrong");
+                            }
+                            else 
+                            {   
+                                componentData =  data.result.fields;
+                            
+                            }
+                        },
+                        error: function(jqXHR, textStatus, errorThrown){
+                            alert("(Fields)There was an error:" + textStatus);
                         }
-                    },
-                    error: function(jqXHR, textStatus, errorThrown){
-                        alert("(Fields)There was an error:" + textStatus);
+                    });
+                }
+                for (var j in componentData)
+                { 
+                    var fieldName = componentData[j].name;
+                                
+                    //remove all <option>s from the specified select
+                    $("#Details select[name="+fieldName+"]").empty();
+                                
+                    //iterate through all the allowed values for this field
+                    for (var i in componentData[j].values) 
+                    {   
+                        //get the value
+                        var visval =  componentData[j].values[i].visibility_values[0];
+                                        
+                        //This is a crude method of weeding out which values should be displayed based off of the product name
+                        if (visval == name)
+                        {    
+                            //create an option element with a value and the inner html being the name                                     
+                            var comp = componentData[j].values[i].name;
+                            var option = $("<option>").val(comp).html(comp);
+
+                            //append the option to the <select>
+                            $("#Details select[name="+fieldName+"]").append(option);
+                        }                                    
+                                    
+                                    
                     }
-                });
+                }
             };
             
             function editCard(cardId) {
@@ -813,7 +853,7 @@
                 $("#"+col.replace(/\s+/g, '')).append(newLi);
                     
                 //TODO Move this into the success block of the AJAX call because we only want the local data to change if a new card i successfully created
-                //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
+                //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAX call to complete in order to access bug info
                 newCard.data({
                     "title": summary,
                     "jobtype": severity,
@@ -1114,10 +1154,14 @@
         </ul> 
         <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Archive">
             <li class="bigBanners">Archive</li>      
-        </ul>     
+        </ul>    
+        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Limbo">
+            <li class="bigBanners">Limbo</li>      
+        </ul> 
         <div class="toolbar">                
-            <button id="btnBacklog">Backlog</button>
-            <button id="btnArchive">Archive</button>
+            <button class="btnTab">Backlog</button>
+            <button class="btnTab">Archive</button>
+            <button class="btnTab">Limbo</button>
             <button id="btnAddCard">Add Card</button>
         </div>
 
@@ -1141,24 +1185,10 @@
             <a action="deleteCard()">Delete Card</a>
         </div>
         <div id="moveCardTo" class="mbmenu">
-            <a>ToDo</a>
-            <a>Doing</a>
-            <a>Done</a>
-            <a>Backlog</a>
-            <a>Archive</a>
         </div>
         <div id="moveAllCards" class="mbmenu">
-            <a>ToDo</a>
-            <a>Doing</a>
-            <a>Done</a>
-            <a>Backlog</a>
-            <a>Archive</a>
         </div>
         <div id="setPriority" class="mbmenu">
-            <a>Normal</a>
-            <a>Critical</a>
-            <a>High</a>
-            <a>Low</a>
         </div>
         <div class="mbmenu" id="contextMenuColumn">            
             <a class="{menu:'moveAllCards'}">Move All Cards to</a>

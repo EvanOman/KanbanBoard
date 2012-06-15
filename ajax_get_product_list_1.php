@@ -1,26 +1,10 @@
 <?php
 include "config.php";
-
-$name = $_REQUEST['name'];
-$values = $_REQUEST['values'];
-$ids = filter_input(INPUT_POST, 'ids', FILTER_SANITIZE_NUMBER_INT);
-$value_field = filter_input(INPUT_POST, 'value_field', FILTER_SANITIZE_STRING);
-$visibility_values = filter_input(INPUT_POST, 'visibility_values', FILTER_SANITIZE_NUMBER_INT);
-$visibility_field = filter_input(INPUT_POST, 'visibility_field', FILTER_SANITIZE_STRING);
-
-foreach ($name as $value) {
-    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
-}
-
-
-
-$params = array(array("names" => $name, "id" => $ids, "value_field " => $value_field, "visibility_values" => $visibility_values, "visibility_field"=>$visibility_field, "values"=>$values));
-
-
+$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban"));
 
 $params = json_encode($params);
 
-$data = array("method" => "Bug.fields", "params" => $params);
+$data = array("method" => "Product.get_accessible_products");
 
 // is cURL installed yet?
 if (!function_exists('curl_init')) {
