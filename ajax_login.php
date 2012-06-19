@@ -1,20 +1,14 @@
 <?php
- if ($_REQUEST[method]!= NULL)
- {
-     echo "Got the data\n";
-     var_dump($_REQUEST);
- }
- else{
-     echo "Didnt work\n";
-     var_dump($_REQUEST);
- }
+include "config.php";
 
-/*include "config.php";
+$params = array(array("login" => userName, "password" => password, "remember"=>true));
 
-//$params = json_encode($params);
 
-$data = array("method" => "Bugzilla.time");
-$data = json_encode($data);
+$params = json_encode($params);
+
+$data = array( "params" => $params, "method" => "User.login","id"=> "bugs");
+
+
 // is cURL installed yet?
 if (!function_exists('curl_init')) {
     die('Sorry cURL is not installed!');
@@ -24,8 +18,8 @@ if (!function_exists('curl_init')) {
 $ch = curl_init();
 
 // Now set some options (most are optional)
-// Set URL to download
-curl_setopt($ch, CURLOPT_URL, 'http://software-pc/Bugzilla4.2/jsonrpc.cgi');
+// Set URL to download  
+curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
 
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -40,18 +34,26 @@ curl_setopt($ch, CURLOPT_HEADER, 0);
 // Should cURL return or print out the data? (true = return, false = print)
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
 // Timeout in seconds
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
 // Download the given URL, and return output
 $output = curl_exec($ch);
 
+if($output === false)
+{
+    echo json_encode(array("error" => array("message"=>'Curl error: ' . curl_error($ch))));
+}
+else 
+{
+    echo $output;
+}
+
 // Close the cURL resource, and free system resources
 curl_close($ch);
 
-echo $output;*/
 
 
 ?>

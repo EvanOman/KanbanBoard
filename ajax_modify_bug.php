@@ -14,12 +14,12 @@ $bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
 $priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
 /*$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban","ids" => $bugId, "summary" => $summary,"component" => $component, 
     "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));*/
- $params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "ids"=>$bugId, "priority"=>$priority));
+ $params = array(array("Bugzilla_login" => userName, "Bugzilla_password" => password, "ids"=>$bugId, "priority"=>$priority));
 
 
 $params = json_encode($params);
 
-$data = array( "params" => $params, "method" => "Bug.update","id"=> "bugs");
+$data = array( "params" => $params, "method" => "Bug.update","id"=> "https://landfill.bugzilla.org/bugzilla-4.2-branch/");
 
 
 
@@ -35,7 +35,7 @@ if (!function_exists('curl_init')) {
 $ch = curl_init();
 
 // Now set some options (most are optional)
-// Set URL to download  http://software-pc/jsonrpc.cgihttp://eckop.com/evan/post_check.php 
+// Set URL to download  
 curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
 

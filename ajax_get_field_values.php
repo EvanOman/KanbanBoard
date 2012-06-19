@@ -18,7 +18,7 @@ $params = array(array("names" => $name, "id" => $ids, "value_field " => $value_f
 
 $params = json_encode($params);
 
-$data = array("method" => "Bug.fields", "params" => $params);
+$data = array("method" => "Bug.fields", "params" => $params, "id"=>BUGZILLA_URL);
 
 // is cURL installed yet?
 if (!function_exists('curl_init')) {

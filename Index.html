@@ -29,6 +29,10 @@
         <script type="text/javascript">
             $(document).ready(function() {
                  
+                 
+                 
+                 
+                 
                 //Enables the sortable behavior that allows the reordering of the cards
                 $( ".column,.tablists" ).sortable({
                     connectWith: ".column,.tablists",
@@ -111,6 +115,35 @@
                
                 
                 //Creates the edit dialog box
+                $( "#dialogSearch" ).dialog({
+                    autoOpen: true,
+                    resizable: false,
+                    height: 800,
+                    width: 1400,
+                    
+                    show: { effect: 'blind', complete: function() { $("#title").focus();}},
+                    hide: "explode",
+                    modal: true,
+                    buttons: {
+                        "Save Card": function() {
+                            
+                            //Will need to add data editing code here later
+                            $( this ).dialog( "close" );
+                                                                                
+                        },
+                        Cancel: function() {
+                            $( this ).dialog( "close" );
+                        }    
+                    },
+                    
+                    //Resets all the feilds to null to allow a fresh dialog window each time
+                    close: function() {
+                        $("#Details input, #Details textarea, #Details select").val("");
+                    }
+                    
+                });
+                
+                //Creates the edit dialog box
                 $( "#dialogAddEditCard" ).dialog({
                     autoOpen: false,
                     minHeight: 560,
@@ -138,6 +171,7 @@
                     }
                     
                 });
+                
                 
                 //Allows calendar plugin
                 $( ".Dates" ).datepicker();                                  
@@ -326,8 +360,9 @@
                                 }
                                
                                 //remove all <option>s from the specified select
-                                $("#Details select[name="+fieldName+"]").empty();
+                                $("#Details select[name="+fieldName+"], Search select[name="+fieldName+"]").empty();
                                 
+                                //Priority has a context menue that needs to be populated as well
                                 if (fieldName == "priority")
                                 {
                                     //Populates the priority context menu as well
@@ -469,10 +504,7 @@
                             }
                         }
                     }
-                });
-                
-                // alert($("#setPriority a").html());
-                
+                });                             
                 
                 //Sets the priority of the card 
                 $(".p").live("click", function(){
@@ -493,7 +525,7 @@
                 });
                 
                 
-                $.ajax({
+                /*  $.ajax({
                     url: "ajax_modify_bug.php",
                     type: "POST",
                     data: { 
@@ -522,7 +554,7 @@
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("There was an error:" + textStatus);
                     }
-                }); 
+                }); */
 
                 
                 
@@ -667,6 +699,7 @@
                 $("label[for=whichColumn],#whichColumn").show();
                 $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );
                 dialogDisplay(null);
+                getCompsVers($("#product").val());
                     
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Save Card": function() {
                         if($( "#title" ).val()=="")
@@ -694,19 +727,13 @@
             }                    
             
             function searchCards() {
-                //Adds add card specifc dialog properties
-                $("#edit-tabs ul li:not(:first-child)").hide().attr({"title": "Search Terms"});
-                $( "#edit-tabs" ).tabs("select", 0);
-                $("#rightDiv").hide();
-                $("#resultsDiv").show();
-                $("#dialogAddEditCard").dialog( "option", "title", "Advanced Search" );
+          
                 
-                $("#Details input, #Details textarea, #Details select").prepend("<option></option>"); 
-                $("#Details input, #Details textarea, #Details select").val("");
-                dialogDisplay(null);
-                $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Search": function() {
+                $( "#dialogSearch" ).dialog( "option", "buttons", { "Search": function() {
   
                         //TODO Need to find a way to submit the selected value to PHP using Bug.search
+                        //Documentation: "Note that you will only be returned information about bugs that you can see. Bugs that you can't see will be entirely excluded from the results. 
+                        //So, if you want to see private bugs, you will have to first log in and then call this method."
                         $.ajax({
                             url: "ajax_search_bugs.php",
                             type: "POST",
@@ -717,8 +744,9 @@
                                 "priority":  $("#priority").val(),
                                 "product":  $("#product").val(),
                                 "severity":  $("#severity").val(),
-                                "summary":  $("#summary").val(),
+                                "summary":  $("#title").val(),
                                 "version":  $("#version").val(),
+                                "status":  $("#status").val(),
                                 "component":  $("#component").val()
                             },
                             
@@ -734,7 +762,10 @@
                                 }
                                 else 
                                 {
-                                    //Card creation logic will be placed here as soon as the Bug.create/Bug.update issues have been resolved
+                                    //Search results will be printed to the screen from here
+                                    //Bugzilla documentation states that Bug.search has the same return as Bug.get, maybe recycle the syntax
+                                    var result = data.result.bugs[0];
+                                    alert(result);
                                 }
                         
                             },
@@ -749,18 +780,8 @@
                     }
                 });
                  
-                //Changes how the dialog closes in order to return the dialog menu to the correct form 
-                $( "#dialogAddEditCard" ).dialog( "option", "close",function()  {
-                    $("#Details select").each(function(){
-                        var id = $(this).attr("id");
-                        $("#"+id+" option").first().remove();
-                    });
-                    $("#Details input, #Details textarea, #Details select").val("");
-                    $("#rightDiv").show();
-                    $("#resultsDiv").hide();
-                }
-            );
-                $( "#dialogAddEditCard" ).dialog( "open" );
+                
+                $( "#dialogSearch" ).dialog( "open" );
                 
             }
             
@@ -803,7 +824,7 @@
                 
 
                 
-                // TODO: The below works as a simplified if else statement toggling between all the classes, need to adapt to the new names
+                // TODO: Need to adapt to the new names
                 //For simplicity the following maps will be defined until we switch to the real Bugzilla: "Blocker"=>"Bug",  "Criticial"=>"TBD", "Major"=>"Feature Request", "Normal"=> "DesignBug"
                 if (job != null)
                 {
@@ -863,13 +884,24 @@
                 var year = date.getFullYear();
                 var until = daysUntil(year, month, day);
                 $(cardRef+ " .iconBar .calBack .calIcon").html(day).attr({"title": "Due: "+ dueDate + " ("+until+" days from today)"});
-                if (until <= 7)
+                if (until <= 7 && until > 0)
                 {
                     $(cardRef+ " .iconBar .calBack .calIcon").addClass("calIconWeek");
                 }
                 else
                 {
                     $(cardRef+ " .iconBar .calBack .calIcon").removeClass("calIconWeek");    
+                }
+                
+                
+                if (until <= 0)
+                {
+                    $(cardRef+ " .iconBar .calBack .calIcon").addClass("calIconNeg");
+                    $(cardRef+ " .iconBar .calBack .calIcon").attr({"title": "Due: "+ dueDate + " ("+(-until)+" days ago)"});
+                }
+                else
+                {
+                    $(cardRef+ " .iconBar .calBack .calIcon").removeClass("calIconNeg");
                 }
                 if (until == 0)
                 {
@@ -1222,13 +1254,7 @@
                                     <label for="description">Description:</label>
                                     <textarea  name="description" id="description" class="text ui-widget-content ui-corner-all" style="width:95%; height: 95%; max-height: 100%; max-width: 100%;"  ></textarea> 
                                 </span>
-                            </div>
-                            <div id="resultsDiv" style="float: left; margin-left: 10px; width: 665px; height: 325px;display: none;">
-                                <span style="width: 75%;">
-                                    <label for="results">Results</label>
-                                    <div  name="results" id="results" class="text ui-widget-content ui-corner-all" style="width:95%; height: 95%; max-height: 100%; max-width: 100%;"  ></div> 
-                                </span>
-                            </div>
+                            </div>                            
                         </fieldset>
                     </form>
                 </div>
@@ -1244,6 +1270,65 @@
                 </div>
             </div>
         </div>   
+        <div id="dialogSearch" class="ui-dialog-content ui-widget-content"  title="Advanced Search" >
+            <div id="search">
+                <form style="height:200px;">
+                    <fieldset style="margin-top: 10px;">
+                        <div class="box"style="float:top; max-height: 40px; width:400px;">
+                            <label for="title" style="float:left; margin-right: 10px;">Summary:</label>
+                            <textarea  name="title" id="searchSummary" class="text ui-widget-content ui-corner-all" style="float:left !important; width:auto; height: 20px; max-height: 60px; width:300px;"  ></textarea>
+                        </div>
+                        <div style="float: left; width:100%">
+                            <div class="box">
+                                <label for="product"class="searchLabel">Product:</label>
+                                <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                            </div>
+                            <div class="box">
+                                <label for="component"class="searchLabel">Component:</label>
+                                <select  name="component" id="searchComponent"  class="text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                            </div>
+                            <div class="box">
+                                <label for="bug_status"class="searchLabel">Status:</label>
+                                <select  name="bug_status" id="searchBug_status"  class="text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                            </div>
+                            <div class="box">
+                                <label for="resolution"class="searchLabel">Resolution:</label>
+                                <select  name="resolution" id="searchResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                            </div>
+                        </div>                        
+                    </fieldset>
+                </form>
+                <div id="Results" class="ui-widget">                 
+                    <div id="users-contain" class="ui-widget" >
+                        <h1>Bugs:</h1>
+                        <table id="users" class="ui-widget ui-widget-content" cellspacing="0" cellpadding="4" width="100%">
+                            <thead>
+                                <tr class="ui-widget-header ">
+                                    <th colspan="1">ID</th> 
+                                    <th colspan="1">Product</th> 
+                                    <th colspan="1">Component</th> 
+                                    <th colspan="1">Assignee</th> 
+                                    <th colspan="1">Status</th>  
+                                    <th colspan="1">Resolution</th> 
+                                    <th colspan="1">Summary</th> 
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>ID</td> 
+                                    <td>Product</td> 
+                                    <td>Component</td> 
+                                    <td>Assignee</td> 
+                                    <td>Status</td>  
+                                    <td>Resolution</td> 
+                                    <td>Summary</td>  
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Backlog" > 
             <li class="bigBanners">Backlog</li>      

@@ -142,9 +142,9 @@ div#users-contain table {
 }
 
 div#users-contain table td, div#users-contain table th { 
-    border: 1px solid #eee;
+    /*border: 1px solid #eee;*/
     padding: .6em 10px; 
-    text-align: left; 
+    text-align: center; 
 }
 
 .ui-dialog .ui-state-error { 
@@ -217,6 +217,9 @@ div#users-contain table td, div#users-contain table th {
 .calIconWeek{
     background-image: url('images/CalendarWeek.png') !important;
 }
+.calIconNeg{
+    background-image: url('images/Calendar.Neg.png') !important;
+} 
 .sizeIcon{
     background-image: url('images/Size.png') !important;
     color: white;
@@ -227,4 +230,30 @@ div#users-contain table td, div#users-contain table th {
 }
 .btnTab{
 
+}
+.searchLabel{
+    float:top !important;
+    margin-bottom:0;
+}
+#search select{
+    float: left;
+    width: 100%;
+    height:100%;
+}
+.box{
+    float: left;
+    margin-left: 10px;
+    width:200px;
+    height:100px;
+}
+#dialogSearch {
+    font-size: 15px;
+}
+#Results{
+    float: top;
+    margin:10px;
+    width:1350px;
+}
+#users-contain{
+    width:1350px !important;
 }

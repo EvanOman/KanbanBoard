@@ -8,17 +8,17 @@ $priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
 $product = filter_input(INPUT_POST, "product", FILTER_SANITIZE_STRING);
 $severity = filter_input(INPUT_POST, "severity", FILTER_SANITIZE_STRING);
 $summary = filter_input(INPUT_POST, "summary", FILTER_SANITIZE_STRING);
+$status = filter_input(INPUT_POST, "status", FILTER_SANITIZE_STRING);
 // TODO This field is sometimes a field and sometimes an int, need to figure out how to sanitize
 $version = filter_input(INPUT_POST, "version");
 $bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
 $priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
-$params = array(array("summary" => $summary,"component" => $component, 
-    "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));
-//$params = array(array("login" => userName, "password" => password ));
+$params = array(array("Bugzilla_login"=> userName, "Bugzilla_password"=>password,  "summary" => $summary,"component" => $component, 
+    "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version, "bug_status"=>$status, "bug_severity"=>$severity));
 
 $params = json_encode($params);
 
-$data = array("method" => "Bug.search", "params" => $params);
+$data = array("method" => "Bug.search", "params" => $params, "id"=>BUGZILLA_URL);
 
 
 
