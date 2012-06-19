@@ -16,8 +16,6 @@ foreach ($name as $value) {
 
 $params = array(array("names" => $name, "id" => $ids, "value_field " => $value_field, "visibility_values" => $visibility_values, "visibility_field"=>$visibility_field, "values"=>$values));
 
-
-
 $params = json_encode($params);
 
 $data = array("method" => "Bug.fields", "params" => $params);
@@ -46,6 +44,8 @@ curl_setopt($ch, CURLOPT_HEADER, 0);
 
 // Should cURL return or print out the data? (true = return, false = print)
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
 // Timeout in seconds
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);

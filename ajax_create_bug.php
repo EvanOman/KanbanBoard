@@ -11,13 +11,13 @@ $summary = filter_input(INPUT_POST, "summary", FILTER_SANITIZE_STRING);
 // TODO This field is sometimes a field and sometimes an int, need to figure out how to sanitize
 $version = filter_input(INPUT_POST, "version");
 
-$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "summary" => $summary,"component" => $component, 
+$params = array(array("Bugzilla_login" => userName, "Bugzilla_password" => password, "summary" => $summary,"component" => $component, 
     "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));
 
 
 $params = json_encode($params);
 
-$data = array("method" => "Bug.create", "params" => $params);
+$data = array("method" => "Bug.create", "params" => $params, "id"=> 1);
 
 /* TODO Need to enable cookies, recieve cookies from the bugzilla server upon login, and somehow send them with each modify call*/
 
@@ -45,6 +45,8 @@ curl_setopt($ch, CURLOPT_HEADER, 0);
 
 // Should cURL return or print out the data? (true = return, false = print)
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
 // Timeout in seconds
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);

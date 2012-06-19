@@ -33,6 +33,8 @@ foreach ($ids as $value) {
 
     // Include header in result? (1 = yes, 0 = no)
     curl_setopt($ch, CURLOPT_HEADER, 0);
+    
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
     // Should cURL return or print out the data? (true = return, false = print)
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

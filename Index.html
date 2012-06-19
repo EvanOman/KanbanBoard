@@ -28,7 +28,7 @@
 
         <script type="text/javascript">
             $(document).ready(function() {
-                
+                 
                 //Enables the sortable behavior that allows the reordering of the cards
                 $( ".column,.tablists" ).sortable({
                     connectWith: ".column,.tablists",
@@ -74,16 +74,17 @@
                     handleTabLists("#"+tab);
                 });
                 
-                /*$("#btnArchive").click(function(){
-                    handleTabLists("#Archive");
-                });*/
-               
+
+                //Handles the add card button
                 $("#btnAddCard").click(function(){
                     addCard();
-                });                              
+                }); 
+                $("#btnSearchCard").click(function(){
+                    searchCards();
+                });
                                 
                     
-                                        
+                //Pulls up the edit menu whenever a card is double clicked                       
                 $(".card").live( "dblclick", function () { 
                     $( "#edit-tabs" ).tabs("select", 0);
                     editCard($(this).attr("id"));
@@ -91,6 +92,7 @@
                   
                 
                 
+                //Saets up the invalids entry dialog menu
                 $( "#dialogInvalid" ).dialog({
                     autoOpen: false,
                     show: "blind",
@@ -164,33 +166,54 @@
 
                 });
                 
+                //Populates the context menu and add card menu with the correct columns:
+                $("body .tablists, body .column").each(function(){
+                    var col = $(this).attr("id");
+                    
+                    var anc = $("<a>").html(col);
+                    var option = $("<option>").html(col);
+                    
+                    //append the option to the context menu
+                    $("#moveAllCards, #moveCardTo").append(anc);
+                    
+                    //append the option to the <select>
+                    $("#Details #whichColumn").append(option);
+                });
+                
+                
                 //Handles the moveallCards submenu 
                 $("#moveAllCards a").click( function(){
                     //Finds and saves the column that was right clicked
                     var startCol = $($.mbMenu.lastContextMenuEl).attr("id");                
                     var endCol = $(this).html();
                     
-                    //Cycles through each card in the specified column and moves them into the ending column
-                    $("#"+startCol+" .card").each(function(){
+                    if (startCol != endCol)
+                    {
+                        //Cycles through each card in the specified column and moves them into the ending column
+                     
+                        $("#"+startCol+" .card").each(function(){
                         
-                        var newLi = $('<li></li>').append(this);
-                        $("#"+endCol).append(newLi); 
-                        var cardId = $(this).attr("id");
-                        updatePosition(endCol, cardId);
+                            var newLi = $('<li></li>').append(this);
+                            $("#"+endCol).append(newLi); 
+                            var cardId = $(this).attr("id");
+                            updatePosition(endCol, cardId);
                         
-                    });
+                        });
                     
-                    //Previously the moveall method moved the cards but left all of the <li>s behind. This removes those(except the first: The banner)
-                    $("#"+startCol+" li:not(:first-child)").remove();
+                        //Previously the moveall method moved the cards but left all of the <li>s behind. This removes those(except the first: The banner)
+                        $("#"+startCol+" li:not(:first-child)").remove();
+                    }
                     
                     closeContextMenu(); 
                 });
+                
                 
                 //Handles the moveCardTo submenu moveCardTo
                 $("#moveCardTo a").click(  function(){
                     var card = $($.mbMenu.lastContextMenuEl).parent();
                     var newLi = $('<li></li>').append(card);
                     var column = $(this).html();
+                    
                     $("#"+column).append(newLi);
                     var cardId = $($.mbMenu.lastContextMenuEl).attr("id");
                     
@@ -199,17 +222,6 @@
                     closeContextMenu(); 
                 });
                 
-                //Sets the priority of the card 
-                $("#setPriority a").click( function(){
-                    //Grabs the anchor's text
-                    var prio = $(this).html();
-                    //Finds which card was right clicked
-                    var card = $.mbMenu.lastContextMenuEl;
-                    //Stores the selected priority as the cards priority
-                    $(card).data({"priority": prio});
-                    displayHandler($(card));
-                    closeContextMenu(); 
-                })
                 
                 //Handles the edit dialog background color change based off of user selection
                 $("#jobtype").change(function () {
@@ -266,6 +278,9 @@
                     
                 });
                 
+
+                
+                
                 
                 //setup the dialog with the proper field values for the jobtype dropdown
                 //Evan, go ahead and do the same for other dropdowns.  You might be able to find a way to get
@@ -280,8 +295,11 @@
                 //A single Ajax call that finds all the specified field option values                
                 $.ajax({
                     url: "ajax_get_field_values.php",
+                    async: false,
                     type: "POST",
-                    data: {"name": formFields},    
+                    data: {
+                        "name": formFields
+                    },    
                     dataType: "json",
                     
                     success: function(data, status){
@@ -317,11 +335,11 @@
                                     {    
                                         //get the value
                                         var name = data.result.fields[j].values[i].name;
-                                   
+                                        var value = data.result.fields[j].values[i].sortkey;
                                         //create an option element with a value and the inner html being the name
-                                        var a = $("<a>").html(name);
+                                        var a = $("<a>").html(name).attr({"value":value}).addClass("p");
 
-                                        //append the option to the <select>
+                                        //append the option to the context menu
                                         $("#setPriority").append(a);
                                     }  
                                 }
@@ -419,14 +437,7 @@
                     
                 };
                 
-                $("body ul").each(function(){
-                    var col = $(this).attr("id");
-                    
-                    var option = $("<a>").html(col);
-
-                    //append the option to the <select>
-                    $("#moveAllCards, #moveCardTo").append(option);
-                });
+                
            
                 var bugArray = [772,1294,9003,9215,13213,5202];
                 //Adds existing cards to the page  
@@ -454,14 +465,35 @@
                             for (var i in data.result.bugs)
                             {
                                 var bug = data.result.bugs[i];
-                                createCard(bug.id,"Done", bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, 10, "Test", bug.status);
+                                createCard(bug.id,"DevelopmentDone", bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, "Test", bug.status);
                             }
                         }
                     }
                 });
                 
+                // alert($("#setPriority a").html());
                 
-                /*$.ajax({
+                
+                //Sets the priority of the card 
+                $(".p").live("click", function(){
+                    //Grabs the anchor's text
+                    var prio = $(this).html();
+                    var val = $(this).attr("value");
+                    
+                    //Finds which card was right clicked
+                    var card = $.mbMenu.lastContextMenuEl;
+                    //Stores the selected priority as the cards priority
+                    
+                    $(card).data({"priority": prio});
+                    //TODO Need a way to associate the priority string with  its sortkey
+                    /*$(card).data({"priokey": val});*/
+                    
+                    displayHandler($(card));
+                    closeContextMenu(); 
+                });
+                
+                
+                $.ajax({
                     url: "ajax_modify_bug.php",
                     type: "POST",
                     data: { 
@@ -490,7 +522,8 @@
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("There was an error:" + textStatus);
                     }
-                }); */
+                }); 
+
                 
                 
             });
@@ -587,7 +620,6 @@
                 $("#priority").val(card.data("priority"));
                 //$("#whichColumn").val(card.data("whichColumn"));
                 $("#dueDate").val(card.data("dueDate"));
-                $("#size").val(card.data("size"));
                 $("#description").val(card.data("description"));
                 $("#product").val(card.data("product"));  
                 $("#version").val(card.data("version"));
@@ -605,21 +637,25 @@
                     "Save Card": function() {
                         
                         $('#'+cardId+" .cardText").html($("#title").val());
-                        displayHandler(card); 
+                         
                         
                         //Finds the current column of the selected card
                         var col = card.parent().parent().attr("id");
                         
                         //TODO: Will need to send this info to the PHP file with modify function                    //Severity            //Summary
-                        ajaxEditBug(col, $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#jobtype").val(), $("#title").val(), $("#version").val(),$("#user").val(),$("#dueDate").val(), $("#size").val(), $("#description").val()); 
-                         
+                        ajaxEditBug(col, $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#jobtype").val(), $("#title").val(), $("#version").val(),$("#user").val(),$("#dueDate").val(), $("#description").val(), $("#bug_status").val()); 
+                        displayHandler(card); 
                         $( this ).dialog( "close" );    
                     },
                     Cancel: function() {
                         $( this ).dialog( "close" );
                     }   
                 });
-                
+                $( "#dialogAddEditCard" ).dialog( "option", "close",function()  {
+                   
+                    $("#Details input, #Details textarea, #Details select").val("");
+                }
+            );   
                 $( "#dialogAddEditCard" ).dialog( "open" );
                 
             }
@@ -640,7 +676,7 @@
                         else{                        
                             //Calls my card creation method, physically adds the card to the page with proper name and location(for now).
                             // createCard($("#whichColumn").val(), $("#title").val()); 
-                            displayHandler($("#"+$("#title").val().replace(/\s+/g, '')));   
+                            //displayHandler($("#"+));   
                             $( this ).dialog( "close" ); 
                         } 
                     },
@@ -648,10 +684,86 @@
                         $( this ).dialog( "close" );
                     }   
                 });
-                    
+                $( "#dialogAddEditCard" ).dialog( "option", "close",function()  {
+                   
+                    $("#Details input, #Details textarea, #Details select").val("");
+                }
+            );   
                 $( "#dialogAddEditCard" ).dialog( "open" );
                 
             }                    
+            
+            function searchCards() {
+                //Adds add card specifc dialog properties
+                $("#edit-tabs ul li:not(:first-child)").hide().attr({"title": "Search Terms"});
+                $( "#edit-tabs" ).tabs("select", 0);
+                $("#rightDiv").hide();
+                $("#resultsDiv").show();
+                $("#dialogAddEditCard").dialog( "option", "title", "Advanced Search" );
+                
+                $("#Details input, #Details textarea, #Details select").prepend("<option></option>"); 
+                $("#Details input, #Details textarea, #Details select").val("");
+                dialogDisplay(null);
+                $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Search": function() {
+  
+                        //TODO Need to find a way to submit the selected value to PHP using Bug.search
+                        $.ajax({
+                            url: "ajax_search_bugs.php",
+                            type: "POST",
+                            dataType: "json",
+                            data: {    
+                                "whichColumn": $("#whichColumn").val(),
+                                "component":  $("#component").val(),
+                                "priority":  $("#priority").val(),
+                                "product":  $("#product").val(),
+                                "severity":  $("#severity").val(),
+                                "summary":  $("#summary").val(),
+                                "version":  $("#version").val(),
+                                "component":  $("#component").val()
+                            },
+                            
+                            success: function(data, status){
+                
+                                if (data.error)
+                                {
+                                    alert(data.error.message);
+                                }
+                                else if (!data.result)
+                                {
+                                    alert("Something is wrong");
+                                }
+                                else 
+                                {
+                                    //Card creation logic will be placed here as soon as the Bug.create/Bug.update issues have been resolved
+                                }
+                        
+                            },
+                            error: function(jqXHR, textStatus, errorThrown){
+                                alert("There was an error:" + textStatus);
+                            }
+                        })
+                            
+                    },
+                    Cancel: function() {
+                        $( this ).dialog( "close" );
+                    }
+                });
+                 
+                //Changes how the dialog closes in order to return the dialog menu to the correct form 
+                $( "#dialogAddEditCard" ).dialog( "option", "close",function()  {
+                    $("#Details select").each(function(){
+                        var id = $(this).attr("id");
+                        $("#"+id+" option").first().remove();
+                    });
+                    $("#Details input, #Details textarea, #Details select").val("");
+                    $("#rightDiv").show();
+                    $("#resultsDiv").hide();
+                }
+            );
+                $( "#dialogAddEditCard" ).dialog( "open" );
+                
+            }
+            
             
             function deleteCard(){
                 //Handles the removal of the card from the page(and eventually from the database)
@@ -688,11 +800,12 @@
                 var prio = card.data("priority");
                 var dueDate = card.data("dueDate");
                 var date = new Date(dueDate);
-                var size =  card.data("size")
+                
 
                 
                 // TODO: The below works as a simplified if else statement toggling between all the classes, need to adapt to the new names
-                /*if (job != null)
+                //For simplicity the following maps will be defined until we switch to the real Bugzilla: "Blocker"=>"Bug",  "Criticial"=>"TBD", "Major"=>"Feature Request", "Normal"=> "DesignBug"
+                if (job != null)
                 {
                     $("#jobtype option").each(function(){
                     
@@ -710,10 +823,10 @@
                     $("#jobtype option").each(function(){
                         $("#Details").removeClass($(this).val());
                     });
-                    $("#Details").addClass("Task");
-                    $(cardRef).addclass("Task");
+                    $("#Details").addClass("normal");
+                    $(cardRef).addclass("normal");
                     
-                }*/
+                }
         
                 //$(cardRef).addclass("Task");
                 
@@ -762,19 +875,7 @@
                 {
                     $(cardRef+ " .iconBar .calBack .calIcon").attr({"title": "Due: "+ dueDate + " (Today)"});
                 }
-                
-                
-                //This section handles the size icon
-                if (size != null && $(cardRef + " .iconBar .sizeBack").length ==0)
-                {
-                    $(cardRef+ " .iconBar").append("<div class=\"sizeBack\"><div class=\"sizeIcon\"></div></div>"); 
-                }
-                if (size == null || size == 0 || size == "")
-                {
-                    $(cardRef+ " .iconBar .sizeBack").remove();
-                }
-                $(cardRef+ " .iconBar .sizeBack .sizeIcon").html(size).attr({"title": "Size: "+ size});
-                
+                               
             }
             /*</editor-fold>*/  
             
@@ -793,7 +894,7 @@
                 });
                 if (job == null)
                 {
-                    $("#Details").addClass("Task");
+                    $("#Details").addClass("normal");
                 }
                 else
                 {
@@ -803,7 +904,7 @@
             
             //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, Jobtype, priority. 
             //Note: Id has been added for testing purposes
-            function  createCard(/**TEST ONLY**/ id,col, component,   priority, product, severity, summary, version, user, dueDate, size, description, status){ 
+            function  createCard(/**TEST ONLY**/ id,col, component,   priority, product, severity, summary, version, user, dueDate, description, status){ 
                    
                 /*$.ajax({
                     url: "ajax_create_bug.php",
@@ -846,11 +947,12 @@
                            
                 var newCard = $('<div id="'+id+'" class="card "><div class="cardText">'+summary+'</div><div class="iconBar"></div></div>');
                     
-                newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}, Task");
+                newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}, normal");
                 //<div class="cardText">Existing Card</div><div class="iconBar"></div></div>   
                 var newLi = $('<li></li>').append(newCard);
                                                                        
                 $("#"+col.replace(/\s+/g, '')).append(newLi);
+                
                     
                 //TODO Move this into the success block of the AJAX call because we only want the local data to change if a new card i successfully created
                 //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAX call to complete in order to access bug info
@@ -864,7 +966,6 @@
                     "user": user,
                     "whichColumn": col,
                     "dueDate": dueDate,
-                    "size": size,
                     "description": description,
                     "status": status
                         
@@ -886,13 +987,13 @@
                     onContextualMenu:function(o,e){}
 
                 });
-                
+                displayHandler(newCard);
             }
 
             
             // TODO: Need to find a way to store the column info on the Bugzilla server. Make a new field? Use an existing one that is otherwise rarely utilized? 
-            function ajaxEditBug(col, component, id, priority, product, severity, summary, version, user, dueDate, size, description, status){
-                $.ajax({
+            function ajaxEditBug(col, component, id, priority, product, severity, summary, version, user, dueDate, description, status){
+                /*  $.ajax({
                     url: "ajax_modify_bug.php",
                     type: "POST",
                     data: { 
@@ -925,7 +1026,7 @@
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("There was an error:" + textStatus);
                     }
-                });
+                });*/
                 
                 //TODO Move this into the success block of the AJAX call because we only want the local data to change if the database data is changed
                 //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
@@ -939,7 +1040,6 @@
                     "version": version,
                     "user": user,
                     "dueDate": dueDate,
-                    "size": size,
                     "description": description,
                     "status": status
                 });
@@ -1103,34 +1203,30 @@
                                     <div style="float: left;">
                                         <label for="priority">Priority:</label>
                                         <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all, half">    </select>
-
                                     </div>
                                     <div style="float: left; margin-left: 10px;">
-                                        <label for="whichColumn">Into Column:</label>
-                                        <select  name="whichColumn" id="whichColumn"  class="text ui-widget-content ui-corner-all, half" >     
-                                            <option>To Do</option>
-                                            <option>Doing</option>
-                                            <option>Done</option> 
-                                            <option>Backlog</option> 
-                                            <option>Archive</option>                            
-                                        </select>
+                                        <label for="dueDate">Due Date:</label>
+                                        <input type="text" name="dueDate" id="dueDate" class="Dates text ui-widget-content ui-corner-all, half" />
                                     </div>
                                 </div>
                                 <div style="float: left;">
                                     <div style="float: left;">
-                                        <label for="dueDate">Due Date:</label>
-                                        <input type="text" name="dueDate" id="dueDate" class="Dates text ui-widget-content ui-corner-all" style="width:100px;"/>
-                                    </div>
-                                    <div style="float: left; margin-left: 10px;">
-                                        <label for="size">Size:</label>
-                                        <input type="number" name="size" id="size" class="text ui-widget-content ui-corner-all" style="width:100px;" min="1"/>
+                                        <label for="whichColumn">Into Column:</label>
+                                        <select  name="whichColumn" id="whichColumn"  class="text ui-widget-content ui-corner-all, half" >                               
+                                        </select>
                                     </div>
                                 </div>
                             </div>
-                            <div style="float: left; margin-left: 10px; width: 50%; height: 680px;">
+                            <div id="rightDiv" style="float: left; margin-left: 10px; width: 665px; height: 325px;">
                                 <span style="width: 75%;">
                                     <label for="description">Description:</label>
                                     <textarea  name="description" id="description" class="text ui-widget-content ui-corner-all" style="width:95%; height: 95%; max-height: 100%; max-width: 100%;"  ></textarea> 
+                                </span>
+                            </div>
+                            <div id="resultsDiv" style="float: left; margin-left: 10px; width: 665px; height: 325px;display: none;">
+                                <span style="width: 75%;">
+                                    <label for="results">Results</label>
+                                    <div  name="results" id="results" class="text ui-widget-content ui-corner-all" style="width:95%; height: 95%; max-height: 100%; max-width: 100%;"  ></div> 
                                 </span>
                             </div>
                         </fieldset>
@@ -1163,16 +1259,34 @@
             <button class="btnTab">Archive</button>
             <button class="btnTab">Limbo</button>
             <button id="btnAddCard">Add Card</button>
+            <button id="btnSearchCard">Advanced Search</button>
         </div>
-
-        <ul id="ToDo" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="banners">To Do</li>                        
+        <ul id="Ready" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="banners">Ready</li>                        
         </ul>
-        <ul id="Doing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="banners">Doing</li>
+        <ul id="Development" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="dubBanners">Development</li>  
+            <ul id="DevelopmentDoing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+                <li class="banners">Doing</li>
+            </ul>
+            <ul id="DevelopmentDone" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+                <li class="banners">Done</li>
+            </ul>
         </ul>
-        <ul id="Done" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="banners">Done</li>
+        <ul id="Build" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="dubBanners">Build</li>  
+            <ul id="BuildDoing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+                <li class="banners">Doing</li>
+            </ul>
+            <ul id="BuildDone" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+                <li class="banners">Done</li>
+            </ul>
+        </ul>
+        <ul id="Test" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="banners">Test</li>
+        </ul>
+        <ul id="ReadyforRelease" class="column cmVoice {cMenu: 'contextMenuColumn'}">
+            <li class="banners">Ready for Release</li>
         </ul>
         <div class="mbmenu" id="contextMenuCard">
             <a action="editView(0)">View Card Details</a>

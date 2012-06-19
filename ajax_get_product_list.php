@@ -1,6 +1,6 @@
 <?php
 include "config.php";
-$params = array(array("Bugzilla_login" => "evan.oman@blc.edu", "Bugzilla_password" => "password"));
+$params = array(array("Bugzilla_login" => userName, "Bugzilla_password" => password));
 
 $params = json_encode($params);
 
@@ -31,6 +31,8 @@ curl_setopt($ch, CURLOPT_HEADER, 0);
 // Should cURL return or print out the data? (true = return, false = print)
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
 // Timeout in seconds
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
@@ -46,5 +48,5 @@ if($output === false)
 // Close the cURL resource, and free system resources
 curl_close($ch);
 
-echo var_dump($output);
+echo $output;
 ?>

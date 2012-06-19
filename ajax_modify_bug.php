@@ -1,4 +1,5 @@
 <?php
+include "config.php";
 //bugzilla_login();
 
 /*$bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
@@ -13,13 +14,15 @@ $bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
 $priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
 /*$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban","ids" => $bugId, "summary" => $summary,"component" => $component, 
     "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));*/
-//$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "ids"=>$bugId, "priority"=>"priority"));
-$params = array(array("method" => "Bug.update", "Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "ids"=>$bugId, "priority"=>"priority"));
+ $params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban", "ids"=>$bugId, "priority"=>$priority));
+
 
 $params = json_encode($params);
 
-//$data = array("method" => "Bug.update", "params" => $params);
-  $data = $params;
+$data = array( "params" => $params, "method" => "Bug.update","id"=> "bugs");
+
+
+
 /* TODO Need to enable cookies, recieve cookies from the bugzilla server upon login, and somehow send them with each modify call*/
 
 
@@ -33,7 +36,7 @@ $ch = curl_init();
 
 // Now set some options (most are optional)
 // Set URL to download  http://software-pc/jsonrpc.cgihttp://eckop.com/evan/post_check.php 
-curl_setopt($ch, CURLOPT_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
+curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
 
 curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
@@ -50,6 +53,8 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 // Timeout in seconds
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
 // Download the given URL, and return output
 $output = curl_exec($ch);
