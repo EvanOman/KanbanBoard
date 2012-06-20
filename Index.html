@@ -22,7 +22,10 @@
         <script type="text/javascript" src="jquery.metadata.js"></script>
         <script type="text/javascript" src="jquery.hoverIntent.js"></script>
         <script type="text/javascript" src="jquery.json-2.3.js"></script>
+        <script type="text/javascript" src="tablesorter/jquery.tablesorter.js"></script>
         <script type="text/javascript" src="tiny_mce/tiny_mce.js"></script>
+        <script type="text/javascript" src="tablesorter/addons/pager/jquery.tablesorter.pager.js"></script>
+        <link type="text/css" href="tablesorter/themes/blue/style.css" rel="stylesheet" />
         <link type="text/css" href="index.css" rel="stylesheet" />
 
 
@@ -84,7 +87,7 @@
                     addCard();
                 }); 
                 $("#btnSearchCard").click(function(){
-                    searchCards();
+                    $("#dialogSearch ").dialog("open");
                 });
                                 
                     
@@ -112,7 +115,7 @@
                     }
                 });
                 
-               
+                
                 
                 //Creates the edit dialog box
                 $( "#dialogSearch" ).dialog({
@@ -120,20 +123,96 @@
                     resizable: false,
                     height: 800,
                     width: 1400,
-                    
-                    show: { effect: 'blind', complete: function() { $("#title").focus();}},
+                    show: { effect: 'blind', complete: function() { $("#searchSummary").focus();}},
                     hide: "explode",
                     modal: true,
                     buttons: {
-                        "Save Card": function() {
+                        "Search": function() {
+  
+                            //TODO Need to find a way to submit the selected value to PHP using Bug.search
+                            //Documentation: "Note that you will only be returned information about bugs that you can see. Bugs that you can't see will be entirely excluded from the results. 
+                            //So, if you want to see private bugs, you will have to first log in and then call this method."
                             
-                            //Will need to add data editing code here later
-                            $( this ).dialog( "close" );
-                                                                                
+                                           
+                            var searchArr = [$("#searchProduct"),$("#searchBug_severity"),$("#searchSummary"),$("#searchVersion"),$("#searchBug_status"), $("#searchResolution"),$("#searchPriority")];
+                            
+                            //Need to covert each search parameter to an array and remove all void values to avoid problems with PHP             
+                            for (var i in searchArr){
+                                var id = searchArr[i].attr("id");
+                                //Bug.search doesn't like 'null' values so we will simply replace them with all the possible fields(not selecting a parameter filters nothing)
+                                //TODO is there a better way? Is this doing what we want?                                
+                                if ($("#"+id).val() == null)
+                                {
+                                    var vals = []
+                                    $("#"+id+" option").each(function(){
+                                        vals.push($(this).val());
+                                    })
+                                    $("#"+id).val(vals);                                     
+                                }
+                                //If the value is not an array
+                                if ( ! $.isArray($("#"+id).val()))
+                                {                                    
+                                    //Turn it into an array
+                                    $("#"+id).val( [$("#"+id).val()]);
+                                }
+                            }
+                            
+                            $.ajax({
+                                url: "ajax_search_bugs.php",
+                                type: "POST",
+                                dataType: "json",
+                                data: {                                       
+                                    "priority":  $("#searchPriority").val(),
+                                    "product":  $("#searchProduct").val(),
+                                    "severity":  $("#searchBug_severity").val(),
+                                    "summary":  $("#searchSummary").val(),
+                                    "version":  $("#searchVersion").val(),
+                                    "resolution":  $("#searchResolution").val(),
+                                    "status":  $("#searchBug_status").val()                                    
+                                },
+                            
+                                success: function(data, status){
+                                    //First thing we want to do is clear the previous results:
+                                    $( "#users tbody tr" ).remove()
+                                    if (data.error)
+                                    {
+                                        alert(data.error.message);
+                                    }
+                                    else if (!data.result)
+                                    {
+                                        alert("Something is wrong");
+                                    }
+                                    else 
+                                    {
+                                        //Search results will be printed to the screen from here
+                                        //Bugzilla documentation states that Bug.search has the same return as Bug.get, maybe recycle the syntax
+                                        
+                                        var bug = data.result.bugs;  
+                                        for (var i in bug){                                                                                    
+                                            $( "#users tbody" ).append( "<tr>" +
+                                                "<td><a>"+bug[i].id+"</a></td>" + 
+                                                "<td>"+bug[i].product+"</td>" + 
+                                                "<td>"+bug[i].version+"</td>" +
+                                                "<td>"+bug[i].assigned_to+"</td>" +
+                                                "<td>"+bug[i].status+"</td>" +
+                                                "<td>"+bug[i].resolution+"</td>" +
+                                                "<td>"+bug[i].summary+"</td>" +
+                                                "</tr>" );                                           
+                                        }
+                                    }
+                                    
+                                    //Allows sortable behavior for the search results table
+                                    $("#users").trigger("update");                                     
+                                },
+                                error: function(jqXHR, textStatus, errorThrown){
+                                    alert("There was an error:" + textStatus);
+                                }
+                            })
+                            
                         },
                         Cancel: function() {
                             $( this ).dialog( "close" );
-                        }    
+                        }
                     },
                     
                     //Resets all the feilds to null to allow a fresh dialog window each time
@@ -174,8 +253,11 @@
                 
                 
                 //Allows calendar plugin
-                $( ".Dates" ).datepicker();                                  
+                $( ".Dates" ).datepicker(); 
                 
+                //Sets the table to sort
+                $("#users").tablesorter();
+                                
                 //Allows the tabs on the edit dialog
                 $( "#edit-tabs" ).tabs();
      
@@ -258,9 +340,9 @@
                 
                 
                 //Handles the edit dialog background color change based off of user selection
-                $("#jobtype").change(function () {
+                $("#bug_severity").change(function () {
                     var job = $(this).val();
-                    $("#jobtype option").each(function(){
+                    $("#bug_severity option").each(function(){
                         $("#Details").removeClass($(this).val());
                     });
                     $("#Details").addClass(job);
@@ -269,10 +351,22 @@
                 //Populates the components field based off of the selected product
                 $("#product").change(function () {
                 
-                    var name = $(this).val();
-                    getCompsVers(name);
+                    var name = [$(this).val()];
+                    
+                    getCompsVers(name, "Details");
+                
                 });
                 
+                //Populates the components field of the search menu based off of the selected product
+                //TODO If I drag to select certain values and leave the selection area the versions arent updated. Need work around(tried click, live, bind)
+                //Also note that the actual .val() after ending a drag outside of the box is correct which is indicative of a failure to call getCompsVers below
+                $("#searchProduct").change(function () {
+                    //Grabs the selected values
+                    var name = $(this).val();                
+                    getCompsVers(name, "search");
+                
+                });
+                                            
                 //Updates the cards position whenever it is moved
                 $( ".column, .tablists" ).sortable({
                     receive: function(event, ui) { 
@@ -316,7 +410,7 @@
                 
                 
                 
-                //setup the dialog with the proper field values for the jobtype dropdown
+                //setup the dialog with the proper field values for the bug_severity dropdown
                 //Evan, go ahead and do the same for other dropdowns.  You might be able to find a way to get
                 //MULTIPLE fields in one ajax call;  make an array out of the names field.
                 //then parse the results --> handle each field's values
@@ -324,7 +418,7 @@
                 //And then also find some way to associate their field's name with this page's select dropdowns. (id or name maybe?)
                 //also, note, I put this in the document.ready so that I'd be sure that the dialog code exists before I try to modify it.
                 //The Array of fields that we want to find values for
-                var formFields = ["priority","bug_severity", "bug_status"];
+                var formFields = ["priority","bug_severity", "bug_status", "resolution"];
             
                 //A single Ajax call that finds all the specified field option values                
                 $.ajax({
@@ -353,14 +447,10 @@
                             for (var j in data.result.fields)
                             {
                                 var fieldName = data.result.fields[j].name;
-                                if (fieldName == "bug_severity")
-                                {
-                                    //The way our Bugzilla is set up is that Severity=>Job Type
-                                    fieldName="jobtype";
-                                }
+                                
                                
                                 //remove all <option>s from the specified select
-                                $("#Details select[name="+fieldName+"], Search select[name="+fieldName+"]").empty();
+                                $("#Details select[name="+fieldName+"]").empty();
                                 
                                 //Priority has a context menue that needs to be populated as well
                                 if (fieldName == "priority")
@@ -388,7 +478,7 @@
                                     var option = $("<option>").val(name).html(name);
 
                                     //append the option to the <select>
-                                    $("#Details select[name="+fieldName+"]").append(option);
+                                    $("#Details select[name="+fieldName+"], #search select[name="+fieldName+"]").append(option);
                                 }
                             }
                         }
@@ -456,11 +546,12 @@
                                     var option = $("<option>").val(name).html(name);
 
                                     //append the option to the <select>
-                                    $("#Details select[name=product]").append(option);
+                                    $("#Details select[name=product], #search select[name=product]").append(option);
                                 } 
                                 //Automatically populates the components and version fields based off of the first(default) product
                                 var firstProduct = $("#Details select[name=product] option").first().html(); 
-                                getCompsVers(firstProduct);
+                                getCompsVers(null, "search");
+                                getCompsVers([firstProduct], "Details");
                             }
                                 
                         
@@ -567,13 +658,13 @@
         
             var componentData = null;
         
-            //Retrieves all of the available components and versions for a given product. Very slow, consider revision
-            function getCompsVers(name){
+            //Retrieves all of the available components and versions for a given product. Now revised to pull down all the products and components once and then reuse the info
+            function getCompsVers(name, dialogID){
                 if (componentData == null)
                 {
                     $.ajax({
                         //Need this to be completed before other actions occur:
-                        //async: false,
+                        async: false,
                         url: "ajax_get_field_values.php",
                         type: "POST",
                         data: {
@@ -608,38 +699,48 @@
                         }
                     });
                 }
+               
                 for (var j in componentData)
                 { 
+            
                     var fieldName = componentData[j].name;
                                 
                     //remove all <option>s from the specified select
-                    $("#Details select[name="+fieldName+"]").empty();
+                    $("#"+dialogID+" select[name="+fieldName+"]").empty();
                                 
                     //iterate through all the allowed values for this field
-                    for (var i in componentData[j].values) 
+                    for (var k in componentData[j].values) 
                     {   
                         //get the value
-                        var visval =  componentData[j].values[i].visibility_values[0];
-                                        
-                        //This is a crude method of weeding out which values should be displayed based off of the product name
-                        if (visval == name)
-                        {    
-                            //create an option element with a value and the inner html being the name                                     
-                            var comp = componentData[j].values[i].name;
+                        var visval =  componentData[j].values[k].visibility_values[0];
+                        //Need to check if name is null before looping through it because other wise there is nothing to loop through
+                        if (name != null)
+                        {                        
+                            for (var l in name)
+                            {    //create an option element with a value and the inner html being the name  
+                                var comp = componentData[j].values[k].name;
+                                var option = $("<option>").val(comp).html(comp);
+                                
+                                //This is a crude method of weeding out which values should be displayed based off of the product name                           
+                                if (visval == name[l])
+                                {                                                               
+                                    //append the option to the <select>
+                                    $("#"+dialogID+" select[name="+fieldName+"]").append(option);
+                                }                                    
+                            }         
+                        } else{
+                            //If name is null we will simply display all options
+                            var comp = componentData[j].values[k].name;
                             var option = $("<option>").val(comp).html(comp);
-
-                            //append the option to the <select>
-                            $("#Details select[name="+fieldName+"]").append(option);
-                        }                                    
-                                    
-                                    
+                            $("#"+dialogID+" select[name="+fieldName+"]").append(option);
+                        }          
                     }
                 }
             };
             
             function editCard(cardId) {
                 var card = $('#'+cardId);
-                getCompsVers(card.data("product"));
+                getCompsVers(card.data("product"), "Details");
                 //Changes the edit dialog to have the correct fields for the selected card's Product. 
                 // TODO: The component and version retrieval is too slow and it changes after the dialog is opened and therefore removes the proper component and version selection
                 //Bugzilla solves this by allowing the product to change without component update and then upon save a new page is opened confirming the change and prompting new version and component values
@@ -647,7 +748,7 @@
                 // TODO: Create and new dialog if the the product name is changed  
                 //Populates the fields
                 $("#title").val(card.data("title"));
-                $("#jobtype").val(card.data("jobtype"));
+                $("#bug_severity").val(card.data("bug_severity"));
                 $("#user").val(card.data("user"));
                 $("#priority").val(card.data("priority"));
                 //$("#whichColumn").val(card.data("whichColumn"));
@@ -663,7 +764,7 @@
                 $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
                 $("#edit-tabs ul li").show();
                 $("label[for=whichColumn],#whichColumn").hide();
-                dialogDisplay(card.data("jobtype"));
+                dialogDisplay(card.data("bug_severity"));
                 
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
                     "Save Card": function() {
@@ -675,7 +776,7 @@
                         var col = card.parent().parent().attr("id");
                         
                         //TODO: Will need to send this info to the PHP file with modify function                    //Severity            //Summary
-                        ajaxEditBug(col, $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#jobtype").val(), $("#title").val(), $("#version").val(),$("#user").val(),$("#dueDate").val(), $("#description").val(), $("#bug_status").val()); 
+                        ajaxEditBug(col, $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#bug_severity").val(), $("#title").val(), $("#version").val(),$("#user").val(),$("#dueDate").val(), $("#description").val(), $("#bug_status").val()); 
                         displayHandler(card); 
                         $( this ).dialog( "close" );    
                     },
@@ -699,7 +800,7 @@
                 $("label[for=whichColumn],#whichColumn").show();
                 $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );
                 dialogDisplay(null);
-                getCompsVers($("#product").val());
+                getCompsVers($("#product").val(), "Details");
                     
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Save Card": function() {
                         if($( "#title" ).val()=="")
@@ -726,64 +827,7 @@
                 
             }                    
             
-            function searchCards() {
-          
-                
-                $( "#dialogSearch" ).dialog( "option", "buttons", { "Search": function() {
-  
-                        //TODO Need to find a way to submit the selected value to PHP using Bug.search
-                        //Documentation: "Note that you will only be returned information about bugs that you can see. Bugs that you can't see will be entirely excluded from the results. 
-                        //So, if you want to see private bugs, you will have to first log in and then call this method."
-                        $.ajax({
-                            url: "ajax_search_bugs.php",
-                            type: "POST",
-                            dataType: "json",
-                            data: {    
-                                "whichColumn": $("#whichColumn").val(),
-                                "component":  $("#component").val(),
-                                "priority":  $("#priority").val(),
-                                "product":  $("#product").val(),
-                                "severity":  $("#severity").val(),
-                                "summary":  $("#title").val(),
-                                "version":  $("#version").val(),
-                                "status":  $("#status").val(),
-                                "component":  $("#component").val()
-                            },
-                            
-                            success: function(data, status){
-                
-                                if (data.error)
-                                {
-                                    alert(data.error.message);
-                                }
-                                else if (!data.result)
-                                {
-                                    alert("Something is wrong");
-                                }
-                                else 
-                                {
-                                    //Search results will be printed to the screen from here
-                                    //Bugzilla documentation states that Bug.search has the same return as Bug.get, maybe recycle the syntax
-                                    var result = data.result.bugs[0];
-                                    alert(result);
-                                }
-                        
-                            },
-                            error: function(jqXHR, textStatus, errorThrown){
-                                alert("There was an error:" + textStatus);
-                            }
-                        })
-                            
-                    },
-                    Cancel: function() {
-                        $( this ).dialog( "close" );
-                    }
-                });
-                 
-                
-                $( "#dialogSearch" ).dialog( "open" );
-                
-            }
+               
             
             
             function deleteCard(){
@@ -817,7 +861,7 @@
             function displayHandler(card) {
                 //Finds the card's values    
                 var cardRef = "#"+card.attr("id");
-                var job = card.data("jobtype");
+                var job = card.data("bug_severity");
                 var prio = card.data("priority");
                 var dueDate = card.data("dueDate");
                 var date = new Date(dueDate);
@@ -828,20 +872,20 @@
                 //For simplicity the following maps will be defined until we switch to the real Bugzilla: "Blocker"=>"Bug",  "Criticial"=>"TBD", "Major"=>"Feature Request", "Normal"=> "DesignBug"
                 if (job != null)
                 {
-                    $("#jobtype option").each(function(){
+                    $("#bug_severity option").each(function(){
                     
                         $(cardRef).removeClass($(this).val());
                     })
                     $(cardRef).addClass(job).attr({"title": job});
                     
-                    $("#jobtype option").each(function(){
+                    $("#bug_severity option").each(function(){
                         $("#Details").removeClass($(this).val());
                     });
                     $("#Details").addClass(job);
                 }
                 if (job == null)
                 {
-                    $("#jobtype option").each(function(){
+                    $("#bug_severity option").each(function(){
                         $("#Details").removeClass($(this).val());
                     });
                     $("#Details").addClass("normal");
@@ -921,7 +965,7 @@
             }
 
             function dialogDisplay(job){
-                $("#jobtype option").each(function(){
+                $("#bug_severity option").each(function(){
                     $("#Details").removeClass($(this).val());
                 });
                 if (job == null)
@@ -934,7 +978,7 @@
                 }
             }
             
-            //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, Jobtype, priority. 
+            //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, bug_severity, priority. 
             //Note: Id has been added for testing purposes
             function  createCard(/**TEST ONLY**/ id,col, component,   priority, product, severity, summary, version, user, dueDate, description, status){ 
                    
@@ -990,7 +1034,7 @@
                 //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAX call to complete in order to access bug info
                 newCard.data({
                     "title": summary,
-                    "jobtype": severity,
+                    "bug_severity": severity,
                     "priority": priority,
                     "product": product,
                     "component": component,
@@ -1067,7 +1111,7 @@
                     "component": component,                   
                     "product": product,
                     "priority": priority,
-                    "jobtype": severity,
+                    "bug_severity": severity,
                     "title": summary,
                     "version": version,
                     "user": user,
@@ -1211,8 +1255,8 @@
                                         <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all, half">    </select>
                                     </div>
                                     <div style="float: left; margin-left: 10px;">
-                                        <label for="jobtype">Job Type:</label>
-                                        <select  name="jobtype" id="jobtype"  class=" text ui-widget-content ui-corner-all, half" ></select>
+                                        <label for="bug_severity">Severity:</label>
+                                        <select  name="bug_severity" id="bug_severity"  class=" text ui-widget-content ui-corner-all, half" ></select>
                                     </div>
                                 </div>
                                 <div style="float: top">
@@ -1272,28 +1316,36 @@
         </div>   
         <div id="dialogSearch" class="ui-dialog-content ui-widget-content"  title="Advanced Search" >
             <div id="search">
-                <form style="height:200px;">
+                <form style="height:300px;">
                     <fieldset style="margin-top: 10px;">
-                        <div class="box"style="float:top; max-height: 40px; width:400px;">
+                        <div class="box"style="float:top; max-height: 40px; width:830px;">
                             <label for="title" style="float:left; margin-right: 10px;">Summary:</label>
-                            <textarea  name="title" id="searchSummary" class="text ui-widget-content ui-corner-all" style="float:left !important; width:auto; height: 20px; max-height: 60px; width:300px;"  ></textarea>
+                            <textarea  name="title" id="searchSummary" class="text ui-widget-content ui-corner-all" style="float:left !important; width:auto; height: 20px; max-height: 60px; width:745px;"  ></textarea>
                         </div>
                         <div style="float: left; width:100%">
                             <div class="box">
                                 <label for="product"class="searchLabel">Product:</label>
-                                <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                                <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="component"class="searchLabel">Component:</label>
-                                <select  name="component" id="searchComponent"  class="text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                                <label for="version"class="searchLabel">Version</label>
+                                <select  name="version" id="searchVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>
+                            <div class="box">
+                                <label for="bug_severity"class="searchLabel">Severity:</label>
+                                <select  name="bug_severity" id="searchBug_severity"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>
+                             <div class="box">
+                                <label for="priority"class="searchLabel">Priority</label>
+                                <select  name="priority" id="searchPriority"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
                                 <label for="bug_status"class="searchLabel">Status:</label>
-                                <select  name="bug_status" id="searchBug_status"  class="text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                                <select  name="bug_status" id="searchBug_status"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
                                 <label for="resolution"class="searchLabel">Resolution:</label>
-                                <select  name="resolution" id="searchResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"><option></option></select>
+                                <select  name="resolution" id="searchResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                         </div>                        
                     </fieldset>
@@ -1301,12 +1353,12 @@
                 <div id="Results" class="ui-widget">                 
                     <div id="users-contain" class="ui-widget" >
                         <h1>Bugs:</h1>
-                        <table id="users" class="ui-widget ui-widget-content" cellspacing="0" cellpadding="4" width="100%">
+                        <table id="users" class="ui-widget ui-widget-content, tablesorter" cellspacing="0" cellpadding="4" width="100%">
                             <thead>
                                 <tr class="ui-widget-header ">
                                     <th colspan="1">ID</th> 
                                     <th colspan="1">Product</th> 
-                                    <th colspan="1">Component</th> 
+                                    <th colspan="1">Version</th> 
                                     <th colspan="1">Assignee</th> 
                                     <th colspan="1">Status</th>  
                                     <th colspan="1">Resolution</th> 
@@ -1314,15 +1366,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>ID</td> 
-                                    <td>Product</td> 
-                                    <td>Component</td> 
-                                    <td>Assignee</td> 
-                                    <td>Status</td>  
-                                    <td>Resolution</td> 
-                                    <td>Summary</td>  
-                                </tr>
                             </tbody>
                         </table>
                     </div>

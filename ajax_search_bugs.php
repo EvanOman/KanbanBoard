@@ -2,19 +2,44 @@
 include "config.php";
 //bugzilla_login();
 
-$bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
-$component = filter_input(INPUT_POST, "component", FILTER_SANITIZE_STRING);
-$priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
-$product = filter_input(INPUT_POST, "product", FILTER_SANITIZE_STRING);
-$severity = filter_input(INPUT_POST, "severity", FILTER_SANITIZE_STRING);
-$summary = filter_input(INPUT_POST, "summary", FILTER_SANITIZE_STRING);
-$status = filter_input(INPUT_POST, "status", FILTER_SANITIZE_STRING);
+$bugId = $_REQUEST['bug_id'];
+foreach ($bugId as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_NUMBER_INT);
+}
+
+$priority = $_REQUEST['priority'];//
+foreach ($priority as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
+}
+
+$product = $_REQUEST['product'];//
+foreach ($product as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
+}
+
+$severity = $_REQUEST['severity'];//
+foreach ($severity as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
+}
+
+$summary = $_REQUEST['summary'];//
+foreach ($summary as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
+}
+
+$status = $_REQUEST['status'];//
+foreach ($status as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
+}
+$resolution = $_REQUEST['resolution'];
+foreach ($resolution as $value) {
+    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
+}
+
 // TODO This field is sometimes a field and sometimes an int, need to figure out how to sanitize
-$version = filter_input(INPUT_POST, "version");
-$bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
-$priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
-$params = array(array("Bugzilla_login"=> userName, "Bugzilla_password"=>password,  "summary" => $summary,"component" => $component, 
-    "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version, "bug_status"=>$status, "bug_severity"=>$severity));
+$version =  $_REQUEST['version'];
+$params = array(array("Bugzilla_login"=> userName, "Bugzilla_password"=>password,  "summary" => $summary, "product" => $product, "version" => $version,
+    "bug_status"=>$status, "bug_severity"=>$severity, "resolution"=>$resolution, "priority" => $priority));
 
 $params = json_encode($params);
 
@@ -50,7 +75,7 @@ curl_setopt($ch, CURLOPT_HEADER, 0);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 // Timeout in seconds
-curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+curl_setopt($ch, CURLOPT_TIMEOUT, 100000);
 
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 

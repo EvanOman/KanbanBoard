@@ -144,7 +144,7 @@ div#users-contain table {
 div#users-contain table td, div#users-contain table th { 
     /*border: 1px solid #eee;*/
     padding: .6em 10px; 
-    text-align: center; 
+    text-align: left; 
 }
 
 .ui-dialog .ui-state-error { 
@@ -244,7 +244,9 @@ div#users-contain table td, div#users-contain table th {
     float: left;
     margin-left: 10px;
     width:200px;
-    height:100px;
+    height:150px;
+    margin-top: 20px;
+   
 }
 #dialogSearch {
     font-size: 15px;
@@ -253,6 +255,7 @@ div#users-contain table td, div#users-contain table th {
     float: top;
     margin:10px;
     width:1350px;
+    max-height:200px;
 }
 #users-contain{
     width:1350px !important;
