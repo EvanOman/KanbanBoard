@@ -1,8 +1,8 @@
 <?php
-$source = 8;
+$source = 0;
 
 if ($source == 0) {
-    define(BUGZILLA_URL, "http://software-pc/Bugzilla4.2/jsonrpc.cgi");
+    define(BUGZILLA_URL, "http://software-pc/Bugzilla4.2/xmlrpc.cgi");
     define(userName, "evan.oman@blc.edu");
     define(password, "password");
 } 
@@ -17,7 +17,7 @@ else if ($source == 2) {
     define(password, "password");
 }
 else  {
-    define(BUGZILLA_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
+    define(BUGZILLA_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/xmlrpc.cgi");
     define(userName, "dr.ecksk@gmail.com");
     define(password, "kanban");
 }

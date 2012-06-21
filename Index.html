@@ -31,11 +31,7 @@
 
         <script type="text/javascript">
             $(document).ready(function() {
-                 
-                 
-                 
-                 
-                 
+                
                 //Enables the sortable behavior that allows the reordering of the cards
                 $( ".column,.tablists" ).sortable({
                     connectWith: ".column,.tablists",
@@ -119,7 +115,7 @@
                 
                 //Creates the edit dialog box
                 $( "#dialogSearch" ).dialog({
-                    autoOpen: true,
+                    autoOpen: false,
                     resizable: false,
                     height: 800,
                     width: 1400,
@@ -740,7 +736,7 @@
             
             function editCard(cardId) {
                 var card = $('#'+cardId);
-                getCompsVers(card.data("product"), "Details");
+                getCompsVers([card.data("product")], "Details");
                 //Changes the edit dialog to have the correct fields for the selected card's Product. 
                 // TODO: The component and version retrieval is too slow and it changes after the dialog is opened and therefore removes the proper component and version selection
                 //Bugzilla solves this by allowing the product to change without component update and then upon save a new page is opened confirming the change and prompting new version and component values
@@ -800,7 +796,7 @@
                 $("label[for=whichColumn],#whichColumn").show();
                 $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );
                 dialogDisplay(null);
-                getCompsVers($("#product").val(), "Details");
+                getCompsVers([$("#product").val()], "Details");
                     
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Save Card": function() {
                         if($( "#title" ).val()=="")

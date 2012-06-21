@@ -1,24 +1,19 @@
 <?php
+
+if (!class_exists('DateTime'))
+    require_once('DateTime.class.php');
+include 'class.bugzillaxml.php';
 include "config.php";
 
 $name = $_REQUEST['name'];
-$values = $_REQUEST['values'];
-$ids = filter_input(INPUT_POST, 'ids', FILTER_SANITIZE_NUMBER_INT);
-$value_field = filter_input(INPUT_POST, 'value_field', FILTER_SANITIZE_STRING);
-$visibility_values = filter_input(INPUT_POST, 'visibility_values', FILTER_SANITIZE_NUMBER_INT);
-$visibility_field = filter_input(INPUT_POST, 'visibility_field', FILTER_SANITIZE_STRING);
-
+$cleanNames = array();
 foreach ($name as $value) {
-    $value = filter_input(INPUT_POST, $value, FILTER_SANITIZE_STRING);
+    $value = filter_var($value, FILTER_SANITIZE_STRING);
+    $cleanNames[] = $value;
 }
 
-
-
-$params = array(array("names" => $name, "id" => $ids, "value_field " => $value_field, "visibility_values" => $visibility_values, "visibility_field"=>$visibility_field, "values"=>$values));
-
-$params = json_encode($params);
-
-$data = array("method" => "Bug.fields", "params" => $params, "id"=>BUGZILLA_URL);
+$bugzilla = new BugzillaXML('Bug.fields');
+$bugzilla->addMember('names', $cleanNames);
 
 // is cURL installed yet?
 if (!function_exists('curl_init')) {
@@ -37,7 +32,7 @@ curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
 curl_setopt($ch, CURLOPT_POST, true);
 
-curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $bugzilla->toXML());
 
 // Include header in result? (1 = yes, 0 = no)
 curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -46,6 +41,8 @@ curl_setopt($ch, CURLOPT_HEADER, 0);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: text/xml'));
 
 // Timeout in seconds
 curl_setopt($ch, CURLOPT_TIMEOUT, 10);
@@ -56,5 +53,5 @@ $output = curl_exec($ch);
 // Close the cURL resource, and free system resources
 curl_close($ch);
 
-echo $output;
+echo $bugzilla->toJson($output);
 ?>

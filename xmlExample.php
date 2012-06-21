@@ -1,6 +1,12 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', true);
 
-$xml_data ='<method>Bugzilla.time</method>';
+if(!class_exists('DateTime'))
+    require_once('DateTime.class.php');
+include 'class.bugzillaxml.php';
+
+/*$xml_data ='<method>Bugzilla.time</method>';
 
 
 
@@ -46,5 +52,19 @@ echo var_dump($output);
 
 
 // Close the cURL resource, and free system resources
-curl_close($ch);
+curl_close($ch);*/
+$bugzilla = new BugzillaXML('Bug.update');
+$bugzilla->addMember('ids', array('11', '12'));
+$bugzilla->addMember('Bugzilla_login', 'evan.oman@blc.edu');
+$bugzilla->addMember('Bugzilla_password', 'password');
+$bugzilla->addMember('priority', 'Critical');
+
+echo $bugzilla->toJson();
+
+
+
+//echo htmlspecialchars($bugzilla->toJson());
+
+
+
 ?>
