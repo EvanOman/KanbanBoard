@@ -157,12 +157,13 @@
                                 url: "ajax_search_bugs.php",
                                 type: "POST",
                                 dataType: "json",
-                                data: {                                       
-                                    "priority":  $("#searchPriority").val(),
-                                    "product":  $("#searchProduct").val(),
-                                    "severity":  $("#searchBug_severity").val(),
-                                    "summary":  $("#searchSummary").val(),
-                                    "version":  $("#searchVersion").val(),
+                                data: { 
+                                    /*"bugid":  $("#searchId").val(),*/
+                                    "priority":  $("#searchPriority").val(),//
+                                    "product":  $("#searchProduct").val(),//
+                                    "severity":  $("#searchBug_severity").val(),//
+                                    "summary":  $("#searchSummary").val(),//
+                                    "version":  $("#searchVersion").val(),//
                                     "resolution":  $("#searchResolution").val(),
                                     "status":  $("#searchBug_status").val()                                    
                                 },
@@ -279,7 +280,7 @@
                 });
                 
                 //Populates the context menu and add card menu with the correct columns:
-                $("body .tablists, body .column").each(function(){
+                /* $("body .tablists, body .column").each(function(){
                     var col = $(this).attr("id");
                     
                     var anc = $("<a>").html(col);
@@ -289,8 +290,8 @@
                     $("#moveAllCards, #moveCardTo").append(anc);
                     
                     //append the option to the <select>
-                    $("#Details #whichColumn").append(option);
-                });
+                    $("#Details #cf_whichcolumn").append(option);
+                });*/
                 
                 
                 //Handles the moveallCards submenu 
@@ -354,7 +355,7 @@
                 });
                 
                 //Populates the components field of the search menu based off of the selected product
-                //TODO If I drag to select certain values and leave the selection area the versions arent updated. Need work around(tried click, live, bind)
+                //TODO If I drag to select certain values and release the click outside the select area, the versions arent updated. Need work around(tried click, live, bind)
                 //Also note that the actual .val() after ending a drag outside of the box is correct which is indicative of a failure to call getCompsVers below
                 $("#searchProduct").change(function () {
                     //Grabs the selected values
@@ -414,7 +415,7 @@
                 //And then also find some way to associate their field's name with this page's select dropdowns. (id or name maybe?)
                 //also, note, I put this in the document.ready so that I'd be sure that the dialog code exists before I try to modify it.
                 //The Array of fields that we want to find values for
-                var formFields = ["priority","bug_severity", "bug_status", "resolution"];
+                var formFields = ["priority","bug_severity", "bug_status", "resolution", "cf_whichcolumn"];
             
                 //A single Ajax call that finds all the specified field option values                
                 $.ajax({
@@ -444,7 +445,6 @@
                             {
                                 var fieldName = data.result.fields[j].name;
                                 
-                               
                                 //remove all <option>s from the specified select
                                 $("#Details select[name="+fieldName+"]").empty();
                                 
@@ -561,13 +561,13 @@
                 
                 
            
-                var bugArray = [772,1294,9003,9215,13213,5202];
+                var bugArray = [1,2,3,4,5,6,7,8,9];
                 //Adds existing cards to the page  
                 $.ajax({
                     url: "ajax_get_single_bug.php",
                     type: "POST",
                     data: { 
-                        "bug_id": bugArray
+                        "bugid": bugArray
                     },
                     dataType: "json",
                     success: function(data, status){
@@ -587,7 +587,7 @@
                             for (var i in data.result.bugs)
                             {
                                 var bug = data.result.bugs[i];
-                                createCard(bug.id,"DevelopmentDone", bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, "Test", bug.status);
+                                createCard(bug.id,bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, "Test", bug.status);
                             }
                         }
                     }
@@ -747,7 +747,7 @@
                 $("#bug_severity").val(card.data("bug_severity"));
                 $("#user").val(card.data("user"));
                 $("#priority").val(card.data("priority"));
-                //$("#whichColumn").val(card.data("whichColumn"));
+                $("#cf_whichcolumn").val(card.data("cf_whichcolumn"));
                 $("#dueDate").val(card.data("dueDate"));
                 $("#description").val(card.data("description"));
                 $("#product").val(card.data("product"));  
@@ -759,7 +759,7 @@
                 //Adds edit specifc dialog properties
                 $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
                 $("#edit-tabs ul li").show();
-                $("label[for=whichColumn],#whichColumn").hide();
+                $("label[for=cf_whichcolumn],#cf_whichcolumn").hide();
                 dialogDisplay(card.data("bug_severity"));
                 
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
@@ -793,7 +793,7 @@
                 //Adds add card specifc dialog properties
                 $("#edit-tabs ul li:not(:first-child)").hide();
                 $( "#edit-tabs" ).tabs("select", 0);
-                $("label[for=whichColumn],#whichColumn").show();
+                $("label[for=cf_whichcolumn],#cf_whichcolumn").show();
                 $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );
                 dialogDisplay(null);
                 getCompsVers([$("#product").val()], "Details");
@@ -805,7 +805,7 @@
                         }
                         else{                        
                             //Calls my card creation method, physically adds the card to the page with proper name and location(for now).
-                            // createCard($("#whichColumn").val(), $("#title").val()); 
+                            // createCard($("#cf_whichcolumn").val(), $("#title").val()); 
                             //displayHandler($("#"+));   
                             $( this ).dialog( "close" ); 
                         } 
@@ -844,7 +844,7 @@
                 var startCol = $($.mbMenu.lastContextMenuEl).attr("id"); 
                 
                 //Presets the form to open with the correct column selected                
-                $("#whichColumn").val(startCol);
+                $("#cf_whichcolumn").val(startCol);
                 addCard();
             }
             
@@ -982,14 +982,14 @@
                     url: "ajax_create_bug.php",
                     type: "POST",
                     data: {    
-                        /*"whichColumn": col
-                        "component": component,
-                        "priority": priority,
-                        "product": product,
-                        "severity": severity,
-                        "summary": summary,
-                        "version": version
-                        /*"component": component,
+                        //"cf_whichcolumn": col
+                        "component": component,//
+                        "priority": priority,//
+                        "product": product,//
+                        "severity": severity,//
+                        "summary": summary,//
+                        "version": version//
+                        
                     },
                     dataType: "json",
                     success: function(data, status){
@@ -1036,7 +1036,7 @@
                     "component": component,
                     "version": version,
                     "user": user,
-                    "whichColumn": col,
+                    "cf_whichcolumn": col,
                     "dueDate": dueDate,
                     "description": description,
                     "status": status
@@ -1065,11 +1065,11 @@
             
             // TODO: Need to find a way to store the column info on the Bugzilla server. Make a new field? Use an existing one that is otherwise rarely utilized? 
             function ajaxEditBug(col, component, id, priority, product, severity, summary, version, user, dueDate, description, status){
-                /*  $.ajax({
+                $.ajax({
                     url: "ajax_modify_bug.php",
                     type: "POST",
                     data: { 
-                        "bug_id": id,
+                        "bugid": id,
                         "component": component,
                         "priority": priority,
                         "product": product,
@@ -1092,76 +1092,72 @@
                         else 
                         {
                             //Will eventually hold the card.data map below. Need to make the Bug.Update work first
+                            //TODO Move this into the success block of the AJAX call because we only want the local data to change if the database data is changed
+                            //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
+                            $("#"+id).data({
+                                "cf_whichcolumn": col,
+                                "component": component,                   
+                                "product": product,
+                                "priority": priority,
+                                "bug_severity": severity,
+                                "title": summary,
+                                "version": version,
+                                "user": user,
+                                "dueDate": dueDate,
+                                "description": description,
+                                "status": status
+                            });
                         }
                         
                     },
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("There was an error:" + textStatus);
                     }
-                });*/
-                
-                //TODO Move this into the success block of the AJAX call because we only want the local data to change if the database data is changed
-                //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
-                $("#"+id).data({
-                    "whichColumn": col,
-                    "component": component,                   
-                    "product": product,
-                    "priority": priority,
-                    "bug_severity": severity,
-                    "title": summary,
-                    "version": version,
-                    "user": user,
-                    "dueDate": dueDate,
-                    "description": description,
-                    "status": status
                 });
+                
+               
             }
             
             //An update function that stores a card position when called
             function updatePosition(column, cardId)
             {
-                //Automatically updates the card's position both in local data and server data. Waiting on Bug.update Resolution
+                //Automatically updates the card's position both in local data and server data. Waiting on Bug.update Resolution                                                
+                $.ajax({
+                    url: "ajax_modify_bug.php",
+                    type: "POST",
+                    data: { 
+                        "bug_id": cardId,
+                        //TODO Need to add the below field to the Bugzilla field options
+                        "cf_whichcolumn": column
+                    },
+                    dataType: "json",
+                    success: function(data, status){
                 
-                /*
-                 *
-                 *$.ajax({
-                 *  url: "ajax_modify_bug.php",
-                 *  type: "POST",
-                 *  data: { 
-                 *       "bug_id": cardId
-                 *      //TODO Need to add the below field to the Bugzilla field options
-                 *      /*"whichColumn": column
-                 *  },
-                 *  dataType: "json",
-                 *  success: function(data, status){
-                 *
-                 *      if (data.error)
-                 *      {
-                 *          alert(data.error.message);
-                 *      }
-                 *      else if (!data.result)
-                 *      {
-                 *          alert("Something is wrong");
-                 *      }
-                 *      else 
-                 *      {
-                 *          //Will eventually hold the card.data map below. Need to make the Bug.Update work first
-                 *      }
-                 *      
-                 *  },
-                 *  error: function(jqXHR, textStatus, errorThrown){
-                 *      alert("There was an error:" + textStatus);
-                 *  }
-                 *   });
-                 */
-                
-                $("#"+cardId).data({
-                    "whichColumn": column
-                });
+                        if (data.error)
+                        {
+                            alert(data.error.message);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {
+                            //Will eventually hold the card.data map below. Need to make the Bug.Update work first
+                            $("#"+cardId).data({
+                                "cf_whichcolumn": column
+                            });
+                        }
+                     
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });                                                
                     
             }
                
-            //A function that updates the whichColumn field of every card in a column
+            //A function that updates the cf_whichcolumn field of every card in a column
             /*TODO I feel like this is very inefficient, also need to figure out how to OVERLOAD!! */
             function updatePosition1(col)
             {
@@ -1283,8 +1279,8 @@
                                 </div>
                                 <div style="float: left;">
                                     <div style="float: left;">
-                                        <label for="whichColumn">Into Column:</label>
-                                        <select  name="whichColumn" id="whichColumn"  class="text ui-widget-content ui-corner-all, half" >                               
+                                        <label for="cf_whichcolumn">Into Column:</label>
+                                        <select  name="cf_whichcolumn" id="cf_whichcolumn"  class="text ui-widget-content ui-corner-all, half" >                               
                                         </select>
                                     </div>
                                 </div>
@@ -1331,7 +1327,7 @@
                                 <label for="bug_severity"class="searchLabel">Severity:</label>
                                 <select  name="bug_severity" id="searchBug_severity"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
-                             <div class="box">
+                            <div class="box">
                                 <label for="priority"class="searchLabel">Priority</label>
                                 <select  name="priority" id="searchPriority"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
@@ -1385,33 +1381,42 @@
             <button id="btnAddCard">Add Card</button>
             <button id="btnSearchCard">Advanced Search</button>
         </div>
-        <ul id="Ready" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="banners">Ready</li>                        
-        </ul>
-        <ul id="Development" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="dubBanners">Development</li>  
-            <ul id="DevelopmentDoing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-                <li class="banners">Doing</li>
-            </ul>
-            <ul id="DevelopmentDone" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-                <li class="banners">Done</li>
-            </ul>
-        </ul>
-        <ul id="Build" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="dubBanners">Build</li>  
-            <ul id="BuildDoing" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-                <li class="banners">Doing</li>
-            </ul>
-            <ul id="BuildDone" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-                <li class="banners">Done</li>
-            </ul>
-        </ul>
-        <ul id="Test" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="banners">Test</li>
-        </ul>
-        <ul id="ReadyforRelease" class="column cmVoice {cMenu: 'contextMenuColumn'}">
-            <li class="banners">Ready for Release</li>
-        </ul>
+        <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+            <span class="banners">Ready</span>
+            <ul id="Ready"class="column"></ul>                                    
+        </div>
+
+        <div class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}" >
+            <span class="dubBanners">Development</span>
+            <div  class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="banners">Doing</span>
+                <ul id="DevelopmentDoing" class="column"></ul>
+            </div>
+            <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="banners">Done</span>
+                <ul id="DevelopmentDone" class="column"></ul>
+            </div>
+        </div>
+
+        <div id="Build" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
+            <span class="dubBanners">Build</span>
+            <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="banners">Doing</span>
+                <ul id="BuildDoing" class="column"></ul>
+            </div>
+            <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="banners">Done</span>
+                <ul id="BuildDone" class="column"> </ul>
+            </div>
+        </div>
+        <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+            <span class="banners">Test</span>
+            <ul id="Test" class="column" > </ul>            
+        </div>
+        <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+            <span class="banners">Ready for Release</span>
+            <ul id="ReadyforRelease" class="column"> </ul>
+        </div>
         <div class="mbmenu" id="contextMenuCard">
             <a action="editView(0)">View Card Details</a>
             <a action="editView(1)">View Card Comments</a>

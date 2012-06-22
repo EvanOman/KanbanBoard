@@ -1,6 +1,6 @@
 <?php
 $source = 0;
-
+$BUGZILLA_URL;
 if ($source == 0) {
     define(BUGZILLA_URL, "http://software-pc/Bugzilla4.2/xmlrpc.cgi");
     define(userName, "evan.oman@blc.edu");

@@ -1,4 +1,7 @@
 <?php
+include "config.php";
+/*error_reporting(E_ALL);
+ini_set('display_errors', true);*/
 
 class BugzillaXML {
 
@@ -20,10 +23,21 @@ class BugzillaXML {
         $this->data->params->addChild('param');
         $this->data->params->param->addChild('value');
         $this->data->params->param->value->addChild('struct');
+        //Automatically logins  to bugzilla. Should this only be done once with a User.login call?
+        $login = $this->data->params->param->value->struct->addChild('member');
+        $login->addChild('name', 'Bugzilla_login');
+        $login->addChild('value', userName);
+        $password = $this->data->params->param->value->struct->addChild('member');
+        $password->addChild('name', 'Bugzilla_password');
+        $password->addChild('value', password);
     }
 
-    function addMember($name, $value) {
+    function addMember($name, $value, $valueType) {
         $member = $this->data->params->param->value->struct->addChild('member');
+        
+        //Automatically calls the CleanInput() function which sanitizes the value based off of its intended type       
+        $value = $this->cleanInput($value, $valueType);
+        
         $member->addChild('name', $name);
 
         if (is_array($value)) {
@@ -47,6 +61,8 @@ class BugzillaXML {
 
         $doc = new DOMDocument();
         $doc->loadXML($xml);
+        
+       // var_dump($doc);
 
         $paramElements = $doc->getElementsByTagName('param');
 
@@ -92,24 +108,69 @@ class BugzillaXML {
           return json_encode(array("result" => $json)); */
     }
 
-    function xml2array($xml) {
-        $sxi = new SimpleXmlIterator($xml);
-        return $this->sxiToArray($sxi);
-    }
+    /* function xml2array($xml) {
+      $sxi = new SimpleXmlIterator($xml);
+      return $this->sxiToArray($sxi);
+      }
 
-    function sxiToArray($sxi) {
-        $a = array();
-        for ($sxi->rewind(); $sxi->valid(); $sxi->next()) {
-            if (!array_key_exists($sxi->key(), $a)) {
-                $a[$sxi->key()] = array();
-            }
-            if ($sxi->hasChildren()) {
-                $a[$sxi->key()][] = $this->sxiToArray($sxi->current());
-            } else {
-                $a[$sxi->key()][] = strval($sxi->current());
-            }
+      function sxiToArray($sxi) {
+      $a = array();
+      for ($sxi->rewind(); $sxi->valid(); $sxi->next()) {
+      if (!array_key_exists($sxi->key(), $a)) {
+      $a[$sxi->key()] = array();
+      }
+      if ($sxi->hasChildren()) {
+      $a[$sxi->key()][] = $this->sxiToArray($sxi->current());
+      } else {
+      $a[$sxi->key()][] = strval($sxi->current());
+      }
+      }
+      return $a;
+      } */
+
+    function submit() {
+
+        // is cURL installed yet?
+        if (!function_exists('curl_init')) {
+            die('Sorry cURL is not installed!');
         }
-        return $a;
+
+        // OK cool - then let's create a new cURL resource handle
+        $ch = curl_init();
+
+        // Now set some options (most are optional)
+        // Set URL to download
+        curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
+
+
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+
+        curl_setopt($ch, CURLOPT_POST, true);        
+        
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $this->toXML());
+
+        // Include header in result? (1 = yes, 0 = no)
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+
+        // Should cURL return or print out the data? (true = return, false = print)
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: text/xml'));
+
+        // Timeout in seconds
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+
+        // Download the given URL, and return output
+        $output = curl_exec($ch);
+
+        //echo $output;
+        
+        // Close the cURL resource, and free system resources
+        curl_close($ch);
+
+        return $this->toJson($output);
     }
 
     protected function printResponseStart() {
@@ -458,6 +519,33 @@ class BugzillaXML {
             $next++;
         }
         return true;
+    }
+
+    //This function sanitizes arrays and single values based off of the option passed in
+    //$opts => "string" || "int"
+    public function cleanInput($input, $opt) {
+
+        switch ($opt) {
+            case 'string': $filter = FILTER_SANITIZE_STRING;
+                break;
+            case 'int': $filter = FILTER_SANITIZE_NUMBER_INT;
+                break;
+            default: $filter = FILTER_SANITIZE_STRING;
+                break;
+        }
+     
+
+        if (is_array($input)) {
+            $clean = array();
+            foreach ($input as $value) {
+                $value = filter_var($value, $filter);
+                $clean[] = $value;
+            }
+            return $clean;
+            
+        } else {
+            return filter_var($input, $filter);
+        }
     }
 
 }

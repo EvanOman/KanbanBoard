@@ -1,121 +1,26 @@
 <?php
+
+if (!class_exists('DateTime'))
+    require_once('DateTime.class.php');
+include 'class.bugzillaxml.php';
 include "config.php";
-//bugzilla_login();
-
-/*$bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
-$component = filter_input(INPUT_POST, "component", FILTER_SANITIZE_STRING);
-$priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
-$product = filter_input(INPUT_POST, "product", FILTER_SANITIZE_STRING);
-$severity = filter_input(INPUT_POST, "severity", FILTER_SANITIZE_STRING);
-$summary = filter_input(INPUT_POST, "summary", FILTER_SANITIZE_STRING);
-// TODO This field is sometimes a field and sometimes an int, need to figure out how to sanitize
-$version = filter_input(INPUT_POST, "version");*/
-$bugId = filter_input(INPUT_POST, "bug_id", FILTER_SANITIZE_NUMBER_INT);
-$priority = filter_input(INPUT_POST, "priority", FILTER_SANITIZE_STRING);
-/*$params = array(array("Bugzilla_login" => "dr.ecksk@gmail.com", "Bugzilla_password" => "kanban","ids" => $bugId, "summary" => $summary,"component" => $component, 
-    "priority" => $priority,"product" => $product, "summary" => $summary,"summary" => $summary, "version" => $version,));*/
- $params = array(array("Bugzilla_login" => userName, "Bugzilla_password" => password, "ids"=>$bugId, "priority"=>$priority));
 
 
-$params = json_encode($params);
+//Here we instantiate a new BugzillaXML object
+$bugzilla = new BugzillaXML('Bug.update');
 
-$data = array( "params" => $params, "method" => "Bug.update","id"=> "https://landfill.bugzilla.org/bugzilla-4.2-branch/");
-
-
-
-/* TODO Need to enable cookies, recieve cookies from the bugzilla server upon login, and somehow send them with each modify call*/
-
-
-// is cURL installed yet?
-if (!function_exists('curl_init')) {
-    die('Sorry cURL is not installed!');
-}
-
-// OK cool - then let's create a new cURL resource handle
-$ch = curl_init();
-
-// Now set some options (most are optional)
-// Set URL to download  
-curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
+//Now we add the parameters and specify their type
+$bugzilla->addMember('summary', $_REQUEST['summary'], 'string');
+$bugzilla->addMember('ids', $_REQUEST['bugid'], 'int');
+$bugzilla->addMember('component', $_REQUEST['component'], 'string');
+$bugzilla->addMember('priority', $_REQUEST['priority'], 'string');
+$bugzilla->addMember('product', $_REQUEST['product'], 'string');
+$bugzilla->addMember('severity', $_REQUEST['severity'], 'string');
+$bugzilla->addMember('version', $_REQUEST['version'], 'string');
+$bugzilla->addMember('status', $_REQUEST['status'], 'string');
 
 
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-
-curl_setopt($ch, CURLOPT_POST, true);
-
-curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-
-// Include header in result? (1 = yes, 0 = no)
-curl_setopt($ch, CURLOPT_HEADER, 0);
-
-// Should cURL return or print out the data? (true = return, false = print)
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-// Timeout in seconds
-curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-// Download the given URL, and return output
-$output = curl_exec($ch);
-
-if($output === false)
-{
-    echo json_encode(array("error" => array("message"=>'Curl error: ' . curl_error($ch))));
-}
-else 
-{
-    echo $output;
-}
-
-// Close the cURL resource, and free system resources
-curl_close($ch);
-
-
-
-function bugzilla_login() {
-    $params = array(array("login" => "dr.ecksk@gmail.com", "password" => "kanban", "remember"=> true));
-
-
-    $params = json_encode($params);
-
-    $data = array("method" => "User.login", "params" => $params);
-
-    // is cURL installed yet?
-    if (!function_exists('curl_init')) {
-        die('Sorry cURL is not installed!');
-    }
-
-    // OK cool - then let's create a new cURL resource handle
-    $ch = curl_init();
-
-    // Now set some options (most are optional)
-    // Set URL to download
-    curl_setopt($ch, CURLOPT_URL, "http://landfill.bugzilla.org/bugzilla-4.2-branch/jsonrpc.cgi");
-
-
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-
-    curl_setopt($ch, CURLOPT_POST, true);
-
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-
-    // Include header in result? (1 = yes, 0 = no)
-    curl_setopt($ch, CURLOPT_HEADER, 0);
-
-    // Should cURL return or print out the data? (true = return, false = print)
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    // Timeout in seconds
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-    // Download the given URL, and return output
-    $output = curl_exec($ch);
-
-    // Close the cURL resource, and free system resources
-    curl_close($ch);
-
-    echo $output;
-}
+//Then submit
+echo $bugzilla->submit();
 
 ?>
