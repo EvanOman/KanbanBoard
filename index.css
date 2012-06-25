@@ -52,7 +52,7 @@ body{
 }
 .dubColumn{
     width: 372px;
-   /* padding: 0;*/
+    padding: 0;
     border: none; 
 }
 .column{
@@ -81,14 +81,13 @@ body{
 }
 .dubBanners{
     width: 100%; 
-    margin-left: 0;
-    margin-top: 0;
     margin-bottom: 0;
     padding-bottom: 0;
-    float: left;
+    float: top;
+    margin-left:0;
     /*border-top: black 1px solid;*/
     border-left: black 2px solid;
-    border-top: black 2px solid;
+    border-top: black 3px solid;
 
 }
 .bigBanners{
@@ -182,10 +181,14 @@ div#users-contain table td, div#users-contain table th {
 .FeatureRequest/*=> "Feature Request"*/{
     background-color:yellowgreen !important; 
 }
-
+.enhancement{
+    background-color:orange !important; 
+}
 .Critical{
     background-image: url('images/Critical.png')  !important;
 }
+
+
 
 .High{
     background-image: url('images/High.png')  !important;
