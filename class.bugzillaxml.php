@@ -1,7 +1,8 @@
 <?php
+
 include "config.php";
-/*error_reporting(E_ALL);
-ini_set('display_errors', true);*/
+/* error_reporting(E_ALL);
+  ini_set('display_errors', true); */
 
 class BugzillaXML {
 
@@ -34,10 +35,10 @@ class BugzillaXML {
 
     function addMember($name, $value, $valueType) {
         $member = $this->data->params->param->value->struct->addChild('member');
-        
+
         //Automatically calls the CleanInput() function which sanitizes the value based off of its intended type       
         $value = $this->cleanInput($value, $valueType);
-        
+
         $member->addChild('name', $name);
 
         if (is_array($value)) {
@@ -61,72 +62,61 @@ class BugzillaXML {
 
         $doc = new DOMDocument();
         $doc->loadXML($xml);
-        
-       // var_dump($doc);
 
         $paramElements = $doc->getElementsByTagName('param');
+        // echo $paramElements;
+        if ($paramElements->item(0) == NULL) {
+            //echo 'Worked';
+            $faultElements = $doc->getElementsByTagName('fault');
+            $faultEl = $faultElements->item(0);
+            $valueEl = $faultEl->firstChild;
+            while ($valueEl && ($valueEl->nodeType != 1 || $valueEl->nodeName != 'value'))
+                $valueEl = $valueEl->nextSibling;
+            if (!$valueEl)
+                trigger_error("XML-RPC Parse Error: Expected a 'value' element child of the 'param' element.");
+            $requestParams = $this->decodeXmlRpc($valueEl);
 
-        $paramEl = $paramElements->item(0);
-        $valueEl = $paramEl->firstChild;
-        while ($valueEl && ($valueEl->nodeType != 1 || $valueEl->nodeName != 'value'))
-            $valueEl = $valueEl->nextSibling;
-        if (!$valueEl)
-            trigger_error("XML-RPC Parse Error: Expected a 'value' element child of the 'param' element.");
-        $requestParams = $this->decodeXmlRpc($valueEl);
+            //var_dump($requestParams);
+            $this->responseType = self::JSON;
+            $this->requestType = self::JSON;
+            $this->isJSONOmitResponseWrapper = false;
+            //$this->requestID = "";
 
-        //var_dump($requestParams);
-        $this->responseType = self::JSON;
-        $this->requestType = self::JSON;
-        $this->isJSONOmitResponseWrapper = false;
-        $this->requestID = "ID";
+            $json = $this->printResponseStart();
 
-        $json = $this->printResponseStart();
+            if (!$this->isJSONOmitResponseWrapper) {
+                $json .= '"result":';
+            }
+            $json .= $this->encodeJson($requestParams);
 
-        if (!$this->isJSONOmitResponseWrapper) {
-            $json .= '"result":';
+            $json .= $this->printResponseEnd();
+        } else {
+            //echo 'Didnt Work';
+            $paramEl = $paramElements->item(0);
+            $valueEl = $paramEl->firstChild;
+            while ($valueEl && ($valueEl->nodeType != 1 || $valueEl->nodeName != 'value'))
+                $valueEl = $valueEl->nextSibling;
+            if (!$valueEl)
+                trigger_error("XML-RPC Parse Error: Expected a 'value' element child of the 'param' element.");
+            $requestParams = $this->decodeXmlRpc($valueEl);
+
+            //var_dump($requestParams);
+            $this->responseType = self::JSON;
+            $this->requestType = self::JSON;
+            $this->isJSONOmitResponseWrapper = false;
+            //$this->requestID = $requestID;
+
+            $json = $this->printResponseStart();
+
+            if (!$this->isJSONOmitResponseWrapper) {
+                $json .= '"result":';
+            }
+            $json .= $this->encodeJson($requestParams);
+
+            $json .= $this->printResponseEnd();
         }
-        $json .= $this->encodeJson($requestParams);
-
-        $json .= $this->printResponseEnd();
-
         return $json;
-        /* $json = array();
-          $this->data = new SimpleXMLElement('newXMLDocument.xml', null, true);
-
-          $a = $this->xml2Array($this->data->asXML());
-          // var_dump($a);
-          foreach ($a['params'][0]['param'][0]['value'][0]['struct'][0]["member"] as $val) {
-
-          foreach ($val['value'][0] as $type => $contents) {
-          if ($type == 'array') {
-
-          }
-          $result = $contents[0];
-          }
-          $json[$val['name'][0]] = $result;
-          }
-          return json_encode(array("result" => $json)); */
     }
-
-    /* function xml2array($xml) {
-      $sxi = new SimpleXmlIterator($xml);
-      return $this->sxiToArray($sxi);
-      }
-
-      function sxiToArray($sxi) {
-      $a = array();
-      for ($sxi->rewind(); $sxi->valid(); $sxi->next()) {
-      if (!array_key_exists($sxi->key(), $a)) {
-      $a[$sxi->key()] = array();
-      }
-      if ($sxi->hasChildren()) {
-      $a[$sxi->key()][] = $this->sxiToArray($sxi->current());
-      } else {
-      $a[$sxi->key()][] = strval($sxi->current());
-      }
-      }
-      return $a;
-      } */
 
     function submit() {
 
@@ -142,13 +132,19 @@ class BugzillaXML {
         // Set URL to download
         curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
 
+        $post = $this->toXML();
+
+        //Identifies the call by its method name
+        $name = new SimpleXMLElement($post);
+        $this->requestID = (string) $name->methodName;
 
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
-        curl_setopt($ch, CURLOPT_POST, true);        
-        
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $this->toXML());
+        curl_setopt($ch, CURLOPT_POST, true);
 
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+
+        //echo $post;
         // Include header in result? (1 = yes, 0 = no)
         curl_setopt($ch, CURLOPT_HEADER, 0);
 
@@ -166,7 +162,6 @@ class BugzillaXML {
         $output = curl_exec($ch);
 
         //echo $output;
-        
         // Close the cURL resource, and free system resources
         curl_close($ch);
 
@@ -533,7 +528,7 @@ class BugzillaXML {
             default: $filter = FILTER_SANITIZE_STRING;
                 break;
         }
-     
+
 
         if (is_array($input)) {
             $clean = array();
@@ -542,7 +537,6 @@ class BugzillaXML {
                 $clean[] = $value;
             }
             return $clean;
-            
         } else {
             return filter_var($input, $filter);
         }
