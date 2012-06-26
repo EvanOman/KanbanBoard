@@ -1,8 +1,8 @@
 <?php
 
 include "config.php";
-/* error_reporting(E_ALL);
-  ini_set('display_errors', true); */
+/*error_reporting(E_ALL);
+ini_set('display_errors', true);*/
 
 class BugzillaXML {
 
@@ -11,6 +11,7 @@ class BugzillaXML {
     protected $data;
     protected $requestID;
     protected $requestType;
+    protected $loginCookie = "Bugzilla_logincookie";
 
     const JSON_RPC_VERSION = "1.1";
     const XML_RPC_VERSION = "1.0";
@@ -64,23 +65,20 @@ class BugzillaXML {
         $doc->loadXML($xml);
 
         $paramElements = $doc->getElementsByTagName('param');
-        // echo $paramElements;
         if ($paramElements->item(0) == NULL) {
-            //echo 'Worked';
             $faultElements = $doc->getElementsByTagName('fault');
             $faultEl = $faultElements->item(0);
             $valueEl = $faultEl->firstChild;
             while ($valueEl && ($valueEl->nodeType != 1 || $valueEl->nodeName != 'value'))
                 $valueEl = $valueEl->nextSibling;
-            if (!$valueEl)
-                trigger_error("XML-RPC Parse Error: Expected a 'value' element child of the 'param' element.");
+            /* if (!$valueEl)
+              trigger_error("XML-RPC Parse Error: Expected a 'value' element child of the 'param' element."); */
             $requestParams = $this->decodeXmlRpc($valueEl);
 
-            //var_dump($requestParams);
             $this->responseType = self::JSON;
             $this->requestType = self::JSON;
             $this->isJSONOmitResponseWrapper = false;
-            //$this->requestID = "";
+            $this->requestID = "Error";
 
             $json = $this->printResponseStart();
 
@@ -138,12 +136,22 @@ class BugzillaXML {
         $name = new SimpleXMLElement($post);
         $this->requestID = (string) $name->methodName;
 
+        //TODO Need to figure out how to send cookies so we don't have to send login info each time
+        /* if ($this->requestID != "User.login") {
+          $value = $_COOKIE["Bugzilla_logincookie"];
+          setcookie($login, $value);
+          }
+
+          print_r($_COOKIE);
+
+          curl_setopt ($ch, CURLOPT_COOKIEJAR, $login); */
+
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
         curl_setopt($ch, CURLOPT_POST, true);
 
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-
+        
         //echo $post;
         // Include header in result? (1 = yes, 0 = no)
         curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -165,7 +173,7 @@ class BugzillaXML {
         // Close the cURL resource, and free system resources
         curl_close($ch);
 
-        return $this->toJson($output);
+        echo $this->toJson($output);
     }
 
     protected function printResponseStart() {

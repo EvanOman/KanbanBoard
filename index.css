@@ -12,8 +12,8 @@ body,html{
     border:0;
 }
 body{
-    width:2000px;
-
+    width:2500px;
+    height: 1500px;
 }
 
 
@@ -80,7 +80,7 @@ body{
 
 }
 .dubBanners{
-    width: 100%; 
+    width: 370px; 
     margin-bottom: 0;
     padding-bottom: 0;
     float: top;
@@ -91,10 +91,10 @@ body{
 
 }
 .bigBanners{
-    width: 502px;
+    width: 732px;
 }
 .tablists{
-    width: 500px;
+    width: 730px;
     display: none;
 }
 .toolbar{
@@ -141,18 +141,18 @@ h1 {
     margin: .6em 0;
 }
 
-div#users-contain { 
+div#bugs-contain { 
     width: 350px; 
     margin: 20px 0; 
 }
 
-div#users-contain table { 
+div#bugs-contain table { 
     margin: 1em 0;
     border-collapse: collapse;
     width: 100%;
 }
 
-div#users-contain table td, div#users-contain table th { 
+div#bugs-contain table td, div#bugs-contain table th { 
     /*border: 1px solid #eee;*/
     padding: .6em 10px; 
     text-align: left; 
@@ -272,6 +272,6 @@ div#users-contain table td, div#users-contain table th {
     width:1350px;
     max-height:200px;
 }
-#users-contain{
+#bugs-contain{
     width:1350px !important;
 }

@@ -11,15 +11,15 @@ $paramArr = $_POST;
 //Finds the method parameter 
 $method = $paramArr['method'];
 
-//Here we instantiate a new BugzillaXML object
+//Here we instantiate a new BugzillaXML object with the passed in method
 $bugzilla = new BugzillaXML($method);
 
 //Now we destroy the method part of the array because there is no Bugzilla method field in the parameters section:
 unset($paramArr['method']);
 
-//This is now done dynamically so as to remove the need for repetition
+//Now the members are added dynamically so as to remove repetition
 foreach ($paramArr as $k => $v) {
-    if ($k == 'bugid') {
+    if ($k == 'ids' || $k == 'limit') {
         $type = 'int';
     } else {
         $type = 'string';
@@ -29,5 +29,5 @@ foreach ($paramArr as $k => $v) {
 }
 
 //Then submit
-echo $bugzilla->submit();
+$bugzilla->submit();
 ?>
