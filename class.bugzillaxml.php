@@ -1,6 +1,5 @@
 <?php
 
-include "config.php";
 /*error_reporting(E_ALL);
 ini_set('display_errors', true);*/
 
@@ -173,7 +172,7 @@ class BugzillaXML {
         // Close the cURL resource, and free system resources
         curl_close($ch);
 
-        echo $this->toJson($output);
+        return $this->toJson($output);
     }
 
     protected function printResponseStart() {

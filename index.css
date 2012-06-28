@@ -212,6 +212,7 @@ div#bugs-contain table td, div#bugs-contain table th {
     padding: 5px;
     font-family: sans-serif;
     font-size: 12px;
+
 }
 .prioBack, .calBack, .sizeBack{
     height: 30px;
@@ -274,4 +275,11 @@ div#bugs-contain table td, div#bugs-contain table th {
 }
 #bugs-contain{
     width:1350px !important;
+}
+.commDiv{
+ height: auto !important;
+ overflow:hidden;
+}
+form>div>label {
+    float: left;
 }

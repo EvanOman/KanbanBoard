@@ -31,6 +31,34 @@
 
 
         <script type="text/javascript">
+            var prioMap = {};
+            
+            function initialize()
+            {
+                $.ajax({
+                    url: "ajax_get_options.php",
+                    dataType: "json",                    
+                    success: function(data, status){                                                
+                        if (data.error)
+                        {
+                            alert(data.error);
+                        }
+                        else if (!data.success)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {  
+                            prioMap = data.options.prioIcons;
+                        }
+                        
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });
+            }
+            initialize();
             $(document).ready(function() {
                 
                 //Enables the sortable behavior that allows the reordering of the cards
@@ -87,7 +115,9 @@
                     getCompsVers(null, "search");
                     $("#dialogSearch ").dialog("open");
                 });
-                                
+                $("#btnOptions").click(function(){
+                    $("#dialogOptions ").dialog("open");
+                });               
                     
                 //Pulls up the edit menu whenever a card is double clicked                       
                 $(".card").live( "dblclick", function () { 
@@ -178,8 +208,128 @@
                 });
                 
                 
+                                
+                //Creates the options dialog
+                $( "#dialogOptions" ).dialog({
+                    autoOpen: false,
+                    resizable: false,
+                    height: 300,
+                    width: 400,
+                    show: { effect: 'blind'},
+                    hide: "explode",
+                    modal: true,
+                    buttons: {
+                        //TODO Needs to take in offset and limit parameters
+                        Save: function() {
+                            $("#dialogOptions #prioIconTable tbody tr").each(function(){
+                                var name = $(this).find("td").first().text();
+                                if ($(this).find("input[type=radio]:checked").length == 0)
+                                    {
+                                       var iconClass = "none"; 
+                                    }
+                                    else
+                                    {
+                                       iconClass = $(this).find("input[type=radio]:checked").val(); 
+                                    }
+                                
+                                prioMap[name] = iconClass;
+                            });
+                            $.ajax({
+                                    url: "ajax_write_options.php",
+                                    type: "POST",
+                                    data: {
+                                        map: prioMap                                       
+                                    },    
+                                    dataType: "json",
+                                    
+                                    success: function(data, status){
+                                        
+                                        
+                                        if (data.error)
+                                        {
+                                            alert(data.error);
+                                        }
+                                        else if (!data.success)
+                                        {
+                                            alert("Something is wrong");
+                                        }
+                                        else 
+                                        {
+                                            
+                                            $(".card").each(function(){
+                                                var prio = $(this).data("priority").replace(/\s+/g, ''); 
+                                                if (prioMap[prio]=="none")
+                                                {
+                                                    $(".iconBar .prioBack .prioIcon", $(this)).removeClass().addClass("prioIcon");
+                                                }
+                                                else
+                                                {
+                                                    $(".iconBar .prioBack .prioIcon", $(this)).removeClass().addClass("prioIcon "+prioMap[prio]);
+                                                }
+
+                                            });
+                                            
+                                          $("#dialogOptions").dialog("close");                                            
+                                        }
+                                       
+                                    },
+                                    error: function(jqXHR, textStatus, errorThrown){
+                                        alert("(Fields)There was an error:" + textStatus);
+                                    }
+                                }); 
+                        },                    
+                        //Resets all the feilds to null to allow a fresh dialog window each time
+                        Close: function() {
+                            $( this ).dialog( "close" );
+                        }
+                    }
+                });
                 
-                //Creates the edit dialog box
+                function makeRowPrioOptions(prioName){
+                    var row = $('<tr>\
+                        <td>'+prioName+'</td>\
+                        <td><form><div id="'+prioName+'radiodiv">\
+                                <input type="radio" id="'+prioName+'icon1" name="radio" value="High" />\
+                                <label for="'+prioName+'icon1">\
+                                    <div class="prioBack">\
+                                        <div class="prioIcon High">\
+                                        </div>\
+                                    </div>\
+                                </label>\
+                                <input type="radio" id="'+prioName+'icon2" name="radio" value="Critical"/>\
+                                <label for="'+prioName+'icon2">\
+                                    <div class="prioBack">\
+                                        <div class="prioIcon Critical">\
+                                        </div>\
+                                    </div>\
+                                </label>\
+                                <input type="radio" id="'+prioName+'icon3" name="radio" value="Low"/>\
+                                <label for="'+prioName+'icon3">\
+                                    <div class="prioBack">\
+                                        <div class="prioIcon Low">\
+                                        </div>\
+                                    </div>\
+                                </label>\
+                                <input type="radio" id="'+prioName+'icon4" name="radio" value="none"/>\
+                                <label for="'+prioName+'icon4">\
+                                    <div class="prioBack">\
+                                        <div class="prioIcon">\
+                                            No Icon\
+                                        </div>\
+                                    </div>\
+                                </label>\
+                            </div></form>\
+                        </td>\
+                    </tr>');
+                    $(row).find("input[type=radio][value="+prioMap[prioName]+"]").attr("checked","checked");
+                    $("#dialogOptions #prioIconTable tbody").append(row);
+                    
+                    $("#"+prioName+"radiodiv").buttonset();
+                    
+                    
+                }
+                
+                //Creates the search dialog box
                 $( "#dialogSearch" ).dialog({
                     autoOpen: false,
                     resizable: false,
@@ -237,6 +387,7 @@
                 //Allows the tabs on the edit dialog
                 $( "#edit-tabs" ).tabs();                                
                 
+              
                 //Initializes the board's column context menu
                 $(document).buildContextualMenu(
                 {
@@ -332,7 +483,7 @@
                 
                 });
                 
-                var prioMap = {};
+                
                 //Populates the components field of the search menu based off of the selected product
                 //TODO If I drag to select certain values and release the click outside the select area, the versions arent updated. Need work around(tried click, live, bind)
                 //Also note that the actual .val() after ending a drag outside of the box is correct which is indicative of a failure to call getCompsVers below
@@ -440,13 +591,14 @@
                                         var value = data.result.fields[j].values[i].sortkey;
                                         //create an option element with a value and the inner html being the name
                                         var a = $("<a>").html(name).attr({"value":value}).addClass("p");
-                                        
-                                        prioMap[name] = i; 
-                                        
+                                                                                
                                         //append the option to the context menu
                                         $("#setPriority").append(a);
+                                        
+                                        makeRowPrioOptions(name);
                                     }  
                                 }
+                               
                                 
                                 //iterate through all the allowed values for this field
                                 for (var i in data.result.fields[j].values) 
@@ -462,6 +614,7 @@
                                 }
                             }
                         }
+                        console.log(prioMap);
                     },
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("(Fields)There was an error:" + textStatus);
@@ -611,7 +764,7 @@
                 });
                 
                 $('#accordion .header').live("click",function() {
-                    $(this).next().toggle();
+                    $(this).next().toggle("slow");
                     return false;
                 }).next().hide();
                 
@@ -819,7 +972,7 @@
                     }
                 }
                 editCardContextMenu();
-            }
+            }                       
             
             /*<editor-fold>*/
             function displayHandler(card) {
@@ -859,6 +1012,7 @@
                 }
         
                 //$(cardRef).addclass("Task");
+                
                 
                 //This section adds and switches the priority icon. TODO need to find new method taking the sortkey used by bugzilla
                 if (prio != "Medium" && $(cardRef + " .prioBack").length == 0)
@@ -935,7 +1089,7 @@
                 dateEnd = new Date(year, month, day), 
                 days = (dateEnd - now) / 1000/60/60/24;   // convert milliseconds to days
 
-                return Math.round(days);
+                return Math.ceil(days);
             }
 
             function dialogDisplay(job){
@@ -1407,7 +1561,13 @@
         </script>
     </head>
     <body>
-
+        <div id="dialogOptions" class="ui-dialog-content ui-widget-content"  title="Options" >
+            <table id="prioIconTable">
+                <tbody>
+                    
+                </tbody>
+            </table>
+        </div>  
         <div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
             <form>
                 <fieldset
@@ -1595,6 +1755,7 @@
             <button class="btnTab">Limbo</button>
             <button id="btnAddCard">Add Card</button>
             <button id="btnSearchCard">Advanced Search</button>
+            <button id="btnOptions">Options</button>
         </div>
         <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
             <span class="banners">Ready</span>

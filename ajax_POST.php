@@ -1,4 +1,6 @@
 <?php
+/*error_reporting(E_ALL);
+ini_set('display_errors', true);*/
 
 if (!class_exists('DateTime'))
     require_once('DateTime.class.php');
@@ -8,6 +10,8 @@ include "config.php";
 //Copies the posted array of fields
 $paramArr = $_POST;
 
+//TODO Sanitize the method as well
+//
 //Finds the method parameter 
 $method = $paramArr['method'];
 
@@ -29,5 +33,5 @@ foreach ($paramArr as $k => $v) {
 }
 
 //Then submit
-$bugzilla->submit();
+echo $bugzilla->submit();
 ?>
