@@ -98,7 +98,7 @@ body{
     display: none;
 }
 .toolbar{
-    width: 70px;
+    width: 100px;
     height: 100%;
     margin: 0; 
     padding: 5px;
@@ -132,6 +132,7 @@ select {
     margin-bottom:12px; 
     width:300px;
     padding: .4em;
+    color: black;
 }
 
 fieldset { padding:0; border:0; margin-top:25px; }
@@ -184,19 +185,6 @@ div#bugs-contain table td, div#bugs-contain table th {
 .enhancement{
     background-color:orange !important; 
 }
-.Critical{
-    background-image: url('images/Critical.png')  !important;
-}
-
-
-
-.High{
-    background-image: url('images/High.png')  !important;
-}
-
-.Low{
-    background-image: url('images/Low.png')  !important;
-}
 .iconBar{
     width:140px;
     height: 40px;
@@ -225,25 +213,25 @@ div#bugs-contain table td, div#bugs-contain table th {
     width: 100%;
 }
 .calIcon, .sizeIcon{
-    background-image: url('images/Calendar.png');
+    background-image: url('images/icons/Calendar.png');
     background-size: 100%;
     text-align: center;
     line-height: 35px;
 }
 .calIconWeek{
-    background-image: url('images/CalendarWeek.png') !important;
+    background-image: url('images/icons/CalendarWeek.png') !important;
 }
 .calIconNeg{
-    background-image: url('images/Calendar.Neg.png') !important;
+    background-image: url('images/icons/Calendar.Neg.png') !important;
 } 
 .sizeIcon{
     background-image: url('images/Size.png') !important;
     color: white;
     overflow: hidden;
 }
-.half{
+/*.half{
     width:135px !important; 
-}
+}*/
 .btnTab{
 
 }
@@ -282,4 +270,10 @@ div#bugs-contain table td, div#bugs-contain table th {
 }
 form>div>label {
     float: left;
+}
+#colorSelector div {
+	
+	width: 30px;
+	height: 30px;
+	
 }

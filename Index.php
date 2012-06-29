@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
     <head>
         <title>Eckhardt Optics Kanban Board</title>
-        <link type="text/css" href="jquery-ui-1.8.20.custom.css" rel="stylesheet" />
+        <link type="text/css" href="themes/black-tie/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
         <link type="text/css" href="demos.css" rel="stylesheet" />
         <link type="text/css" href="menu_black.css" rel="stylesheet" />
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -17,21 +17,21 @@
         <script type="text/javascript" src="jquery.ui.resizable.js"></script>
         <script type="text/javascript" src="jquery.ui.dialog.js"></script>
         <script type="text/javascript" src="jquery.ui.datepicker.js"></script>
-        <script type="text/javascript" src="jquery.ui.tabs.js"></script>
-        <script type="text/javascript" src="jquery.ui.accordion.js"></script>        
+        <script type="text/javascript" src="jquery.ui.tabs.js"></script>     
         <script type="text/javascript" src="mbMenu.js"></script>
         <script type="text/javascript" src="jquery.metadata.js"></script>
         <script type="text/javascript" src="jquery.hoverIntent.js"></script>
         <script type="text/javascript" src="jquery.json-2.3.js"></script>
-        <script type="text/javascript" src="tablesorter/jquery.tablesorter.js"></script>
         <script type="text/javascript" src="tiny_mce/tiny_mce.js"></script>
-        <script type="text/javascript" src="tablesorter/addons/pager/jquery.tablesorter.pager.js"></script>
-        <link type="text/css" href="tablesorter/themes/blue/style.css" rel="stylesheet" />
+        <link rel="stylesheet" media="screen" type="text/css" href="css/colorpicker.css" />
+        <script type="text/javascript" src="js/colorpicker.js"></script>
         <link type="text/css" href="index.css" rel="stylesheet" />
+
 
 
         <script type="text/javascript">
             var prioMap = {};
+            var jobMap = {};
             
             function initialize()
             {
@@ -101,8 +101,7 @@
                 
                 //Handles the tab buttons dynamically
                 $(".toolbar .btnTab").click(function(){
-                    var tab =  $(this).html();
-                   
+                    var tab =  $(this).text();
                     handleTabLists("#"+tab);
                 });
                 
@@ -118,7 +117,9 @@
                 $("#btnOptions").click(function(){
                     $("#dialogOptions ").dialog("open");
                 });               
-                    
+                   
+                $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab ").button();  
+                   
                 //Pulls up the edit menu whenever a card is double clicked                       
                 $(".card").live( "dblclick", function () { 
                     $( "#edit-tabs" ).tabs("select", 0);
@@ -213,8 +214,8 @@
                 $( "#dialogOptions" ).dialog({
                     autoOpen: false,
                     resizable: false,
-                    height: 300,
-                    width: 400,
+                    height: 750,
+                    width: 1250,
                     show: { effect: 'blind'},
                     hide: "explode",
                     modal: true,
@@ -224,59 +225,61 @@
                             $("#dialogOptions #prioIconTable tbody tr").each(function(){
                                 var name = $(this).find("td").first().text();
                                 if ($(this).find("input[type=radio]:checked").length == 0)
-                                    {
-                                       var iconClass = "none"; 
-                                    }
-                                    else
-                                    {
-                                       iconClass = $(this).find("input[type=radio]:checked").val(); 
-                                    }
+                                {
+                                    var iconClass = "none"; 
+                                }
+                                else
+                                {
+                                    iconClass = $(this).find("input[type=radio]:checked").val(); 
+                                }
                                 
                                 prioMap[name] = iconClass;
                             });
                             $.ajax({
-                                    url: "ajax_write_options.php",
-                                    type: "POST",
-                                    data: {
-                                        map: prioMap                                       
-                                    },    
-                                    dataType: "json",
+                                url: "ajax_write_options.php",
+                                type: "POST",
+                                data: {
+                                    map: prioMap                                       
+                                },    
+                                dataType: "json",
                                     
-                                    success: function(data, status){
+                                success: function(data, status){
                                         
                                         
-                                        if (data.error)
-                                        {
-                                            alert(data.error);
-                                        }
-                                        else if (!data.success)
-                                        {
-                                            alert("Something is wrong");
-                                        }
-                                        else 
-                                        {
-                                            
-                                            $(".card").each(function(){
-                                                var prio = $(this).data("priority").replace(/\s+/g, ''); 
-                                                if (prioMap[prio]=="none")
-                                                {
-                                                    $(".iconBar .prioBack .prioIcon", $(this)).removeClass().addClass("prioIcon");
-                                                }
-                                                else
-                                                {
-                                                    $(".iconBar .prioBack .prioIcon", $(this)).removeClass().addClass("prioIcon "+prioMap[prio]);
-                                                }
-
-                                            });
-                                            
-                                          $("#dialogOptions").dialog("close");                                            
-                                        }
-                                       
-                                    },
-                                    error: function(jqXHR, textStatus, errorThrown){
-                                        alert("(Fields)There was an error:" + textStatus);
+                                    if (data.error)
+                                    {
+                                        alert(data.error);
                                     }
-                                }); 
+                                    else if (!data.success)
+                                    {
+                                        alert("Something is wrong");
+                                    }
+                                    else 
+                                    {
+                                            
+                                        $(".card").each(function(){
+                                            var prio = $(this).data("priority").replace(/\s+/g, ''); 
+                                            if (prioMap[prio]=="none")
+                                            {
+                                                $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "none");
+                                            }
+                                            else
+                                            {
+                                                var icon = prioMap[prio];
+                                                var url = "images/icons/"+icon+".png";
+                                                $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
+                                            }
+
+                                        });
+                                            
+                                        $("#dialogOptions").dialog("close");                                            
+                                    }
+                                       
+                                },
+                                error: function(jqXHR, textStatus, errorThrown){
+                                    alert("(Fields)There was an error:" + textStatus);
+                                }
+                            }); 
                         },                    
                         //Resets all the feilds to null to allow a fresh dialog window each time
                         Close: function() {
@@ -286,41 +289,37 @@
                 });
                 
                 function makeRowPrioOptions(prioName){
-                    var row = $('<tr>\
-                        <td>'+prioName+'</td>\
-                        <td><form><div id="'+prioName+'radiodiv">\
-                                <input type="radio" id="'+prioName+'icon1" name="radio" value="High" />\
-                                <label for="'+prioName+'icon1">\
-                                    <div class="prioBack">\
-                                        <div class="prioIcon High">\
-                                        </div>\
-                                    </div>\
-                                </label>\
-                                <input type="radio" id="'+prioName+'icon2" name="radio" value="Critical"/>\
-                                <label for="'+prioName+'icon2">\
-                                    <div class="prioBack">\
-                                        <div class="prioIcon Critical">\
-                                        </div>\
-                                    </div>\
-                                </label>\
-                                <input type="radio" id="'+prioName+'icon3" name="radio" value="Low"/>\
-                                <label for="'+prioName+'icon3">\
-                                    <div class="prioBack">\
-                                        <div class="prioIcon Low">\
-                                        </div>\
-                                    </div>\
-                                </label>\
-                                <input type="radio" id="'+prioName+'icon4" name="radio" value="none"/>\
-                                <label for="'+prioName+'icon4">\
-                                    <div class="prioBack">\
-                                        <div class="prioIcon">\
-                                            No Icon\
-                                        </div>\
-                                    </div>\
-                                </label>\
-                            </div></form>\
-                        </td>\
-                    </tr>');
+  
+                    var row = $('<tr><td>'+prioName+'</td></tr>');
+                    
+                    var td = $("<td><form></form></td>");
+                    var iconDiv = $("<div id='"+prioName+"radiodiv'></div>"); 
+                    
+                    //This for loop autiomatically populates the prioIcon options selection
+                    for (i=0; i<18; i++)
+                    {
+                        var icon = "icon"+i;
+                        var id = prioName+"."+icon;
+                        //Note that the new radio id is prioname.icon#
+                        var input = $("<input type='radio' id='"+id+"' name='radio' value='"+icon+"' />");
+                        var label = $("<label for='"+id+"' style='float: left;'>");
+                        var url = 'images/icons/'+icon+'.png';
+                        var div = $("<div class='prioBack'><div class='prioIcon' style='background-image: url("+escape(url)+")!important;'></div></div>");
+                        label.append(div);
+                        iconDiv.append(input, label);                                  
+                    }
+                    
+                    //In addition to all of the icons we want to have a "no icon" button
+                    var id = prioName+".none";
+                    var input = $("<input type='radio' id='"+id+"' name='radio' value='none' />");
+                    var label = $("<label for='"+id+"' style='float: left;'>");
+                    var div = $("<div class='prioBack'><div class='prioIcon' >No Icon</div></div>");
+                    label.append(div);
+                    iconDiv.append(input, label);         
+                    
+                    td.find("form").append(iconDiv);                    
+                    row.append(td);
+                    
                     $(row).find("input[type=radio][value="+prioMap[prioName]+"]").attr("checked","checked");
                     $("#dialogOptions #prioIconTable tbody").append(row);
                     
@@ -328,6 +327,23 @@
                     
                     
                 }
+                /*$('#colorSelector').ColorPicker({});*/
+                //Allows the colorpicking features
+                $('#colorSelector').ColorPicker({
+                    color: '#0000ff',
+                    onShow: function (colpkr) {
+                        $(colpkr).fadeIn(500);
+                        return false;
+                    },
+                    onHide: function (colpkr) {
+                        $(colpkr).fadeOut(500);
+                        return false;
+                    },
+                    onChange: function (hsb, hex, rgb) {
+                        $('#colorSelector div').css('backgroundColor', '#' + hex);
+                    }
+                });
+                
                 
                 //Creates the search dialog box
                 $( "#dialogSearch" ).dialog({
@@ -540,12 +556,7 @@
                 
                 
                 //setup the dialog with the proper field values for the bug_severity dropdown
-                //Evan, go ahead and do the same for other dropdowns.  You might be able to find a way to get
-                //MULTIPLE fields in one ajax call;  make an array out of the names field.
-                //then parse the results --> handle each field's values
-                //Hint: you'll have to wrap a foreach(to handle fields) around the foreach(to handle field's values) that I wrote.
-                //And then also find some way to associate their field's name with this page's select dropdowns. (id or name maybe?)
-                //also, note, I put this in the document.ready so that I'd be sure that the dialog code exists before I try to modify it.
+                //Evan, go ahead and do the same for other dropdowns.  You might be able to find a way to get               
                 //The Array of fields that we want to find values for
                 var formFields = ["priority","bug_severity", "bug_status", "resolution", "cf_whichcolumn", "rep_platform", "op_sys"];
             
@@ -614,7 +625,7 @@
                                 }
                             }
                         }
-                        console.log(prioMap);
+                        
                     },
                     error: function(jqXHR, textStatus, errorThrown){
                         alert("(Fields)There was an error:" + textStatus);
@@ -736,19 +747,41 @@
                 $(".p").live("click", function(){
                     //Grabs the anchor's text
                     var prio = $(this).html();
-                    var val = $(this).attr("value");
-                    
-                    alert(val);
+
                     //Finds which card was right clicked
                     var card = $.mbMenu.lastContextMenuEl;
+                    
+                    var cardId = $(card).attr("id");
+                    closeContextMenu();
+                    //var cardId = card.attr("id");
                     //Stores the selected priority as the cards priority
-                    
-                    $(card).data({"priority": prio});
-                    //TODO Need a way to associate the priority string with  its sortkey
-                    /*$(card).data({"priokey": val});*/
-                    
-                    displayHandler($(card));
-                    closeContextMenu(); 
+                    $.ajax({
+                        url: "ajax_POST.php",
+                        type: "POST",
+                        data: { 
+                            "method": "Bug.update",
+                            "ids":cardId,
+                            "priority": prio 
+                        },
+                        dataType: "json",
+                        success: function(data, status){
+                        
+                            if (data.result.faultString != null)
+                            {
+                                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                            }
+                            else if (!data.result)
+                            {
+                                alert("Something is wrong");
+                            }
+                            else
+                            {
+                                $(card).data({"priority": prio});
+                                displayHandler($(card));
+                            }
+                        }
+                    });                                                                                          
+                   
                 });
                 
                 
@@ -981,12 +1014,9 @@
                 var job = card.data("bug_severity").replace(/\s+/g, '');
                 var prio = card.data("priority").replace(/\s+/g, '');                
                 var deadline = card.data("deadline");
+                //The date discrepancy was handled by correcting the timezone which is accomplished with this php call
                 var date = new Date(deadline+ " UTC <?php echo date("O"); ?>");
-                /* TODO For some reason instantiating a new date messes the day up by one, need to figure out why
-                alert(deadline); Prints correct date
-                alert(date); Prints the day before the correct date
-                 */ 
-                
+                                       
                 
                 if (job != null)
                 {
@@ -1014,23 +1044,22 @@
                 //$(cardRef).addclass("Task");
                 
                 
-                //This section adds and switches the priority icon. TODO need to find new method taking the sortkey used by bugzilla
-                if (prio != "Medium" && $(cardRef + " .prioBack").length == 0)
+                //This section adds and switches the priority icon.                                         
+                if ($(cardRef + " .prioBack").length == 0)
                 {
-                    $(cardRef+ " .iconBar").append("<div class=\"prioBack\"><div class=\"prioIcon\"></div></div>");
+                    var prioBack = $("<div class=\"prioBack\"><div class=\"prioIcon\"></div></div>");
+                    $(cardRef+ " .iconBar").append(prioBack);
                 }
-                if (prio != "Medium")
-                {
-                    $("#priority option").each(function(){                    
-                        $(cardRef+" .iconBar .prioBack .prioIcon").removeClass($(this).val());
-                    });
                 
-                    $(cardRef+" .iconBar .prioBack .prioIcon").addClass(prio).attr({"title": prio + " Priority"});
-                }
-                else if (prio == "Medum")
-                {
-                    $(cardRef+" .iconBar .prioBack ").remove();
-                }
+                $(cardRef + " .prioBack").attr("title", prio+" Priority")
+                
+                //Now that we have an empty div with the correct div, we refer to the user defined prioMap to add the icons
+                var icon  = prioMap[prio];
+                var url = "images/icons/"+icon+".png";
+                $(cardRef+" .iconBar .prioBack .prioIcon").css("background-image", "url("+url+")")
+                                        
+
+                                      
                 
                 
                 //This section handles the calendar icon
@@ -1041,9 +1070,7 @@
                 if (deadline == null || deadline == "")
                 {
                     $(cardRef+ " .iconBar .calBack").remove(); 
-                }
-
-                //TODO This is a temporary fix, need to figure out why the days are different
+                }       
                 var day = date.getDate() ;                
                 var month = date.getMonth(); 
                 var year = date.getFullYear();
@@ -1088,7 +1115,8 @@
                 var now = new Date(),
                 dateEnd = new Date(year, month, day), 
                 days = (dateEnd - now) / 1000/60/60/24;   // convert milliseconds to days
-
+                                        
+                //This function previously rounded when noon came around. Now it always rounds up which ius more consistent which our perception of time
                 return Math.ceil(days);
             }
 
@@ -1562,11 +1590,25 @@
     </head>
     <body>
         <div id="dialogOptions" class="ui-dialog-content ui-widget-content"  title="Options" >
-            <table id="prioIconTable">
-                <tbody>
-                    
-                </tbody>
-            </table>
+            <div>
+                <h1>
+                    Priority Icon Assignments:
+                </h1>
+                <table id="prioIconTable">
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+            <div style="float:left">
+                <h1>
+                    Job Type Card Color Assignments:\url{http://www.bugzilla.org/docs/4.2/en/html/upgrade.html}
+                </h1>
+                <p>Attached to an text field and using callback functions to update the color with field's value and set the value back in the field by submitting the color.</p>
+                <div id="colorSelector" ><div style="background-color: #0000ff"></div></div>
+
+
+            </div>
         </div>  
         <div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
             <form>
@@ -1612,21 +1654,21 @@
                                 <div style="float: top">
                                     <div style="float: left;">
                                         <label for="version">version</label>
-                                        <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all, half">    </select>
+                                        <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
                                     </div>
                                     <div style="float: left; margin-left: 10px;">
                                         <label for="bug_severity">Severity:</label>
-                                        <select  name="bug_severity" id="bug_severity"  class=" text ui-widget-content ui-corner-all, half" ></select>
+                                        <select  name="bug_severity" id="bug_severity"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; "></select>
                                     </div>
                                 </div>
                                 <div style="float: top">
                                     <div style="float: left;">
                                         <label for="bug_status">Status:</label>
-                                        <select  name="bug_status" id="bug_status"  class="text ui-widget-content ui-corner-all, half" ></select>
+                                        <select  name="bug_status" id="bug_status"  class="text ui-widget-content ui-corner-all"style=" width:135px !important; " ></select>
                                     </div>
                                     <div style="float: left; margin-left: 10px;">
                                         <label for="user">Assigned User:</label>
-                                        <select  name="user" id="user"  class="text ui-widget-content ui-corner-all, half" >   
+                                        <select  name="user" id="user"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">   
                                             <option></option>
                                             <option>User 1</option>
                                             <option>User 2</option>
@@ -1636,29 +1678,29 @@
                                     </div>
                                 </div>
                                 <div style="float: top">
-                                    <div style="float: left;">
+                                    <div style="float: left; width: ">
                                         <label for="priority">Priority:</label>
-                                        <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all, half">    </select>
+                                        <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
                                     </div>
                                     <div style="float: left; margin-left: 10px;">
                                         <label for="deadline">Deadline:</label>
-                                        <input type="text" name="deadline" id="deadline" class="Dates text ui-widget-content ui-corner-all, half" />
+                                        <input type="text" name="deadline" id="deadline" class="Dates text ui-widget-content ui-corner-all" style=" width:135px !important; "/>
                                     </div>
                                 </div>
                                 <div style="float: top">
                                     <div style="float: left;">
                                         <label for="op_sys">Operating System</label>
-                                        <select  name="op_sys" id="op_sys"  class="text ui-widget-content ui-corner-all, half">    </select>
+                                        <select  name="op_sys" id="op_sys"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
                                     </div>
                                     <div style="float: left; margin-left: 10px;">
                                         <label for="rep_platform">Hardware</label>
-                                        <select  name="rep_platform" id="rep_platform"  class="text ui-widget-content ui-corner-all, half">    </select>
+                                        <select  name="rep_platform" id="rep_platform"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
                                     </div>
                                 </div>
                                 <div style="float: left;">
                                     <div style="float: left; ">
                                         <label for="cf_whichcolumn">Into Column:</label>
-                                        <select  name="cf_whichcolumn" id="cf_whichcolumn"  class="text ui-widget-content ui-corner-all, half" >                               
+                                        <select  name="cf_whichcolumn" id="cf_whichcolumn"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;">                               
                                         </select>
                                     </div>
                                 </div>
@@ -1813,6 +1855,7 @@
             <a rel="separator"> </a>
             <a action="addCardToCol()">Add Card</a>
         </div>
+
     </body>
 </html>
 

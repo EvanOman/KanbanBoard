@@ -1,5 +1,5 @@
 <?php
- if ($_REQUEST[method]!= NULL)
+ /*if ($_REQUEST[method]!= NULL)
  {
      echo "Got the data\n";
      var_dump($_REQUEST);
@@ -7,8 +7,14 @@
  else{
      echo "Didnt work\n";
      var_dump($_REQUEST);
- }
+ }*/
+echo date("s")."<br>";
 
+echo date("s", time())."<br>";
+
+echo microtime()."\n";
+
+echo substr(microtime(), 2, 3);
 /*include "config.php";
 
 //$params = json_encode($params);
