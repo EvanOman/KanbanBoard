@@ -532,6 +532,8 @@ class BugzillaXML {
                 break;
             case 'int': $filter = FILTER_SANITIZE_NUMBER_INT;
                 break;
+            case 'special': $filter = FILTER_SANITIZE_SPECIAL_CHARS;
+                break;
             default: $filter = FILTER_SANITIZE_STRING;
                 break;
         }

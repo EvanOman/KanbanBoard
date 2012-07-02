@@ -50,6 +50,7 @@
                         else 
                         {  
                             prioMap = data.options.prioIcons;
+                            jobMap = data.options.jobColors;
                         }
                         
                     },
@@ -59,8 +60,17 @@
                 });
             }
             initialize();
+            
             $(document).ready(function() {
-                
+                /*jQuery.ajaxSetup({
+                    beforeSend: function() {
+                        $('body').addClass("loading"); 
+                    },
+                    complete: function(){
+                        $('body').removeClass("loading"); 
+                    },
+                    success: function() {}
+                });*/
                 //Enables the sortable behavior that allows the reordering of the cards
                 $( ".column,.tablists" ).sortable({
                     connectWith: ".column,.tablists",
@@ -108,6 +118,7 @@
 
                 //Handles the add card button
                 $("#btnAddCard").click(function(){
+                    
                     addCard();
                 }); 
                 $("#btnSearchCard").click(function(){
@@ -215,13 +226,13 @@
                     autoOpen: false,
                     resizable: false,
                     height: 750,
-                    width: 1250,
+                    width: 1300,
                     show: { effect: 'blind'},
                     hide: "explode",
                     modal: true,
                     buttons: {
-                        //TODO Needs to take in offset and limit parameters
                         Save: function() {
+                            //Stores each selection made in the options menu
                             $("#dialogOptions #prioIconTable tbody tr").each(function(){
                                 var name = $(this).find("td").first().text();
                                 if ($(this).find("input[type=radio]:checked").length == 0)
@@ -235,11 +246,21 @@
                                 
                                 prioMap[name] = iconClass;
                             });
+                            
+                            $("#dialogOptions #jobColorTable tbody tr").each(function(){
+                                var name = $(this).find("td").first().text();
+                                
+                                //This finds the color of the color preview. Returns an RGB string, hopefully this will work
+                                var color = $(this).find("td").last().find("div").find("div").css("background-color");                                 
+                                
+                                jobMap[name] = color;
+                            });
                             $.ajax({
                                 url: "ajax_write_options.php",
                                 type: "POST",
                                 data: {
-                                    map: prioMap                                       
+                                    prioMap: prioMap,
+                                    jobMap: jobMap
                                 },    
                                 dataType: "json",
                                     
@@ -269,6 +290,11 @@
                                                 var url = "images/icons/"+icon+".png";
                                                 $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
                                             }
+                                            
+                                            var job = $(this).data("bug_severity").replace(/\s+/g, ''); 
+                                            var color = jobMap[job];
+                                            
+                                            $(this).css("background-color", color);
 
                                         });
                                             
@@ -327,23 +353,44 @@
                     
                     
                 }
-                /*$('#colorSelector').ColorPicker({});*/
-                //Allows the colorpicking features
-                $('#colorSelector').ColorPicker({
-                    color: '#0000ff',
-                    onShow: function (colpkr) {
-                        $(colpkr).fadeIn(500);
-                        return false;
-                    },
-                    onHide: function (colpkr) {
-                        $(colpkr).fadeOut(500);
-                        return false;
-                    },
-                    onChange: function (hsb, hex, rgb) {
-                        $('#colorSelector div').css('backgroundColor', '#' + hex);
-                    }
-                });
                 
+                function makeRowJobColorOptions(job){
+                    job = job.replace(/\s+/g, '');
+                    var id = job+"Color";
+                    var row = $('<tr><td>'+job+'</td></tr>');
+                    
+                    var color = jobMap[job];
+                    
+                    var td = $("<td><div id='"+id+"' class='colorSelector'><div style='background-color:"+color+"'></div></div></td>");
+                    
+                    row.append(td);
+                    
+                    //We do this because the ColorPicker plugin requires Hex 
+                    color = rgb2hex(color)
+
+                    //$(row).find("input[type=radio][value="+prioMap[job]+"]").attr("checked","checked");
+                    $("#dialogOptions #jobColorTable tbody").append(row);
+                    
+                    $('#'+id).ColorPicker({
+                        color: color,
+                        onChange: function (hsb, hex, rgb) {
+                            $('#'+id+' div').css('backgroundColor', /*'rgb('+rgb.r+', '+rgb.g+', '+rgb.b+')'*/'#'+ hex);
+                        }
+                       
+                    });
+                    
+                    
+                    
+                }   
+                
+                //This function converts rgb colors to their hex equivalent
+                function rgb2hex(rgb){
+                    rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+                    return "#" +
+                        ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
+                        ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
+                        ("0" + parseInt(rgb[3],10).toString(16)).slice(-2);
+                }
                 
                 //Creates the search dialog box
                 $( "#dialogSearch" ).dialog({
@@ -486,8 +533,18 @@
                 //Handles the edit dialog background color change based off of user selection
                 $("#bug_severity").change(function () {
                     var job = $(this).val();
-                    
+                   
                     dialogDisplay(job);
+                });
+                
+                 $("#bug_status").change(function () {
+                   var status = $(this).val();
+                   if (status == "RESOLVED")
+                       {
+                           var input = $('<label for="resolution">resolution:</label><select  name="resolution" id="resolution"  class="text ui-widget-content ui-corner-all" ></select>');
+                           $("#Details").find("input").parent().append(input);
+                       }
+                   
                 });
                 
                 //Populates the components field based off of the selected product
@@ -608,6 +665,18 @@
                                         
                                         makeRowPrioOptions(name);
                                     }  
+                                }
+                                //This if and for statement populates the table of color options
+                                if (fieldName == "bug_severity")
+                                {
+                                    for (var i in data.result.fields[j].values) 
+                                    {    
+                                        //get the value
+                                        var name = data.result.fields[j].values[i].name;
+                                        var value = data.result.fields[j].values[i].sortkey;
+                                        makeRowJobColorOptions(name);
+                                    }
+                                    
                                 }
                                
                                 
@@ -737,7 +806,7 @@
                             for (var i in data.result.bugs)
                             {
                                 var bug = data.result.bugs[i];
-                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, "Test", bug.status);
+                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline,"Test" , bug.status);
                             }
                         }
                     }
@@ -801,6 +870,8 @@
                     return false;
                 }).next().hide();
                 
+             
+                
             });
               
               
@@ -825,7 +896,9 @@
                             "value_field": "product"                            
                         },    
                         dataType: "json",
-                    
+                        beforeSend: function() {
+                            $('#Details, #dialogSearch').addClass("loading"); 
+                        },
                         success: function(data, status){
                         
                       
@@ -839,8 +912,10 @@
                             }
                             else 
                             {   
-                                componentData =  data.result.fields;                            
+                                componentData =  data.result.fields;  
                             }
+                            
+                           
                         },
                         error: function(jqXHR, textStatus, errorThrown){
                             alert("(Fields)There was an error:" + textStatus);
@@ -881,7 +956,10 @@
                             var comp = componentData[j].values[k].name;
                             var option = $("<option>").val(comp).html(comp);
                             $("#"+dialogID+" select[name="+fieldName+"]").append(option);
-                        }          
+                        } 
+                        
+                        //We want to make sure that the values are appended before we close the loading modal screen
+                        $('#Details, #dialogSearch').removeClass("loading"); 
                     }
                 }
             };
@@ -898,19 +976,19 @@
                 $("#priority").val(card.data("priority"));
                 $("#cf_whichcolumn").val(card.data("cf_whichcolumn"));
                 $("#deadline").val(card.data("deadline"));
-                $("#description").val(card.data("description"));
                 $("#product").val(card.data("product"));  
                 $("#version").val(card.data("version"));
                 $("#component").val(card.data("component"));                
                 $("#bug_status").val(card.data("status"));
                 $("op_sys").val(card.data("op_sys"));
                 $("rep_platform").val(card.data("rep_platform"));
-              
                 
+                //Need to set the rich text edit separately
+                tinyMCE.get('description').setContent(card.data("description"));
+                                
                 //Adds edit specifc dialog properties
                 $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
                 $("#edit-tabs ul li").show();
-                $("label[for=cf_whichcolumn],#cf_whichcolumn").hide();
                 
                 //We need the comments and the atavhements tabs to be specific to the card as well but we only want to retireve this data from the server if it is requested by the user
                 //To accomplish this we will set the comments and attachments tabs to have an associated value equal to the id of the card being Edited
@@ -925,11 +1003,13 @@
                 
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
                     "Save Card": function() {                                                                                                
-                        //Finds the current column of the selected card
-                        var col = card.parent().parent().attr("id");
+                                                                        
+                        //Gets the text entered in the desciption page
+                        var description = tinyMCE.get('description').getContent();
+                        
                         //Sends the field info to Bugzilla to be processed
-                        ajaxEditBug(col, $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#bug_severity").val(), $("#title").val(), $("#version").val(),$("#user").val(),
-                        $("#deadline").val(), $("#description").val(), $("#bug_status").val(), $("#op_sys").val(),$("#rep_platform").val()); 
+                        ajaxEditBug($("#cf_whichcolumn").val(), $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#bug_severity").val(), $("#title").val(), $("#version").val(),$("#user").val(),
+                        $("#deadline").val(), description, $("#bug_status").val(), $("#op_sys").val(),$("#rep_platform").val()); 
                         //displayHandler(card); 
                             
                     },
@@ -939,7 +1019,16 @@
                 });
                 $( "#dialogAddEditCard" ).dialog( "option", "close",function()  {
                    
+                    //We want to remove any previous comments:
+                    $("#Comments #accordion div, #Comments #accordion .header").each(function(){
+                        $(this).remove();
+                    });
+                    
+                    //Clears every input value
                     $("#Details input, #Details textarea, #Details select").val("");
+                    
+                    //Clears the rich text editor
+                    tinyMCE.get('description').setContent('');
                 }
             );   
                 $( "#dialogAddEditCard" ).dialog( "open" );
@@ -952,8 +1041,16 @@
                 $( "#edit-tabs" ).tabs("select", 0);
                 $("label[for=cf_whichcolumn],#cf_whichcolumn").show();
                 $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );
+                
+                //We want the default value for Status for a new card to be "NEW", not unconfirmed
+                $("#bug_status").val("NEW");
+                //Sets a default value for the caloumn field
+                $("#cf_whichcolumn").val("Limbo");
+                
+                
                 var first = $("#bug_severity option").first().val();                
                 dialogDisplay(first);
+                
                 getCompsVers([$("#product").val()], "Details");
                     
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Save Card": function() {
@@ -962,9 +1059,13 @@
                             $("#dialogInvalid").dialog("open");
                         }
                         else{      
+                            
+                            //Gets the text entered in the desciption page
+                            var description = tinyMCE.get('description').getContent();
+                            
                             //Files a new bug in the bugzilla server
                             createCardBugzilla($("#cf_whichcolumn").val(), $("#component").val(), $("#priority").val(), $("#product").val(),  $("#bug_severity").val(), $("#title").val(), 
-                            $("#version").val(),$("#user").val(),$("#deadline").val(), $("#description").val(), $("#bug_status").val(),$("#op_sys").val(), $("#rep_platform").val() ); 
+                            $("#version").val(),$("#user").val(),$("#deadline").val(), description, $("#bug_status").val(),$("#op_sys").val(), $("#rep_platform").val() ); 
                                                           
                             
                         } 
@@ -976,6 +1077,7 @@
                 $( "#dialogAddEditCard" ).dialog( "option", "close",function()  {
                    
                     $("#Details input, #Details textarea, #Details select").val("");
+                    tinyMCE.get('description').setContent('');
                 }
             );   
                 $( "#dialogAddEditCard" ).dialog( "open" );
@@ -1014,35 +1116,15 @@
                 var job = card.data("bug_severity").replace(/\s+/g, '');
                 var prio = card.data("priority").replace(/\s+/g, '');                
                 var deadline = card.data("deadline");
+                var summary = card.data("title")
                 //The date discrepancy was handled by correcting the timezone which is accomplished with this php call
                 var date = new Date(deadline+ " UTC <?php echo date("O"); ?>");
-                                       
                 
-                if (job != null)
-                {
-                    $("#bug_severity option").each(function(){
-                    
-                        $(cardRef).removeClass($(this).val());
-                    })
-                    $(cardRef).addClass(job).attr({"title": job});
-                    
-                    $("#bug_severity option").each(function(){
-                        $("#Details").removeClass($(this).val());
-                    });
-                    $("#Details").addClass(job);
-                }
-                if (job == null)
-                {
-                    $("#bug_severity option").each(function(){
-                        $("#Details").removeClass($(this).val());
-                    });
-                    $("#Details").addClass("enhancement");
-                    $(cardRef).addclass("enhancement");
-                    
-                }
-        
-                //$(cardRef).addclass("Task");
+                //Changes the background color of the card to match the .ini file
+                card.css("background-color", jobMap[job]);
                 
+                //Sets the title of the card to the jobtype
+                card.attr({"title": job+": " + summary});
                 
                 //This section adds and switches the priority icon.                                         
                 if ($(cardRef + " .prioBack").length == 0)
@@ -1121,19 +1203,16 @@
             }
 
             function dialogDisplay(job){
-                $("#bug_severity option").each(function(){
-                    $("#Details").removeClass($(this).val().replace(/\s+/g, ''));
-                });
-                
-                if (job == null)
-                {
-                    $("#Details").addClass("DesignBug");
-                }
-                else
+                if (job != null)
                 {
                     job = job.replace(/\s+/g, '');
-                    $("#Details").addClass(job);
+                    $("#Details").css("background-color", jobMap[job]);
                 }
+                else {
+                    //This will be our default case. TODO find a better solution
+                    $("#Details").css("background-color", "white");
+                }
+                
             }
             
             //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, bug_severity, priority. 
@@ -1253,6 +1332,7 @@
                         "status": status,
                         "op_sys": op_sys,
                         "deadline": deadline,
+                        "cf_whichcolumn": col,
                         "rep_platform": rep_platform
                     },
                     dataType: "json",
@@ -1268,7 +1348,12 @@
                         }
                         else 
                         {
+                            //Updates the card's text
                             $('#'+id+" .cardText").html($("#title").val());
+                            
+                            //Appends the card to the correct column(Don't want to update the cards position twice)
+                            $("#"+id).appendTo("#"+col)
+                                                        
                             //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
                             $("#"+id).data({
                                 "cf_whichcolumn": col,
@@ -1285,7 +1370,8 @@
                                 "op_sys": op_sys,
                                 "rep_platform": rep_platform
                             });       
-                            displayHandler($("#"+id));
+                            displayHandler($("#"+id));                                                       
+                            
                             //Only want to close the dialog after the information has been sent and no errors pop up
                             $( "#dialogAddEditCard" ).dialog( "close" );
                             
@@ -1392,6 +1478,9 @@
                         url: "ajax_POST.php",
                         type: "POST",
                         dataType: "json",
+                        beforeSend: function() {
+                            $('#dialogSearch').addClass("loading"); 
+                        },
                         data: { 
                             /*"ids":  $("#searchId").val(),*/
                             "method": "Bug.search",
@@ -1423,6 +1512,7 @@
                                 //Search results will be printed to the screen from here
                                 advSearchResults[pageNum] = data.result.bugs;
                                 processResults();
+                                $('#dialogSearch').removeClass("loading"); 
                             }
                                      
                         },
@@ -1480,6 +1570,7 @@
                             ajaxSearch(limit, pageNum+1)
                         });
                         $("#Results").append(next);
+                        next.button();
                     }
                         
                     if (pageNum != 0)
@@ -1490,6 +1581,7 @@
                         });
                                 
                         $("#Results").append(prev);
+                        prev.button();
                     }
                     else if (pageNum <=0 && $("#prev").length > 0)
                     {
@@ -1500,18 +1592,19 @@
             
             //Gets a given card's comments and posts them to the Comments tab 
             function ajaxGetComments(ids) { 
-            
-            
+                        
                 var card = $("#"+ids);
                 
                 //We only want to pull down the card's comments once to save time
                 if (card.data("comments") == null)               
                 {
                     $.ajax({
-                        async: false,
                         url: "ajax_POST.php",
                         type: "POST",
                         dataType: "json",
+                        beforeSend: function() {
+                            $('#Comments').addClass("loading"); 
+                        },
                         data: {                        
                             "method": "Bug.comments",
                             "ids": ids                        
@@ -1533,13 +1626,22 @@
                                 card.data({
                                     "comments": comArr
                                 });
-                            }                                   
+                                postComments(card);
+                            } 
+                            $('#Comments').removeClass("loading");
                         },
                         error: function(jqXHR, textStatus, errorThrown){
                             alert("There was an error:" + textStatus);
                         }
                     }); 
                 }  
+                else {
+                    postComments(card);
+                }
+                                                      
+            }
+            
+            function postComments(card){
                 //First we want to remove any previous comments:
                 $("#Comments #accordion div, #Comments #accordion .header").each(function(){
                     $(this).remove();
@@ -1569,7 +1671,7 @@
                 
                 //Although accordian doesn't do what i want(it only allows one comment to be open at a time), this line initalizing the comments
                 //with ui styling
-                /* $( "#accordion" ).accordion("enable");*/                                               
+                /* $( "#accordion" ).accordion("enable");*/         
             }
             
             $(".commentReplyLink").live("click", function(e){
@@ -1585,7 +1687,7 @@
                 var text = $('<textarea style="width: 95%; height:100%;">').text(quote);
                 var comm = $('<div class="commDiv">').append(text);                      
                 $("#Comments #accordion").append(header,comm);
-            }
+            }                        
         </script>
     </head>
     <body>
@@ -1602,12 +1704,13 @@
             </div>
             <div style="float:left">
                 <h1>
-                    Job Type Card Color Assignments:\url{http://www.bugzilla.org/docs/4.2/en/html/upgrade.html}
+                    <br>Job Type Card Color Assignments:
                 </h1>
-                <p>Attached to an text field and using callback functions to update the color with field's value and set the value back in the field by submitting the color.</p>
-                <div id="colorSelector" ><div style="background-color: #0000ff"></div></div>
+                <table id="jobColorTable">
+                    <tbody>
 
-
+                    </tbody>
+                </table>              
             </div>
         </div>  
         <div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
@@ -1713,13 +1816,16 @@
                             </div>                            
                         </fieldset>
                     </form>
+                    <div class="modal"></div>
                 </div>
 
                 <div id="Comments" style="height: 500px;">
-                    <div id ="accordion"> </div>                    
+                    <div id ="accordion"> </div>  
+                    <div class="modal"></div>
                 </div>
                 <div id="Attachments">
                     <p>These are attachments</p>
+                    <div class="modal"></div>
                 </div>
             </div>
         </div>   
@@ -1780,6 +1886,7 @@
                     </div>
                 </div>
             </div>
+            <div class="modal"></div>
         </div>
 
         <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Backlog" > 
@@ -1795,8 +1902,8 @@
             <button class="btnTab">Backlog</button>
             <button class="btnTab">Archive</button>
             <button class="btnTab">Limbo</button>
-            <button id="btnAddCard">Add Card</button>
-            <button id="btnSearchCard">Advanced Search</button>
+            <button id="btnAddCard" >Add Card</button>
+            <button id="btnSearchCard" >Advanced Search</button>
             <button id="btnOptions">Options</button>
         </div>
         <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
@@ -1854,7 +1961,8 @@
             <a class="{menu:'moveAllCards'}">Move All Cards to</a>
             <a rel="separator"> </a>
             <a action="addCardToCol()">Add Card</a>
-        </div>
+        </div> 
+
 
     </body>
 </html>

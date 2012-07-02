@@ -18,6 +18,8 @@ body{
 
 
 .card{ 
+    /*Here we set the background color to a default, the user can change the colors to whatever he wants*/
+    background-color: #FFE7A1;
     color: black;
     display: block;
     width: 140px;
@@ -165,26 +167,8 @@ div#bugs-contain table td, div#bugs-contain table th {
 
 .menuContainer{
     border-top-width: 0;
-
-}
-.DesignBug/*=> "DesignBug"*/{
-    background-color: khaki !important;  
 }
 
-.Bug/*=> "Bug"*/{
-    background-color: indianred !important;  
-}
-
-.TBD/*=> "TBD"*/{
-    background-color: powderblue !important;
-}
-
-.FeatureRequest/*=> "Feature Request"*/{
-    background-color:yellowgreen !important; 
-}
-.enhancement{
-    background-color:orange !important; 
-}
 .iconBar{
     width:140px;
     height: 40px;
@@ -265,15 +249,58 @@ div#bugs-contain table td, div#bugs-contain table th {
     width:1350px !important;
 }
 .commDiv{
- height: auto !important;
- overflow:hidden;
+    height: auto !important;
+    overflow:hidden;
 }
 form>div>label {
     float: left;
 }
-#colorSelector div {
-	
-	width: 30px;
-	height: 30px;
-	
+.colorSelector div, .colorSelctor {
+    float: left;
+    width: 50px;
+    height: 50px;
+    z-index: 1002;
+    border: 1px  solid black;
+    -moz-box-shadow: 3px 3px 4px #444;
+    -webkit-box-shadow: 3px 3px 4px #444;
+    box-shadow: 3px 3px 4px #444;
+    -moz-border-radius: 10px; /* Firefox */
+    -webkit-border-radius: 10px; /* Safari, Chrome */
+    border-radius: 10px; /* CSS3 */
+}
+/*The colorpicker class is from the Solor Pciker plugin I am implementing to allow card color changing. The Z-index modification is needed to make the 
+widget visible when the dialog is open*/
+.colorpicker{
+    z-index: 1005;
+}
+
+/* Start by setting display:none to make this hidden.
+   Then we position it in relation to the viewport window
+   with position:fixed. Width, height, top and left speak
+   speak for themselves. Background we set to 80% white with
+   our animation centered, and no-repeating */
+.modal {
+    display:    none;
+    position: fixed;
+    z-index:    1005;
+    top: 0;
+     left:       0;
+    height:     100%;
+    width:      100%;
+    background: rgba( 255, 255, 255, .8 ) 
+        url('images/ajax-loader.gif') 
+        50% 50% 
+        no-repeat;
+}
+
+/* When the body has the loading class, we turn
+   the scrollbar off with overflow:hidden */
+.loading {
+    overflow: hidden;   
+}
+
+/* Anytime the body has the loading class, our
+   modal element will be visible */
+.loading .modal {
+    display: block;
 }

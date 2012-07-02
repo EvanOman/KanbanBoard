@@ -1,12 +1,24 @@
 <?php
 
 $prioMap = array();
-foreach ($_POST["map"] as $name => $class) {
+foreach ($_POST["prioMap"] as $name => $icon) {
     $name = filter_var($name, FILTER_SANITIZE_STRING);
-    $class = filter_var($class, FILTER_SANITIZE_STRING);
-    $prioMap[$name] = $class;    
+    $icon = filter_var($icon, FILTER_SANITIZE_STRING);
+    $prioMap[$name] = $icon;    
 }
-$iniSettings = array("prioIcons"=>$prioMap);
+
+$jobMap = array();
+foreach ($_POST["jobMap"] as $name => $color) {
+    $name = filter_var($name, FILTER_SANITIZE_STRING);
+    //Here we sanitizer the color as a string because it coming in as rgb
+    $color = filter_var($color, FILTER_SANITIZE_STRING);
+    $jobMap[$name] = $color;    
+}
+
+
+$iniSettings = array("prioIcons"=>$prioMap, "jobColors"=>$jobMap);
+
+
 
 if (write_ini_file($iniSettings, "kanban.ini", true))
 {

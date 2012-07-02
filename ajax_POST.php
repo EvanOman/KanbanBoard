@@ -1,6 +1,7 @@
 <?php
-/*error_reporting(E_ALL);
-ini_set('display_errors', true);*/
+
+/* error_reporting(E_ALL);
+  ini_set('display_errors', true); */
 
 if (!class_exists('DateTime'))
     require_once('DateTime.class.php');
@@ -25,6 +26,8 @@ unset($paramArr['method']);
 foreach ($paramArr as $k => $v) {
     if ($k == 'ids' || $k == 'limit') {
         $type = 'int';
+    } else if ($k == "description") {
+        $type = "special";
     } else {
         $type = 'string';
     }
