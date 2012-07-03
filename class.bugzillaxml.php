@@ -1,7 +1,7 @@
 <?php
 
-/*error_reporting(E_ALL);
-ini_set('display_errors', true);*/
+/* error_reporting(E_ALL);
+  ini_set('display_errors', true); */
 
 class BugzillaXML {
 
@@ -48,6 +48,9 @@ class BugzillaXML {
             foreach ($value as $val) {
                 $member->value->array->data->addChild('value', $val);
             }
+        } else if ($valueType == "base64") {
+            $member->addChild('value');
+            $member->value->addChild('base64', $value);
         } else {
 
             $member->addChild('value', $value);
@@ -115,7 +118,7 @@ class BugzillaXML {
         return $json;
     }
 
-    function submit() {
+    function submit($returnArray = false) {
 
         // is cURL installed yet?
         if (!function_exists('curl_init')) {
@@ -128,9 +131,9 @@ class BugzillaXML {
         // Now set some options (most are optional)
         // Set URL to download
         curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
-
-        $post = $this->toXML();
-
+        
+        $post = $this->toXML();               
+        
         //Identifies the call by its method name
         $name = new SimpleXMLElement($post);
         $this->requestID = (string) $name->methodName;
@@ -150,7 +153,7 @@ class BugzillaXML {
         curl_setopt($ch, CURLOPT_POST, true);
 
         curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
-        
+
         //echo $post;
         // Include header in result? (1 = yes, 0 = no)
         curl_setopt($ch, CURLOPT_HEADER, 0);
@@ -171,8 +174,13 @@ class BugzillaXML {
         //echo $output;
         // Close the cURL resource, and free system resources
         curl_close($ch);
-
-        return $this->toJson($output);
+        if ($returnArray){
+            return $this->toPHP($output);
+        }
+        else 
+        {
+            return $this->toJson($output);
+        }
     }
 
     protected function printResponseStart() {
@@ -534,6 +542,11 @@ class BugzillaXML {
                 break;
             case 'special': $filter = FILTER_SANITIZE_SPECIAL_CHARS;
                 break;
+            case 'base64':
+                return $input;
+                break;
+            case 'none': return $input;
+                break;
             default: $filter = FILTER_SANITIZE_STRING;
                 break;
         }
@@ -548,6 +561,35 @@ class BugzillaXML {
             return $clean;
         } else {
             return filter_var($input, $filter);
+        }
+    }
+
+    
+
+    function toPHP($xml) {
+
+        $doc = new DOMDocument();
+        $doc->loadXML($xml);
+
+        $paramElements = $doc->getElementsByTagName('param');
+        if ($paramElements->item(0) == NULL) {
+            $faultElements = $doc->getElementsByTagName('fault');
+            $faultEl = $faultElements->item(0);
+            $valueEl = $faultEl->firstChild;
+            while ($valueEl && ($valueEl->nodeType != 1 || $valueEl->nodeName != 'value'))
+                $valueEl = $valueEl->nextSibling;
+            /* if (!$valueEl)
+              trigger_error("XML-RPC Parse Error: Expected a 'value' element child of the 'param' element."); */
+            return $this->decodeXmlRpc($valueEl);
+        } else {
+            //echo 'Didnt Work';
+            $paramEl = $paramElements->item(0);
+            $valueEl = $paramEl->firstChild;
+            while ($valueEl && ($valueEl->nodeType != 1 || $valueEl->nodeName != 'value'))
+                $valueEl = $valueEl->nextSibling;
+            if (!$valueEl)
+                trigger_error("XML-RPC Parse Error: Expected a 'value' element child of the 'param' element.");
+            return $this->decodeXmlRpc($valueEl);
         }
     }
 
