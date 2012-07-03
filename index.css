@@ -281,10 +281,10 @@ widget visible when the dialog is open*/
    our animation centered, and no-repeating */
 .modal {
     display:    none;
-    position: fixed;
+    position: absolute;
     z-index:    1005;
     top: 0;
-     left:       0;
+    left:       0;
     height:     100%;
     width:      100%;
     background: rgba( 255, 255, 255, .8 ) 
@@ -303,4 +303,24 @@ widget visible when the dialog is open*/
    modal element will be visible */
 .loading .modal {
     display: block;
+}
+#Details{
+    position: relative;
+}
+#attachmentTable a{
+    font-size: 16px;
+}
+#attachmentTable tbody td{
+    border-bottom: 1px dashed #B6BDD2;
+    padding-top: 12px;
+    padding-bottom: 4px;
+}
+#attachmentTable tbody tr{
+    
+}
+#attachmentTable tbody tr:last-child td{
+    border: none;
+}
+#Attachments table{
+    float: left;
 }
