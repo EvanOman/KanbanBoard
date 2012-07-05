@@ -131,9 +131,9 @@ class BugzillaXML {
         // Now set some options (most are optional)
         // Set URL to download
         curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
-        
-        $post = $this->toXML();               
-        
+
+        $post = $this->toXML();
+
         //Identifies the call by its method name
         $name = new SimpleXMLElement($post);
         $this->requestID = (string) $name->methodName;
@@ -174,11 +174,9 @@ class BugzillaXML {
         //echo $output;
         // Close the cURL resource, and free system resources
         curl_close($ch);
-        if ($returnArray){
+        if ($returnArray) {
             return $this->toPHP($output);
-        }
-        else 
-        {
+        } else {
             return $this->toJson($output);
         }
     }
@@ -545,7 +543,8 @@ class BugzillaXML {
             case 'base64':
                 return $input;
                 break;
-            case 'none': return $input;
+            case 'none':
+                return $input;
                 break;
             default: $filter = FILTER_SANITIZE_STRING;
                 break;
@@ -563,8 +562,6 @@ class BugzillaXML {
             return filter_var($input, $filter);
         }
     }
-
-    
 
     function toPHP($xml) {
 
