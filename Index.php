@@ -65,6 +65,13 @@
             initialize();                        
             
             $(document).ready(function() {
+                $("#btnCommentSubmit").live("click", function(e){
+                    //Gets the id of the card to which the comment is being appended
+                    var cardId = $("#dialogAddEditCard #edit-tabs a").first().attr("value");
+                
+                    sendComment(cardId);
+                });
+            
                 /*jQuery.ajaxSetup({
                     beforeSend: function() {
                         $('body').addClass("loading"); 
@@ -130,18 +137,29 @@
                     getCompsVers(null, "search");
                     $("#dialogSearch ").dialog("open");
                 });
+                
                 $("#btnOptions").click(function(){
                     $("#dialogOptions ").dialog("open");
                 });               
                    
-                $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit ").button();  
+                $("#searchSubmit").click(function(){
+                    advSearchResults = [];
+                    ajaxSearch(10,0);
+                }); 
+                   
+                $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit").button();  
                  
                 //Pulls up the edit menu whenever a card is double clicked                       
-                $(".card").live( "dblclick", function () { 
-                    $( "#edit-tabs" ).tabs("select", 0);
-                    editCard($(this).attr("id"));
+                $(".card").live( "dblclick", function () {
+                    
+                    if (!$(this).hasClass("loading"))
+                    {
+                        $( "#edit-tabs" ).tabs("select", 0);
+                        editCard($(this).attr("id"));
+                    }
+                    
                 });
-
+               
                 
                 //Sets up the invalids entry dialog menu
                 $( "#dialogInvalid" ).dialog({
@@ -231,7 +249,7 @@
                     autoOpen: false,
                     resizable: false,
                     height: 750,
-                    width: 1300,
+                    width: 1350,
                     show: { effect: 'blind'},
                     hide: "explode",
                     modal: true,
@@ -406,16 +424,12 @@
                     show: { effect: 'blind', complete: function() { $("#searchSummary").focus();}},
                     hide: "explode",
                     modal: true,
-                    buttons: {
-                        //TODO Needs to take in offset and limit parameters
-                        Search: function() {
-                            advSearchResults = [];
-                            ajaxSearch(10,0)
-                        },                    
+                    buttons: {                                      
                         //Resets all the feilds to null to allow a fresh dialog window each time
-                        Close: function() {
+                        //TODO: Do we still want this?
+                        /*Close: function() {
                             $( this ).dialog( "close" );
-                        }
+                        }*/
                     }
                 });
                 
@@ -797,39 +811,43 @@
                     var prio = $(this).html();
 
                     //Finds which card was right clicked
-                    var card = $.mbMenu.lastContextMenuEl;
+                    var card = $($.mbMenu.lastContextMenuEl);
                     
-                    var cardId = $(card).attr("id");
+                    var cardId = card.attr("id");
                     closeContextMenu();
-                    //var cardId = card.attr("id");
-                    //Stores the selected priority as the cards priority
-                    $.ajax({
-                        url: "ajax_POST.php",
-                        type: "POST",
-                        data: { 
-                            "method": "Bug.update",
-                            "ids":cardId,
-                            "priority": prio 
-                        },
-                        dataType: "json",
-                        success: function(data, status){
+                    if (card.data("priority")!= prio)
+                    {    
+                        $.ajax({
+                            url: "ajax_POST.php",
+                            type: "POST",
+                            beforeSend:function(){
+                                card.addClass("loading");
+                            },
+                            data: { 
+                                "method": "Bug.update",
+                                "ids":cardId,
+                                "priority": prio 
+                            },
+                            dataType: "json",
+                            success: function(data, status){
                         
-                            if (data.result.faultString != null)
-                            {
-                                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                                if (data.result.faultString != null)
+                                {
+                                    alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                                }
+                                else if (!data.result)
+                                {
+                                    alert("Something is wrong");
+                                }
+                                else
+                                {
+                                    card.data({"priority": prio});
+                                    displayHandler(card);
+                                    card.removeClass("loading"); 
+                                }
                             }
-                            else if (!data.result)
-                            {
-                                alert("Something is wrong");
-                            }
-                            else
-                            {
-                                $(card).data({"priority": prio});
-                                displayHandler($(card));
-                            }
-                        }
-                    });                                                                                          
-                   
+                        });                                                                                          
+                    }
                 });
                 
                 
@@ -865,52 +883,74 @@
             
             function getAttachments(id)
             {
-                $.ajax({
-                    url: "ajax_POST.php",
-                    type: "POST",  
-                    data:{
-                        "method": "Bug.attachments",
-                        "ids": id,
-                        "exclude_fields": ["data"]
-                    },
-                    dataType: "json",
-                    success: function(data){
+                var card = $("#"+id);
+                
+                if (card.data("attachments") == null)
+                {
+                    $.ajax({
+                        url: "ajax_POST.php",
+                        type: "POST",  
+                        beforeSend: function(){
+                            $("#attTableDiv").addClass("loading");  
+                        },
+                        data:{
+                            "method": "Bug.attachments",
+                            "ids": id,
+                            "exclude_fields": ["data"]
+                        },
+                        dataType: "json",
+                        success: function(data){
                         
-                        if (data.result.faultString != null)
-                        {
-                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                        }
-                        else{
-                            
-                            $("#attachmentTable tbody").empty();                           
-                            
-                            for ( var i in data.result.bugs[id])
+                            if (data.result.faultString != null)
                             {
-                                var att = data.result.bugs[id][i];                                
-                                var date = new Date(att.creation_time);
-                                var time = date.toLocaleTimeString();
-                                time = time.substring(0, time.length -3);
-                                date = date.toLocaleDateString();
-                                 
-                                var patch = (att.is_patch) ? ", patch" : "";
-                                 
-                                var tr = '<tr><td><div><a href="#" value="'+att.id+'">'+att.summary+'</a> ('+att.file_name+patch+')</div><div>'+date+' '+time+', '+att.creator +'</div></td></tr>';
-                                $("#attachmentTable tbody").append(tr);                                                               
+                                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
                             }
-                        }                      
+                            else if (!data.result)
+                            {
+                                alert("Something is wrong");
+                            }
+                            else{                               
+                                card.data({
+                                    "attachments": data.result.bugs[id]
+                                });
+                                
+                                postAttachments(card);
+                                $("#attTableDiv").removeClass("loading");
+                            }                      
                             
                         
-                    },
-                    error: function(jqXHR, textStatus, errorThrown){
-                        alert("There was an error:" + textStatus);
-                    }
-                });
+                        },
+                        error: function(jqXHR, textStatus, errorThrown){
+                            alert("There was an error:" + textStatus);
+                        }
+                    });
+                }
+                
+                else {
+                    postAttachments(card);
+                }
             }
-                                
+            
+            function postAttachments(card)
+            {
+                $("#attachmentTable tbody").empty();                           
+                         
+                var attachments = card.data("attachments");
+                for ( var i in attachments)
+                {
+                    var att = attachments[i];                                
+                    var date = new Date(att.creation_time);
+                    var time = date.toLocaleTimeString();
+                    time = time.substring(0, time.length -3);
+                    date = date.toLocaleDateString();
+                                 
+                    var patch = (att.is_patch) ? ", patch" : "";
+                                 
+                    var tr = '<tr><td><div><a href="#" value="'+att.id+'">'+att.summary+'</a> ('+att.file_name+patch+')</div><div>'+date+' '+time+', '+att.creator +'</div></td></tr>';
+                    $("#attachmentTable tbody").append(tr);                                                               
+                }
+            }
+            
             var componentData = null;
         
             //Retrieves all of the available components and versions for a given product. Now revised to pull down all the products and components once and then reuse the info
@@ -948,6 +988,9 @@
                             }                            
                             //Here we call a function that refreshes the field values only which prevents an infinite recursive loop(editCard calls getCompVers)
                             dialogFields();
+                            
+                            //This line triggers the search page's 'change' function which then updates the component field to be non empty
+                            $("#searchProduct").change();
                                                         
                             //We want to make sure that the values are appended before we close the loading modal screen
                             $('#Details, #dialogSearch').removeClass("loading"); 
@@ -998,6 +1041,7 @@
             }
             
             //Here I have separated the field population and dialog configuration to allow getCompsVers to refresh the fields after it finishes loading
+            //I have also added functionality to allow the 
             function dialogFields()
             {
                 
@@ -1038,10 +1082,7 @@
                 else {
                     //If cardId is 0 then we know that we are in the add card dialog and consequently we want to ensure that all fields are empty(including the comments)
                     $("#Details input, #Details textarea, #Details select:not(#cf_whichcolumn)").val("");    
-                     
-                    //Clears the comments:
-                    $("#Comments div:not(:last-child)").remove();
-                                          
+                                        
                     //We want the default value for Status for a new card to be "NEW", not unconfirmed
                     $("#bug_status").val("NEW");
                 
@@ -1058,7 +1099,7 @@
             
             function editCard(cardId) {                                                     
                 //Adds edit specifc dialog properties
-                $("#dialogAddEditCard").dialog( "option", "title", "Edit Card" );
+                $("#dialogAddEditCard").dialog( "option", "title", "Edit Card #"+cardId );
                 $("#edit-tabs ul li").show();
                 
                 //We need the atachments tabs to be specific to the card as well but we only want to retireve this data from the server if it is requested by the user
@@ -1069,6 +1110,7 @@
                         "value": cardId
                     });                                  
                 });
+                
                 //Now that we have the correct ID, we populate the fields:
                 dialogFields();
                 
@@ -1078,6 +1120,9 @@
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { 
                     "Save Card": function() {                                                                                                
 
+                        
+                        $( "#dialogAddEditCard" ).dialog( "close" );
+                        
                         //Sends the field info to Bugzilla to be processed
                         ajaxEditBug($("#cf_whichcolumn").val(), $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#bug_severity").val(), $("#summary").val(), $("#version").val(),$("#user").val(),
                         $("#deadline").val(), $("#bug_status").val(), $("#op_sys").val(),$("#rep_platform").val(), $("#resolution").val()); 
@@ -1100,6 +1145,12 @@
                                          
                     //Clears the comments:
                     $("#Comments #accordion div").remove();
+                    
+                    //Clears the attachments
+                    $("#attachmentTable tbody").empty();   
+                    
+                    //Also we want to do a card refresh just in case the user closed the dialog after it was reopened without ever saving the data to the server
+                    //cardDataRefresh(cardId);
                 }
             );   
                 $( "#dialogAddEditCard" ).dialog( "open" );
@@ -1110,9 +1161,15 @@
                 
                 //Adds add card specifc dialog properties
                 $("#edit-tabs ul li:not(:first-child)").hide();
-                $( "#edit-tabs" ).tabs("select", 0);
-                $("label[for=cf_whichcolumn],#cf_whichcolumn").show();
+                $( "#edit-tabs" ).tabs("select", 0);               
                 $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );              
+                
+                var label = $('<label for="commentReplyText">').text("Description:");
+                var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all" style="height: 250px; width:640px;">');
+                var comm = $('<div class="commDiv">').append(text);                      
+                $("label[for=Comments],#Comments").hide();
+                $("#detailsRight").prepend(label,comm);
+                     
                 
                 //Here we set the tab values to 0 to prevent the display of false information
                 $("#edit-tabs ul li a").each(function(){
@@ -1133,8 +1190,8 @@
                         else{                                  
                             
                             //Files a new bug in the bugzilla server
-                            createCardBugzilla($("#cf_whichcolumn").val(), $("#component").val(), $("#priority").val(), $("#product").val(),  $("#bug_severity").val(), $("#summary").val(), 
-                            $("#version").val(),$("#user").val(),$("#deadline").val(), $("#bug_status").val(),$("#op_sys").val(), $("#rep_platform").val() );                                                                                       
+                            ajaxCreateCard($("#cf_whichcolumn").val(), $("#component").val(), $("#priority").val(), $("#product").val(),  $("#bug_severity").val(), $("#summary").val(), 
+                            $("#version").val(),$("#user").val(),$("#deadline").val(), $("#bug_status").val(),$("#op_sys").val(), $("#rep_platform").val(), $("#commentReplyText").val() );                                                                                       
                         } 
                     },
                     Cancel: function() {
@@ -1145,8 +1202,11 @@
                    
                     $("#Details input, #Details textarea, #Details select").val("");
                      
-                    //Clears the comments:
-                    $("#Comments #accordion div").remove();
+                    //Clears the description
+                    $("#detailsRight label,#detailsRight #commentReplyText").remove();
+                    
+                    //Shows the comments div again
+                    $("label[for=Comments],#Comments").show();
                 }
             );   
                 $( "#dialogAddEditCard" ).dialog( "open" );
@@ -1284,12 +1344,17 @@
             }
             
             //Card creation function, adds the card to the page. Need the following Bugzilla parameters: product, component, version, bug_severity, priority. 
-            function  createCardBugzilla(col, component,   priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform){ 
-                   
-                
+            //NOTE: Apprently description can be passed in with this Bug.create
+            function  ajaxCreateCard(col, component,   priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform, description){ 
+                                   
                 $.ajax({
                     url: "ajax_POST.php",
                     type: "POST",
+                    beforeSend: function(){
+                        var div = $("<div id='loadingLabel'>Adding Card</div>");
+                        $("#Details .modal").append(div);
+                        $("#Details").addClass("loading");
+                    },
                     data: { 
                         "method": "Bug.create",
                         "cf_whichcolumn": col,
@@ -1301,6 +1366,7 @@
                         "version": version,
                         "deadline": deadline,
                         "op_sys": op_sys,
+                        "description": description,
                         "rep_platform": rep_platform,
                         "status":status
                         
@@ -1321,9 +1387,12 @@
                             //Card creation logic will be placed here as soon as the Bug.create/Bug.update issues have been resolved
                             //The Bugzilla Documentation states that the create method will only return the new ID upon completion
                             var id = data.result.id;
-                            alert("Bug succesfully added.\nID:"+id);
+                            alert("Bug succesfully added.\nID:"+id);                                                       
+                            
                             //Now that we have the new card's Id we can post it to the board:
                             postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status);
+                            $("#Details").removeClass("loading");
+                            $("#Details #loadingLabel").remove();
                             $( "#dialogAddEditCard" ).dialog( "close" ); 
                         }
                         
@@ -1337,7 +1406,7 @@
             
             //Posts a card to the page containing all of the propper information. Used to post new cards and also to populate the board with existing cards
             function postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform){
-                var newCard = $('<div id="'+id+'" class="card "><div class="cardText">'+summary+'</div><div class="iconBar"></div><div class="modal"></div></div>');
+                var newCard = $('<div id="'+id+'" class="card "><div class="cardText">'+summary+'</div><div class="iconBar"></div><div class="modal"><div>Saving Card</div></div></div>');
                     
                 newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}, normal");
                 //<div class="cardText">Existing Card</div><div class="iconBar"></div></div>   
@@ -1375,42 +1444,46 @@
                     adjustTop:0,
                     opacity:.99,
                     shadow:true,
+                    closeOnMouseOut:true,
                     onContextualMenu:function(o,e){}
-
                 });
                 displayHandler(newCard);
             }
 
             
             //NOTE: This function is dependent on the existance of the Bugzilla cf_whichcolumn custom field
-            function ajaxEditBug(col, component, id, priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform, resolution){
-                var card = $("#"+id);
-                
-                alert(id);
-                
+            function ajaxEditBug(col, component, ids, priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform, resolution){  
+            
+                var card = $("#"+ids);
+
                 //Adds loading icon to a card being saved
                 card.addClass("loading");
-                
-               
-                
-                var postData = { 
-                    "method": "Bug.update",
-                    "ids": id,
-                    "component": component,
-                    "priority": priority,
+                                                
+                var postData = {
+                    "cf_whichcolumn": col,
+                    "component": component,                   
                     "product": product,
-                    "severity": severity,
+                    "priority": priority,
+                    "bug_severity": severity,
                     "summary": summary,
                     "version": version,
+                    "user": user,
+                    "deadline": deadline,
                     "status": status,
                     "op_sys": op_sys,
-                    "deadline": deadline,
-                    "cf_whichcolumn": col,
                     "rep_platform": rep_platform,
                     "resolution": resolution
-                };
-                 //Only want to close the dialog after the information has been sent and no errors pop up
-                $( "#dialogAddEditCard" ).dialog( "close" );
+                }
+                
+              
+                //Appends the card to the correct column(Don't want to update the cards position twice)
+                if (col != card.data("cf_whichcolumn"))
+                {
+                    $("#"+col).append(card.parent());
+                }
+                                    
+               
+                
                 //If the Bug has no resolution we don't want to post anything':
                 if (resolution == undefined || resolution == "")
                 {
@@ -1426,11 +1499,31 @@
                         //remove it from the data being posted
                         delete postData[index];
                     }
-                }
+                    //We use an else here because if the posted data is the same as the card data, we wont need to save it
+                    else 
+                    {
+                       
+                        //Here we store the sent data to the card. Yes this is presumptive since we don't know if Bugzilla will accept the information but if it doesn't, we use the stored data below to populate the dialog
+                        //fields and show the Bugzilla error. This way we preserve the form data and keep prompting form edits until Bugzilla likes the data
+                        //TODO Need to address case if someone cancels out of the form after the prompt. Then the card will have different data than Bugzilla. On Cancel call a card refresh??
+                        card.data(index, postData[index]);
+                         
+                    }
+                    
+                }                                
                 
+                //Updates the card's text
+                $('#'+ids+" .cardText").html(summary);
+                
+                displayHandler(card);       
+                                               
                 //Then after we filtered out the unneccary fields we need to check if anything is left, otherwise there is no need to send the post
                 if (postData!=null)
                 {
+                    //Now we add some specific property for post data that need to be sent no matter what:
+                    postData["method"] = "Bug.update";                    
+                    postData["ids"]= ids;
+                    
                     $.ajax({
                         url: "ajax_POST.php",
                         type: "POST",
@@ -1441,36 +1534,22 @@
                             if (data.result.faultString != null)
                             {
                                 alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                                
+                                //If an error occurs we reopen the edit card dialog with the freshly entered form data
+                                editCard(ids);
+                                
                             }
                             else if (!data.result)
                             {
                                 alert("Something is wrong");
+                                
+                                //If an error occurs we reopen the edit card dialog with the freshly entered form data
+                                editCard(ids);
                             }
                             else 
                             {
-                                //Updates the card's text
-                                $('#'+id+" .cardText").html($("#summary").val());
-                            
-                                //Appends the card to the correct column(Don't want to update the cards position twice)
-                                $("#"+id).appendTo("#"+col)
-                                                        
-                                //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAx call to complete in order to access bug info
-                                $("#"+id).data({
-                                    "cf_whichcolumn": col,
-                                    "component": component,                   
-                                    "product": product,
-                                    "priority": priority,
-                                    "bug_severity": severity,
-                                    "summary": summary,
-                                    "version": version,
-                                    "user": user,
-                                    "deadline": deadline,
-                                    "status": status,
-                                    "op_sys": op_sys,
-                                    "rep_platform": rep_platform,
-                                    "resolution": resolution
-                                });       
-                                displayHandler($("#"+id));                                                                                                                                              
+                                //Now that the card has successfully loaded, we remove the loading class
+                                card.removeClass("loading");                                                                                                                                         
                             }
                         
                         },
@@ -1481,23 +1560,30 @@
                 
                 }
                 
-                card.removeClass("loading");
+              
             }
             
             //An update function that stores a card position when called
-            function updatePosition(column, cardId)
+            function updatePosition(column, cardIds)
             {
-                var card = $("#"+cardId);
+                //This function expects an array so if the input is not not an array we will make it one:
+                if (!$.isArray(cardIds))
+                {
+                    cardIds = [cardIds];
+                }
+                                
                 //Automatically updates the card's position both in local data and server data. Waiting on Bug.update Resolution                                                
                 $.ajax({
                     url: "ajax_POST.php",
                     beforeSend: function(){
-                        card.addClass("loading");
+                        for (var i in cardIds) { 
+                            $("#"+cardIds[i]).addClass("loading");
+                        }
                     },
                     type: "POST",
                     data: { 
                         "method": "Bug.update",
-                        "ids": cardId,                        
+                        "ids": cardIds,                        
                         "cf_whichcolumn": column
                     },
                     dataType: "json",
@@ -1512,11 +1598,14 @@
                             alert("Something is wrong");
                         }
                         else 
-                        {
-                            //Will eventually hold the card.data map below. Need to make the Bug.Update work first
-                            $("#"+cardId).data({
-                                "cf_whichcolumn": column
-                            });
+                        {    
+                            for (var i in cardIds) { 
+                                var card = $("#"+cardIds[i])
+                                card.removeClass("loading"); 
+                                card.data({                                
+                                    "cf_whichcolumn": column
+                                });
+                            }                                                                                                           
                         }
                      
                     },
@@ -1525,37 +1614,39 @@
                     }
                 });                                                
                     
-                card.removeClass("loading");
+                
             }
           
             var advSearchResults = [];
             
-            function ajaxSearch(limit, pageNum) {   
+            function ajaxSearch(limit, pageNum) { 
+            
+                //Checks to see if we already have this page's search results. If not we retrieve the results from bugzilla. If we already have them we simply access the cache. 
                 if (typeof(advSearchResults[pageNum]) == "undefined")
                 {
                     
                     //Documentation: "Note that you will only be returned information about bugs that you can see. Bugs that you can't see will be entirely excluded from the results. 
-                    //So, if you want to see private bugs, you will have to first log in and then call this method."
-                    //alert("search");                                                      
+                    //So, if you want to see private bugs, you will have to first log in and then call this method."                                                                        
                     var searchArr = [$("#searchProduct"),$("#searchBug_severity"),$("#searchSummary"),$("#searchVersion"),$("#searchBug_status"), $("#searchResolution"),$("#searchPriority")];
                             
                     //Need to covert each search parameter to an array and remove all void values to avoid problems with PHP             
                     for (var i in searchArr){
                         var id = searchArr[i].attr("id");
+                        var field = $("#"+id);
                         //Bug.search doesn't like 'null' values so we will simply replace them with all the possible fields(not selecting a parameter filters nothing)                            
-                        if ($("#"+id).val() == null)
+                        if (field.val() == null)
                         {
                             var vals = []
-                            $("#"+id+" option").each(function(){
+                            $(" option", field).each(function(){
                                 vals.push($(this).val());
                             })
-                            $("#"+id).val(vals);                                     
+                            field.val(vals);                                     
                         }
                         //If the value is not an array
-                        if ( ! $.isArray($("#"+id).val()))
+                        if ( ! $.isArray(field.val()))
                         {                                    
                             //Turn it into an array
-                            $("#"+id).val( [$("#"+id).val()]);
+                            field.val( [field.val()]);
                         }
                     }
                 
@@ -1567,7 +1658,7 @@
                         type: "POST",
                         dataType: "json",
                         beforeSend: function() {
-                            $('#dialogSearch').addClass("loading"); 
+                            $('#bugs-contain').addClass("loading"); 
                         },
                         data: { 
                             /*"ids":  $("#searchId").val(),*/
@@ -1600,7 +1691,15 @@
                                 //Search results will be printed to the screen from here
                                 advSearchResults[pageNum] = data.result.bugs;
                                 processResults();
-                                $('#dialogSearch').removeClass("loading"); 
+                                $('#bugs-contain').removeClass("loading");
+                                
+                                //For page numbers we want to append an anchor for each page we download:
+                                var pageLink = $("<button id='page"+pageNum+"' class='btnTab' style='float: left'>").html(pageNum+1);
+                                pageLink.click(function(){
+                                    ajaxSearch(limit, pageNum);
+                                });
+                                $("#Results #pageNumDiv").append(pageLink);
+                                pageLink.button();
                             }
                                      
                         },
@@ -1612,6 +1711,8 @@
                 else{
                     processResults();
                 }
+                
+                //
                 function processResults(){
                     //First thing we want to do is clear the previous results and the next button:
                     $( "#bugs tbody tr, #next" ).remove();
@@ -1655,7 +1756,7 @@
                     {
                         var next = $("<button id='next' class='btnTab' style='float: right'>").html("Next");
                         next.click(function(){
-                            ajaxSearch(limit, pageNum+1)
+                            ajaxSearch(limit, pageNum+1);
                         });
                         $("#Results").append(next);
                         next.button();
@@ -1665,7 +1766,7 @@
                     {
                         var prev = $("<button id='prev' class='btnTab' style='float: left'>").html("Previous");
                         prev.click(function(){
-                            ajaxSearch(limit, pageNum-1)
+                            ajaxSearch(limit, pageNum-1);
                         });
                                 
                         $("#Results").append(prev);
@@ -1739,7 +1840,7 @@
                 var comArr = card.data("comments");
                 for (var i in comArr)
                 {       
-                    var commId = "Comment"+i;
+                    var commId = "Comment "+i;
                     var commText = comArr[i].text;
                     var commAuthor = comArr[i].author;
                     var date = new Date(comArr[i].time);
@@ -1755,44 +1856,30 @@
                     var p = $('<p>').text(commText);
                     var comm = $('<div class="commDiv" id="'+commId+'">').append(header, p);                      
                     $("#Comments #accordion").append(comm);
-                }
-                
-                //Although accordian doesn't do what i want(it only allows one comment to be open at a time), this line initalizing the comments
-                //with ui styling
-                /* $( "#accordion" ).accordion("enable");*/         
+                }                       
             }
-            
-            /*<editor-fold>*/
+                       
             $(".commentReplyLink").live("click", function(e){
                 e.stopPropagation();
                 commentReply($(this).closest("div").attr("id"));
-            });
-            /*</editor-fold>*/
+            });            
             
             function commentReply(ids)
             {              
                 //Creates a text box with quoted text and appends it:
                 var quote = "(In response to "+ids+"): '"+$("#"+ids+" p").text()+"'";               
                 var header = $('<h3 class="header">').text("Comment:");
-                var text = $('<textarea id="commentReplyText">').text(quote);
+                var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all">').text(quote);
                 var button = $("<button id='btnCommentSubmit'>Send</button>");
                 var comm = $('<div class="commDiv">').append(text,button);                      
-                $("#Comments #accordion").append(header,comm);
-                $("#btnCommentSubmit").button();
-                                  
-                $("#btnCommentSubmit").live("click", function(e){
-                    e.stopPropagation();
-                
-                    sendComment();
-                });
+                $("#Comments #accordion").prepend(header,comm);
+                $("#btnCommentSubmit").button();                                                
             }       
           
             
-            function sendComment()
+            function sendComment(cardId)
             {
-                //Gets the id of the card to which the comment is being appended
-                var cardId = $("#dialogAddEditCard #edit-tabs a").first().attr("value");
-                
+                               
                 var comment = $("#commentReplyText").val();
                 
                 $.ajax({
@@ -1818,8 +1905,13 @@
                             alert("Something is wrong");
                         }
                         else 
-                        {   alert("Comment successfully added")                    
-                            getComments(cardId);
+                        {  
+                            alert("Comment succesfully added.");   
+                            //Here we empty the card comment data to allow getComments to pull down new comment data
+                            //TODO Find a better way, this is very wasteful. Possibly get all the information that Bugzilla would returna and apppend it in a similar manner as the postComments method? 
+                            $("#"+cardId).data({"comments": null});
+                            
+                            getComments(cardId);                            
                         }                        
                     },
                     error: function(jqXHR, textStatus, errorThrown){
@@ -1847,6 +1939,45 @@
                 } 
             }
             
+            //This function refreshes the information of a certain card just in case there is a discrepancy between the server data and the local  data
+            //TODO is this what we want to be doing? It works but I feel like it is very inefficient      
+            function cardDataRefresh(cardId){   
+                var card = $("#"+cardId);
+                //Finds all bugs assigned to me and posts them to the board 
+                $.ajax({
+                    url: "ajax_POST.php",
+                    type: "POST",
+                    beforeSend:function(){
+                        card.addClass("loading");
+                    },
+                    data: { 
+                        "method": "Bug.search",
+                        "id": cardId
+                    },
+                    dataType: "json",
+                    success: function(data, status){
+                        
+                        if (data.result.faultString != null)
+                        {
+                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else
+                        { 
+                            //Since we don't want any duplicate cards, we have to remove the old card
+                            card.parent().remove();
+                            for (var i in data.result.bugs)
+                            {
+                                var bug = data.result.bugs[i];
+                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status);                              
+                            }
+                        }
+                    }
+                });                     
+            }
         </script>
     </head>
     <body>
@@ -1901,152 +2032,154 @@
                     <li><a href="#Attachments">Attachments</a></li>
                 </ul>
                 <div id="Details" style="height: 500px;">
-                    <form>
-                        <fieldset>
-                            <div id="detailsTop" style="float:top; max-height: 80px;">
-                                <label for="summary">Title:</label>
-                                <textarea  name="summary" id="summary" class="text ui-widget-content ui-corner-all" style="width:990px; height: 40px; max-height: 60px;"  ></textarea>
-                            </div>
-                            <div id="detailsLeft"style="float: left;">
-                                <label for="product">Product:</label>
-                                <select  name="product" id="product"  class="text ui-widget-content ui-corner-all" ></select>
-                                <label for="component">Component:</label>
-                                <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" ></select>
-                                <div style="float: top">
-                                    <div style="float: left;">
-                                        <label for="version">version</label>
-                                        <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                    </div>
-                                    <div style="float: left; margin-left: 10px;">
-                                        <label for="bug_severity">Severity:</label>
-                                        <select  name="bug_severity" id="bug_severity"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; "></select>
-                                    </div>
-                                </div>
-                                <div style="float: top">
-                                    <div style="float: left;">
-                                        <label for="bug_status">Status:</label>
-                                        <select  name="bug_status" id="bug_status"  class="text ui-widget-content ui-corner-all"style=" width:135px !important; " ></select>
-                                    </div>
-                                    <div style="float: left; margin-left: 10px;">
-                                        <label for="user">Assigned User:</label>
-                                        <select  name="user" id="user"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">   
-                                            <option></option>
-                                            <option>User 1</option>
-                                            <option>User 2</option>
-                                            <option>User 3</option>
-                                            <option>User 4</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div style="float: top">
-                                    <div style="float: left; width: ">
-                                        <label for="priority">Priority:</label>
-                                        <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                    </div>
-                                    <div style="float: left; margin-left: 10px;">
-                                        <label for="deadline">Deadline:</label>
-                                        <input type="text" name="deadline" id="deadline" class="Dates text ui-widget-content ui-corner-all" style=" width:135px !important; "/>
-                                    </div>
-                                </div>
-                                <div style="float: top">
-                                    <div style="float: left;">
-                                        <label for="op_sys">Operating System</label>
-                                        <select  name="op_sys" id="op_sys"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                    </div>
-                                    <div style="float: left; margin-left: 10px;">
-                                        <label for="rep_platform">Hardware</label>
-                                        <select  name="rep_platform" id="rep_platform"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                    </div>
-                                </div>
+                    <fieldset>
+                        <div id="detailsTop" style="float:top; max-height: 80px;">
+                            <label for="summary">Title:</label>
+                            <textarea  name="summary" id="summary" class="text ui-widget-content ui-corner-all" style="width:990px; height: 40px; max-height: 60px;"  ></textarea>
+                        </div>
+                        <div id="detailsLeft"style="float: left;">
+                            <label for="product">Product:</label>
+                            <select  name="product" id="product"  class="text ui-widget-content ui-corner-all" ></select>
+                            <label for="component">Component:</label>
+                            <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" ></select>
+                            <div style="float: top">
                                 <div style="float: left;">
-                                    <div style="float: left; ">
-                                        <label for="cf_whichcolumn">Into Column:</label>
-                                        <select  name="cf_whichcolumn" id="cf_whichcolumn"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;">                               
-                                        </select>
-                                    </div>
-                                    <div style="float: left; margin-left: 10px; display: none;">
-                                        <label for="resolution">Resolution:</label>
-                                        <select  name="resolution" id="resolution"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important;"></select>
-                                    </div>
+                                    <label for="version">version</label>
+                                    <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
+                                </div>
+                                <div style="float: left; margin-left: 10px;">
+                                    <label for="bug_severity">Severity:</label>
+                                    <select  name="bug_severity" id="bug_severity"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; "></select>
                                 </div>
                             </div>
-                            <div id="detailsRight">
-                                <label for="Comments">Comments:</label>
-                                <div id="Comments">
-                                    <div id ="accordion" class="ui-accordion ui-widget ui-helper-reset ui-accordion-icons"> </div>  
-                                    <div class="modal"></div>
+                            <div style="float: top">
+                                <div style="float: left;">
+                                    <label for="bug_status">Status:</label>
+                                    <select  name="bug_status" id="bug_status"  class="text ui-widget-content ui-corner-all"style=" width:135px !important; " ></select>
                                 </div>
-                            </div>                            
-                        </fieldset>
-                    </form>
+                                <div style="float: left; margin-left: 10px;">
+                                    <label for="user">Assigned User:</label>
+                                    <select  name="user" id="user"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">   
+                                        <option></option>
+                                        <option>User 1</option>
+                                        <option>User 2</option>
+                                        <option>User 3</option>
+                                        <option>User 4</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div style="float: top">
+                                <div style="float: left; width: ">
+                                    <label for="priority">Priority:</label>
+                                    <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
+                                </div>
+                                <div style="float: left; margin-left: 10px;">
+                                    <label for="deadline">Deadline:</label>
+                                    <input type="text" name="deadline" id="deadline" class="Dates text ui-widget-content ui-corner-all" style=" width:135px !important; "/>
+                                </div>
+                            </div>
+                            <div style="float: top">
+                                <div style="float: left;">
+                                    <label for="op_sys">Operating System</label>
+                                    <select  name="op_sys" id="op_sys"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
+                                </div>
+                                <div style="float: left; margin-left: 10px;">
+                                    <label for="rep_platform">Hardware</label>
+                                    <select  name="rep_platform" id="rep_platform"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
+                                </div>
+                            </div>
+                            <div style="float: left;">
+                                <div style="float: left; ">
+                                    <label for="cf_whichcolumn">Into Column:</label>
+                                    <select  name="cf_whichcolumn" id="cf_whichcolumn"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;">                               
+                                    </select>
+                                </div>
+                                <div style="float: left; margin-left: 10px; display: none;">
+                                    <label for="resolution">Resolution:</label>
+                                    <select  name="resolution" id="resolution"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important;"></select>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="detailsRight">
+                            <label for="Comments">Comments:</label>
+                            <div id="Comments" class="ui-widget-content ui-corner-all">
+                                <div id ="accordion" class="ui-accordion ui-widget ui-helper-reset ui-accordion-icons"> </div>  
+                                <div class="modal"></div>
+                            </div>
+                        </div>                            
+                    </fieldset>
                     <div class="modal"></div>
                 </div>               
                 <div id="Attachments">
                     <form  action="ajax_UploadAttachment.php" method="post" enctype="multipart/form-data" target="upload_target">
-                        <table id="attachmentTable" class="ui-widget ui-widget-content">
-                            <thead>
-                                <tr class="ui-widget-header ">
-                                    <th>
-                                        Attachments
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            </tbody>                       
-                        </table>
-                        <table id="attachmentAddTable" class="ui-widget ui-widget-content">
-                            <thead>
-                                <tr class="ui-widget-header ">
-                                    <th colspan="2">
-                                        Add Attachment
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <label for="attachmentFileName">File:</label>
-                                    </td>
-                                    <td>
-                                        <input id="attachmentFileName" name="file_name" type="file"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <label for="attachmentDescription">Description:</label>
-                                    </td>
-                                    <td>
-                                        <input name="summary" style="width: 300px;" id="attachmentDescription"type="text"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <label  for="attachmentIsPatch">Is Patch:</label>
-                                    </td>
-                                    <td>
-                                        <input name="is_patch" id="attachmentIsPatch"type="checkbox"/>
-                                    </td>
-                                </tr>                               
-                                <tr>
-                                    <td>
-                                        <label for="attachmentComment">Bug Comment:</label>
-                                    </td>
-                                    <td>
-                                        <input name="comment" style="width: 300px;" id="attachmentComment"type="text"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <input type="hidden" name="ids" id="attachmentBugId" value=""/>
-                                    </td>
-                                    <td>
-                                        <input style="float:right;"  type="submit" value="Submit"id="btnAttachmentSubmit"/>
-                                    </td>
-                                </tr>
-                            </tbody>                       
-                        </table>                        
-                        <div style="clear: both;"></div>
+                        <div id="attTableDiv"  class="ui-widget-content ui-corner-all">
+                            <table id="attachmentTable" class="ui-widget ui-widget-content">
+                                <thead>
+                                    <tr class="ui-widget-header ">
+                                        <th>
+                                            Attachments
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                </tbody>                       
+                            </table>
+                            <div class="modal"></div>
+                        </div>
                     </form>
+                    <table id="attachmentAddTable" class="ui-widget ui-widget-content ui-corner-all">
+                        <thead>
+                            <tr class="ui-widget-header ">
+                                <th colspan="2">
+                                    Add Attachment
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <label for="attachmentFileName">File:</label>
+                                </td>
+                                <td>
+                                    <input id="attachmentFileName" name="file_name" type="file"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <label for="attachmentDescription">Description:</label>
+                                </td>
+                                <td>
+                                    <input name="summary" style="width: 300px;" id="attachmentDescription"type="text"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <label  for="attachmentIsPatch">Is Patch:</label>
+                                </td>
+                                <td>
+                                    <input name="is_patch" id="attachmentIsPatch"type="checkbox"/>
+                                </td>
+                            </tr>                               
+                            <tr>
+                                <td>
+                                    <label for="attachmentComment">Bug Comment:</label>
+                                </td>
+                                <td>
+                                    <input name="comment" style="width: 300px;" id="attachmentComment"type="text"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <input type="hidden" name="ids" id="attachmentBugId" value=""/>
+                                </td>
+                                <td>
+                                    <input style="float:right;"  type="submit" value="Submit"id="btnAttachmentSubmit"/>
+                                </td>
+                            </tr>
+                        </tbody>                       
+                    </table>                        
+                    <div style="clear: both;"></div>
+
                     <div class="modal"></div>
                 </div>
             </div>
@@ -2057,7 +2190,7 @@
                     <fieldset style="margin-top: 10px;">
                         <div class="box"style="float:top; max-height: 40px; width:830px;">
                             <label for="summary" style="float:left; margin-right: 10px;">Summary:</label>
-                            <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all" style="float:left !important; width:auto; height: 20px; max-height: 60px; width:745px;"  ></textarea>
+                            <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all"></textarea>
                         </div>
                         <div style="float: left; width:100%">
                             <div class="box">
@@ -2085,11 +2218,14 @@
                                 <select  name="resolution" id="searchResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                         </div>                        
-                    </fieldset>
+                    </fieldset>                    
                 </form>
+                <span>
+                    <button id="searchSubmit" >Search</button>
+                </span>                                   
                 <div id="Results" class="ui-widget">                 
                     <div id="bugs-contain" class="ui-widget" >
-                        <h1>Bugs:</h1>
+                        <h1>Bugs:</h1><div id="pageNumDiv"></div>
                         <table id="bugs" class="ui-widget ui-widget-content" cellspacing="0" cellpadding="4" width="100%">
                             <thead>
                                 <tr class="ui-widget-header ">
@@ -2104,9 +2240,12 @@
                             </thead>
                             <tbody>
                             </tbody>
-                        </table>
+                        </table>  
+                        <div class="modal"></div> 
+
                     </div>
-                </div>
+
+                </div>                
             </div>
             <div class="modal"></div>
         </div>
