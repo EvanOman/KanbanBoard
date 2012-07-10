@@ -24,9 +24,8 @@
         <script type="text/javascript" src="jquery.json-2.3.js"></script>
         <link rel="stylesheet" media="screen" type="text/css" href="css/colorpicker.css" />
         <script type="text/javascript" src="js/colorpicker.js"></script>
+        <script type="text/javascript" src="jquery.tinysort.min.js"></script>
         <link type="text/css" href="index.css" rel="stylesheet" />
-
-
 
         <script type="text/javascript">
             //HEre I create a global variable storing the field values which i may need later on(for now all I need is Resolution)
@@ -35,9 +34,13 @@
             //Next we want global variables to store the priority icons and the jobMap colors
             var prioMap = {};
             var jobMap = {};
+            var prioSortKey = {};
+            var boardFilterOptions = {
+                "method": "Bug.search"
+            };
             
             function initialize()
-            {
+            {                                
                 $.ajax({
                     url: "ajax_get_options.php",
                     dataType: "json",                    
@@ -54,6 +57,12 @@
                         {  
                             prioMap = data.options.prioIcons;
                             jobMap = data.options.jobColors;
+                            boardFilterOptions =  data.options.boardFilterOptions;
+                            
+                            //We dont want this function to run until the initialize function completes but we also want the document to be ready
+                            $(document).ready(function() {
+                                //First things first we want to populoate the board with the correct cards:
+                                boardCardPopulate();})
                         }
                         
                     },
@@ -65,22 +74,16 @@
             initialize();                        
             
             $(document).ready(function() {
+         
+                $('body').addClass("loading");
+                
                 $("#btnCommentSubmit").live("click", function(e){
                     //Gets the id of the card to which the comment is being appended
                     var cardId = $("#dialogAddEditCard #edit-tabs a").first().attr("value");
                 
                     sendComment(cardId);
                 });
-            
-                /*jQuery.ajaxSetup({
-                    beforeSend: function() {
-                        $('body').addClass("loading"); 
-                    },
-                    complete: function(){
-                        $('body').removeClass("loading"); 
-                    },
-                    success: function() {}
-                });*/
+                            
                 //Enables the sortable behavior that allows the reordering of the cards
                 $( ".column,.tablists" ).sortable({
                     connectWith: ".column,.tablists",
@@ -91,27 +94,27 @@
                 }).disableSelection();
                 
                 //Initially diables the sorting of tabbed items
-                $(".tablists").sortable("disable");
-                
-                //Prevents the banners from being selctable or sortable
-                $(".column, .tablists").sortable({
-                    cancel:".banners, .bigBanners",
-                    items: "li:not(.banners, .bigBanners)"
-                });
-                
+                $(".tablists").sortable("disable");                                                               
                 
                 //Method that opens, closes, and switches the tabs appropriately
                 function handleTabLists(tablist){
-                    
-                    if ($(tablist).is(":visible"))
-                        $(tablist).hide(1000).sortable( "disable" ); 
+                    var container = $(tablist).parent();
+                    if (container.is(":visible"))
+                    {
+                        container.hide(1000);
+                        $(tablist).sortable( "disable" ); 
+                    }
                     else
                     {
-                        $(".tablists").each(function(){
+                        $(".tablistsCon").each(function(){
                             if ($(this).is(":visible"))
-                                $(this).hide().sortable( "disable" );
+                            {
+                                $(this).hide();
+                                $(tablist).sortable( "disable" );
+                            }
                         });
-                        $(tablist).show().sortable( "enable" );
+                        container.show();
+                        $(tablist).sortable( "enable" );
                     }
                 }
                 
@@ -139,12 +142,21 @@
                 });
                 
                 $("#btnOptions").click(function(){
+                     getCompsVers(null, "dialogOptions");
                     $("#dialogOptions ").dialog("open");
                 });               
                    
                 $("#searchSubmit").click(function(){
+                    //Empties the search cache
                     advSearchResults = [];
-                    ajaxSearch(10,0);
+                    
+                    //Removes all of the page numbers
+                    $("#pageNumDiv").empty();
+                    
+                    //The 10 here is a dummy value, will maybe someday be replaced by a user defined number of search results
+                    var numResults = 10;
+                    
+                    ajaxSearch(numResults,0);
                 }); 
                    
                 $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit").button();  
@@ -159,7 +171,29 @@
                     }
                     
                 });
+                
+                $(".card").live( "click", function (e) {
+                    
+                    if (!$(this).hasClass("loading"))
+                    {
+                        e.stopPropagation();
+                    }
+                    
+                });
                
+                $("#mb_sortKeyOptions table").live("click",function(){
+                    var colId = $($.mbMenu.lastContextMenuEl).find("ul").attr("id");
+                    
+                    var sortKey = $(this).find("a").attr("value");                                         
+                    
+                    var order = "desc";
+                    
+                    closeContextMenu();
+                    
+                    sortColumn(colId, sortKey, order);
+                    
+                    
+                });
                 
                 //Sets up the invalids entry dialog menu
                 $( "#dialogInvalid" ).dialog({
@@ -278,10 +312,33 @@
                                 
                                 jobMap[name] = color;
                             });
+                            
+                            //Creates a true copy of the boardFilterOptions
+                            var oldFilter = $.extend(true, {}, boardFilterOptions);
+                            
+                            //Finds all of the selected values
+                            $("#dialogOptions select").each(function(){ 
+                                var name = $(this).siblings("label").attr("name");; 
+                                var value = $(this).val();
+                                boardFilterOptions[name] = value;
+                            });
+                           
+                            //Removes all null values
+                            for (var index in boardFilterOptions)
+                            {
+                                if (boardFilterOptions[index] == null)
+                                {
+                                    delete boardFilterOptions[index];
+                                }
+                            }
+                           
+                           
+                           
                             $.ajax({
                                 url: "ajax_write_options.php",
                                 type: "POST",
                                 data: {
+                                    boardFilterOptions: boardFilterOptions,
                                     prioMap: prioMap,
                                     jobMap: jobMap
                                 },    
@@ -300,28 +357,48 @@
                                     }
                                     else 
                                     {
+                                        //TODO Need to find a way to compare each associative array
+                                        if (/*!$(boardFilterOptions).compare(oldFilter)*/ true)
+                                        {
+                                            //If the old filter isn't the same as the new filter, we need to refilter the page 
+                                            //First we remove all cards
+                                            $(".card").each(function(){
+                                                $(this).parent().remove();
+                                            });
                                             
-                                        $(".card").each(function(){
-                                            var prio = $(this).data("priority").replace(/\s+/g, ''); 
-                                            if (prioMap[prio]=="none")
-                                            {
-                                                $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "none");
-                                            }
-                                            else
-                                            {
-                                                var icon = prioMap[prio];
-                                                var url = "images/icons/"+icon+".png";
-                                                $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
-                                            }
+                                            $("#dialogOptions").dialog("close");     
                                             
-                                            var job = $(this).data("bug_severity").replace(/\s+/g, ''); 
-                                            var color = jobMap[job];
-                                            
-                                            $(this).css("background-color", color);
+                                            //Now we repopulate the page according to the new filter
+                                            boardCardPopulate();    
 
-                                        });
+                                             
+                                        }
+                                        else
+                                        {
+                                            $(".card").each(function(){
+                                                var prio = $(this).data("priority").replace(/\s+/g, ''); 
+                                                if (prioMap[prio]=="none")
+                                                {
+                                                    $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "none");
+                                                }
+                                                else
+                                                {
+                                                    var icon = prioMap[prio];
+                                                    var url = "images/icons/"+icon+".png";
+                                                    $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
+                                                }
                                             
-                                        $("#dialogOptions").dialog("close");                                            
+                                                var job = $(this).data("bug_severity").replace(/\s+/g, ''); 
+                                                var color = jobMap[job];
+                                            
+                                                $(this).css("background-color", color);
+                                                
+                                                $("#dialogOptions").dialog("close");  
+                                            });
+                                        }
+                                        //Now that we have made changes to 
+                                        
+                                                                                 
                                     }
                                        
                                 },
@@ -507,10 +584,11 @@
                 
                 
                 //Handles the moveallCards submenu 
-                $("#moveAllCards a").click( function(){
+                $("#mb_moveAllCards table").live("click", function(){
                     //Finds and saves the column that was right clicked
-                    var startCol = $($.mbMenu.lastContextMenuEl).attr("id");                
-                    var endCol = $(this).html();
+                    var startCol = $($.mbMenu.lastContextMenuEl).find("ul").attr("id");;  
+                    var a = $(this).find("a");
+                    var endCol = a.html();
                     
                     if (startCol != endCol)
                     {
@@ -526,8 +604,8 @@
                         });
                         updatePosition(endCol, colArr);
                     
-                        //Previously the moveall method moved the cards but left all of the <li>s behind. This removes those(except the first: The banner)
-                        $("#"+startCol+" li:not(:first-child)").remove();
+                        //Previously the moveall method moved the cards but left all of the <li>s behind. This removes those
+                        $("#"+startCol+" li").remove();
                     }
                     
                     closeContextMenu(); 
@@ -535,12 +613,13 @@
                 
                 
                 //Handles the moveCardTo submenu moveCardTo
-                $("#moveCardTo a").click(  function(){
+                $("#mb_moveCardTo table").live("click" , function(){                    
                     var card = $($.mbMenu.lastContextMenuEl).parent();
                     var newLi = $('<li></li>').append(card);
-                    var column = $(this).html();
+                    var a = $(this).find("a");
+                    var column = a.html();
                     
-                    $("#"+column).append(newLi);
+                    $("#"+column).append(card);
                     var cardId = $($.mbMenu.lastContextMenuEl).attr("id");
                     
                     updatePosition(column, cardId);
@@ -576,6 +655,26 @@
                    
                 });
                 
+                //When the bug status is chanbged to resolved, Bugzilla requires a valid resolution. This function shows a resolution select field when neccessary on the Options menu
+                $("#optBug_status").change(function () {
+                    var status = $(this).val();
+                    
+                    //Only adds a new select field if the status is resolved and the Resolution field doesn't already exist
+                    if (status == "RESOLVED")
+                    {
+                        $("#optResolution").parent().show();
+                    }
+                    else if (status != "RESOLVED")
+                    {
+                        //If the status doesn't equal resolved we remove the resolution box because we can't have a NEW bug with a resolution
+                        $("#optResolution").parent().hide();
+                       
+                        //We also want to make sure that the resolution field no longer has a value:
+                        $("#optResolution").val("");
+                    }
+                   
+                });
+                
                 //Populates the components field based off of the selected product
                 $("#product").change(function () {
                 
@@ -591,6 +690,14 @@
                     //Grabs the selected values
                     var name = $(this).val();                
                     getCompsVers(name, "search");
+                
+                });
+                
+                //Populates the components field of the search menu based off of the selected product                
+                $("#optProduct").change(function () {
+                    //Grabs the selected values
+                    var name = $(this).val();                
+                    getCompsVers(name, "dialogOptions");
                 
                 });
                                             
@@ -647,9 +754,12 @@
                                     {    
                                         //get the value
                                         var name = data.result.fields[j].values[i].name;
+                                        var sortkey = data.result.fields[j].values[i].sort_key;
+                                        
+                                        prioSortKey[name]=sortkey;
 
                                         //create an option element with the inner html being the name
-                                        var a = $("<a>").html(name).addClass("p");
+                                        var a = $("<a>").html(name);
                                                                                 
                                         //append the option to the context menu
                                         $("#setPriority").append(a);
@@ -681,13 +791,15 @@
                                     var option = $("<option>").val(name).html(name);
 
                                     //append the option to the <select>
-                                    $("#Details select[name="+fieldName+"], #search select[name="+fieldName+"]").append(option);
+                                    $("select[name="+fieldName+"]").append(option);
                                 }
+                                
+                                
                             }
                         }
                         
                     },
-                    error: function(jqXHR, textStatus, errorThrown){
+                    error: function(jqXHR, textStatus){
                         alert("(Fields)There was an error:" + textStatus);
                     }
                 }); 
@@ -752,7 +864,7 @@
                                     var option = $("<option>").val(name).html(name);
 
                                     //append the option to the <select>
-                                    $("#Details select[name=product], #search select[name=product]").append(option);
+                                    $("select[name=product]").append(option);
                                 } 
                                 //Automatically populates the components and version fields based off of the first(default) product
                                 var firstProduct = $("#Details select[name=product] option").first().html();
@@ -760,6 +872,7 @@
                             
                                 getCompsVers([firstProduct], "Details");
                                 getCompsVers(null, "search");
+                                getCompsVers(null, "dialogOptions");
                             }
                                 
                         
@@ -769,46 +882,15 @@
                         }
                     });
                     
-                };
-                                           
-                //Finds all bugs assigned to me and posts them to the board 
-                $.ajax({
-                    url: "ajax_POST.php",
-                    type: "POST",
-                    beforeSend:function(){
-                        $("body").addClass("loading");
-                    },
-                    data: { 
-                        "method": "Bug.search",
-                        "assigned_to": "evan.oman@blc.edu" //Test for Landfill tara@bluemartini.com
-                    },
-                    dataType: "json",
-                    success: function(data, status){
-                        
-                        if (data.result.faultString != null)
-                        {
-                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                        }
-                        else
-                        {
-                            for (var i in data.result.bugs)
-                            {
-                                var bug = data.result.bugs[i];
-                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status);
-                                $("body").removeClass("loading");
-                            }
-                        }
-                    }
-                });                                                
+                };                                                        
                 
                 //Sets the priority of the card 
-                $(".p").live("click", function(){
+                $("#mb_setPriority table").live("click", function(){
+                    //Finds the anchor
+                    var a = $(this).find("a");
+                    
                     //Grabs the anchor's text
-                    var prio = $(this).html();
+                    var prio = a.html();
 
                     //Finds which card was right clicked
                     var card = $($.mbMenu.lastContextMenuEl);
@@ -841,8 +923,12 @@
                                 }
                                 else
                                 {
+                                    updateLastChanged(card.attr("id"));
+                                    
                                     card.data({"priority": prio});
+                                    
                                     displayHandler(card);
+                                    
                                     card.removeClass("loading"); 
                                 }
                             }
@@ -969,7 +1055,7 @@
                         },    
                         dataType: "json",
                         beforeSend: function() {
-                            $('#Details, #dialogSearch').addClass("loading"); 
+                            $('#Details, #dialogSearch, #dialogOptions').addClass("loading"); 
                         },
                         success: function(data, status){
                         
@@ -990,10 +1076,13 @@
                             dialogFields();
                             
                             //This line triggers the search page's 'change' function which then updates the component field to be non empty
-                            $("#searchProduct").change();
-                                                        
+                            $("#searchProduct, #optProduct").change();
+                             
+                            //Sets the proper fields for the options menu
+                            setBoardFilterValues();
+                             
                             //We want to make sure that the values are appended before we close the loading modal screen
-                            $('#Details, #dialogSearch').removeClass("loading"); 
+                            $('#Details, #dialogSearch, #dialogOptions').removeClass("loading"); 
                            
                         },
                         error: function(jqXHR, textStatus, errorThrown){
@@ -1094,12 +1183,20 @@
                 
                     getCompsVers([$("#product").val()], "Details");
                     
+                    getCompsVers([$("#product").val()], "dialogOptions");
+                    
                 }
             }
             
-            function editCard(cardId) {                                                     
+            function editCard(cardId) {          
+                var card = $('#'+cardId);
+                
+                var lastEditTime = new Date(card.data("last_change_time"));
+                
+                lastEditTime = lastEditTime.toLocaleDateString() + " at " + lastEditTime.toLocaleTimeString();
+                
                 //Adds edit specifc dialog properties
-                $("#dialogAddEditCard").dialog( "option", "title", "Edit Card #"+cardId );
+                $("#dialogAddEditCard").dialog( "option", "title", "Edit Card #"+cardId+"(Last Edited: " + lastEditTime +")");
                 $("#edit-tabs ul li").show();
                 
                 //We need the atachments tabs to be specific to the card as well but we only want to retireve this data from the server if it is requested by the user
@@ -1196,6 +1293,7 @@
                     },
                     Cancel: function() {
                         $( this ).dialog( "close" );
+                       
                     }   
                 });
                 $( "#dialogAddEditCard" ).dialog( "option", "close",function()  {
@@ -1203,7 +1301,7 @@
                     $("#Details input, #Details textarea, #Details select").val("");
                      
                     //Clears the description
-                    $("#detailsRight label,#detailsRight #commentReplyText").remove();
+                    $("#detailsRight label[for=commentReplyText],#detailsRight #commentReplyText").remove();
                     
                     //Shows the comments div again
                     $("label[for=Comments],#Comments").show();
@@ -1231,13 +1329,15 @@
             
             function editView(index){
                 $( "#edit-tabs" ).tabs("select", index);
-                //Handles special case when the Comments card is selected
-                if (index == 2){
-                    if (card.data("comments") == null){
-                        
-                    }
-                }
+                                
                 editCardContextMenu();
+                
+                //Handles special case when the Attachments button is selected
+                if (index == 1){                     
+                    //Gets the ID of the current card being edited
+                    var cardId = $("#dialogAddEditCard #edit-tabs a").first().attr("value"); 
+                    getAttachments(cardId);
+                }
             }                       
                        
             function displayHandler(card) {
@@ -1253,8 +1353,17 @@
                 //Changes the background color of the card to match the .ini file
                 card.css("background-color", jobMap[job]);
                 
-                //Sets the title of the card to the jobtype
+                //Sets the title of the card to the jobtype 
                 card.attr({"title": "(#"+card.attr("id")+")"+job+": " + summary});
+                
+                //For date testing:
+                /*
+                var lastEditTime = new Date(card.data("last_change_time"));
+                
+                lastEditTime = lastEditTime.toLocaleDateString() + " at " + lastEditTime.toLocaleTimeString();
+                
+                
+                card.attr({"title": lastEditTime});*/
                 
                 //This section adds and switches the priority icon.                                         
                 if ($(cardRef + " .prioBack").length == 0)
@@ -1351,7 +1460,7 @@
                     url: "ajax_POST.php",
                     type: "POST",
                     beforeSend: function(){
-                        var div = $("<div id='loadingLabel'>Adding Card</div>");
+                        var div = $("<div class='loadingLabel'>Adding Card</div>");
                         $("#Details .modal").append(div);
                         $("#Details").addClass("loading");
                     },
@@ -1369,10 +1478,11 @@
                         "description": description,
                         "rep_platform": rep_platform,
                         "status":status
+                         
                         
                     },
                     dataType: "json",
-                    success: function(data, status){
+                    success: function(data){
                 
                         if (data.result.faultString != null)
                         {
@@ -1387,12 +1497,14 @@
                             //Card creation logic will be placed here as soon as the Bug.create/Bug.update issues have been resolved
                             //The Bugzilla Documentation states that the create method will only return the new ID upon completion
                             var id = data.result.id;
-                            alert("Bug succesfully added.\nID:"+id);                                                       
+                            alert("Bug succesfully added.\nID:"+id); 
+                                                      
+                            var now = new Date();
                             
                             //Now that we have the new card's Id we can post it to the board:
-                            postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status);
+                            postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status,  op_sys, rep_platform, now);
                             $("#Details").removeClass("loading");
-                            $("#Details #loadingLabel").remove();
+                            $("#Details .loadingLabel").remove();
                             $( "#dialogAddEditCard" ).dialog( "close" ); 
                         }
                         
@@ -1405,8 +1517,8 @@
             }
             
             //Posts a card to the page containing all of the propper information. Used to post new cards and also to populate the board with existing cards
-            function postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform){
-                var newCard = $('<div id="'+id+'" class="card "><div class="cardText">'+summary+'</div><div class="iconBar"></div><div class="modal"><div>Saving Card</div></div></div>');
+            function postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform, last_change_time){
+                var newCard = $('<div id="'+id+'" class="card "><div class="cardText">(#'+id+') '+summary+'</div><div class="iconBar"></div><div class="modal"><div>Saving Card</div></div></div>');
                     
                 newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}, normal");
                 //<div class="cardText">Existing Card</div><div class="iconBar"></div></div>   
@@ -1414,8 +1526,12 @@
                                                                        
                 $("#"+col.replace(/\s+/g, '')).append(newLi);
                 
+                //Puts the time in the correct format
+                last_change_time = new Date(last_change_time);
+                
                 //NOTE: I realize saving the data locally and on the database violates the DRY principle however I don't want the user to have to wait for an AJAX call to complete in order to access bug info
                 newCard.data({
+                    "id": id,
                     "summary": summary,
                     "bug_severity": severity,
                     "priority": priority,
@@ -1427,7 +1543,8 @@
                     "deadline": deadline,
                     "status": status,
                     "op_sys": op_sys,
-                    "rep_platform": rep_platform
+                    "rep_platform": rep_platform,
+                    "last_change_time" : last_change_time
                         
                 });
                     
@@ -1549,7 +1666,10 @@
                             else 
                             {
                                 //Now that the card has successfully loaded, we remove the loading class
-                                card.removeClass("loading");                                                                                                                                         
+                                card.removeClass("loading");
+                                
+                                //We also need to update the last edit time:
+                                updateLastChanged(ids);
                             }
                         
                         },
@@ -1598,12 +1718,16 @@
                             alert("Something is wrong");
                         }
                         else 
-                        {    
+                        {  
+                            var now  = new Date();
                             for (var i in cardIds) { 
-                                var card = $("#"+cardIds[i])
+                                var card = $("#"+cardIds[i]);
+                                
+                                updateLastChanged(cardIds[i]);
+                                
                                 card.removeClass("loading"); 
                                 card.data({                                
-                                    "cf_whichcolumn": column
+                                    "cf_whichcolumn": column                                    
                                 });
                             }                                                                                                           
                         }
@@ -1623,35 +1747,50 @@
             
                 //Checks to see if we already have this page's search results. If not we retrieve the results from bugzilla. If we already have them we simply access the cache. 
                 if (typeof(advSearchResults[pageNum]) == "undefined")
-                {
+                {                                                                                     
+                    var searchArr = {};
                     
-                    //Documentation: "Note that you will only be returned information about bugs that you can see. Bugs that you can't see will be entirely excluded from the results. 
-                    //So, if you want to see private bugs, you will have to first log in and then call this method."                                                                        
-                    var searchArr = [$("#searchProduct"),$("#searchBug_severity"),$("#searchSummary"),$("#searchVersion"),$("#searchBug_status"), $("#searchResolution"),$("#searchPriority")];
-                            
-                    //Need to covert each search parameter to an array and remove all void values to avoid problems with PHP             
-                    for (var i in searchArr){
-                        var id = searchArr[i].attr("id");
-                        var field = $("#"+id);
-                        //Bug.search doesn't like 'null' values so we will simply replace them with all the possible fields(not selecting a parameter filters nothing)                            
-                        if (field.val() == null)
+                    //Finds all of the selected values
+                    $("#dialogSearch select").each(function(){ 
+                        //Here I am selecting the label's text because I have set it to store the Bugzilla field values
+                        var name = $(this).siblings("label").attr("name");; 
+                        var value = $(this).val();
+                        searchArr[name] = value;
+                    });
+                           
+                    //Removes all null values and makes array switches if neccessary
+                    for (var index in searchArr)
+                    {
+                        if (searchArr[index] == null)
                         {
-                            var vals = []
-                            $(" option", field).each(function(){
-                                vals.push($(this).val());
-                            })
-                            field.val(vals);                                     
+                            delete searchArr[index];
                         }
-                        //If the value is not an array
-                        if ( ! $.isArray(field.val()))
-                        {                                    
-                            //Turn it into an array
-                            field.val( [field.val()]);
+                        else 
+                        {
+                            //If the value is not an array
+                            if ( ! $.isArray(searchArr[index]))
+                            {                                    
+                                //Turn it into an array
+                                searchArr[index] = [searchArr[index]];
+                            } 
                         }
+                    }                                               
+                    
+                    //Now we want to add the Summary if neccessary
+                    if ($("#searchSummary").val() != "" && $("#searchSummary").val() != null)
+                    {
+                        searchArr["summary"] = $("#searchSummary").val();                         
                     }
-                
+                    
                     //This sets the offset to be exact where we want it after the page is changed
-                    var offset = (pageNum) * limit;
+                    var offset = pageNum * limit;
+                    
+                    //Adds the method after the above for loop because we dont want the method to be in an array
+                    searchArr["method"] = "Bug.search";
+                    
+                    searchArr["offset"] = offset;
+                    
+                    searchArr["limit"] = limit;
                    
                     $.ajax({
                         url: "ajax_POST.php",
@@ -1660,20 +1799,7 @@
                         beforeSend: function() {
                             $('#bugs-contain').addClass("loading"); 
                         },
-                        data: { 
-                            /*"ids":  $("#searchId").val(),*/
-                            "method": "Bug.search",
-                            "priority":  $("#searchPriority").val(),//
-                            "product":  $("#searchProduct").val(),//
-                            "severity":  $("#searchBug_severity").val(),//
-                            "summary":  $("#searchSummary").val(),//
-                            "version":  $("#searchVersion").val(),//
-                            "resolution":  $("#searchResolution").val(),
-                            "status":  $("#searchBug_status").val(),
-                            "limit": limit,
-                            "offset": offset
-                                 
-                        },
+                        data: searchArr,
                             
                         success: function(data, status){
                             
@@ -1835,12 +1961,20 @@
                 $("#Comments #accordion div, #Comments #accordion .header").each(function(){
                     $(this).remove();
                 });
-            
+        
+                //Now we want to add the comment textbox
+                var header = $('<h3 class="header">').text("Comment:");
+                var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all">');
+                var button = $("<button id='btnCommentSubmit'>Send</button>");
+                var comm = $('<div class="commDiv">').append(text,button);                      
+                $("#Comments #accordion").prepend(header,comm);
+                $("#btnCommentSubmit").button();       
+        
                 //Now that we have the comment data, we want to post it to the comments tab
                 var comArr = card.data("comments");
                 for (var i in comArr)
                 {       
-                    var commId = "Comment "+i;
+                    var commId = "Comment"+i;
                     var commText = comArr[i].text;
                     var commAuthor = comArr[i].author;
                     var date = new Date(comArr[i].time);
@@ -1861,22 +1995,12 @@
                        
             $(".commentReplyLink").live("click", function(e){
                 e.stopPropagation();
-                commentReply($(this).closest("div").attr("id"));
+                var ids = $(this).closest("div").attr("id");
+                var quote = "(In response to "+ids+"): '"+$("#"+ids+" p").text()+"'\n";
+                
+                $("#commentReplyText").val(quote);
             });            
-            
-            function commentReply(ids)
-            {              
-                //Creates a text box with quoted text and appends it:
-                var quote = "(In response to "+ids+"): '"+$("#"+ids+" p").text()+"'";               
-                var header = $('<h3 class="header">').text("Comment:");
-                var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all">').text(quote);
-                var button = $("<button id='btnCommentSubmit'>Send</button>");
-                var comm = $('<div class="commDiv">').append(text,button);                      
-                $("#Comments #accordion").prepend(header,comm);
-                $("#btnCommentSubmit").button();                                                
-            }       
-          
-            
+                      
             function sendComment(cardId)
             {
                                
@@ -1905,13 +2029,14 @@
                             alert("Something is wrong");
                         }
                         else 
-                        {  
-                            alert("Comment succesfully added.");   
+                        {                                                          
                             //Here we empty the card comment data to allow getComments to pull down new comment data
                             //TODO Find a better way, this is very wasteful. Possibly get all the information that Bugzilla would returna and apppend it in a similar manner as the postComments method? 
                             $("#"+cardId).data({"comments": null});
                             
-                            getComments(cardId);                            
+                            getComments(cardId);         
+                            
+                            alert("Comment succesfully added."); 
                         }                        
                     },
                     error: function(jqXHR, textStatus, errorThrown){
@@ -1972,12 +2097,74 @@
                             for (var i in data.result.bugs)
                             {
                                 var bug = data.result.bugs[i];
-                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status);                              
+                                postCard(bug.id,bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time);                              
                             }
                         }
                     }
                 });                     
             }
+            
+            function sortColumn(colId, sortkey, order)
+            {                
+                var col = $("#"+colId);                    
+                
+                $('>li', col).tsort('div',{data:sortkey, order:order});
+            }
+            
+            function updateLastChanged(cardId)
+            {
+                var now = new Date();
+                $("#"+cardId).data("last_change_time", now);
+            }
+            
+            function boardCardPopulate(){
+                //Finds all bugs assigned to me and posts them to the board 
+                $.ajax({
+                    url: "ajax_POST.php",
+                    type: "POST",
+                    beforeSend:function(){
+                        $("body").addClass("loading");                            
+                    },
+                    data:  boardFilterOptions                        
+                    //Will evetually just be the map: 
+                    ,
+                    dataType: "json",
+                    success: function(data, status){
+                        
+                        if (data.result.faultString != null)
+                        {
+                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else
+                        {
+                            for (var i in data.result.bugs)
+                            {
+                                var bug = data.result.bugs[i];
+                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time);                                
+                            }
+                            
+                            $("body").removeClass("loading");
+                        }
+                    }
+                });
+            }
+            
+            function setBoardFilterValues()
+            {
+                //Finds all of the selected values
+                $("#dialogOptions select").each(function(){ 
+                    
+                    var name = $(this).siblings("label").text();; 
+                    
+                    $(this).val(boardFilterOptions[name]);                    
+                });
+            }
+           
+           
         </script>
     </head>
     <body>
@@ -1992,7 +2179,7 @@
                     </tbody>
                 </table>
             </div>
-            <div style="float:left">
+            <div style="float:initial">
                 <h1>
                     <br>Job Type Card Color Assignments:
                 </h1>
@@ -2002,6 +2189,38 @@
                     </tbody>
                 </table>              
             </div>
+            <div style="float: left;">
+                <h1>
+                    <br>Board Card Filter
+                </h1>
+                <form style="height:300px;">
+                    <fieldset style="margin-top: 10px;">                        
+                        <div style="float: left; width:100%">
+                            <div  class="box">
+                                <label for="product"class="searchLabel" name="product">Product</label>
+                                <select  name="product" id="optProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>
+                            <div class="box">
+                                <label for="version"class="searchLabel" name="version">Version</label>
+                                <select  name="version" id="optVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>
+                            <div class="box">
+                                <label for="bug_severity"class="searchLabel" name="severity">Severity</label>
+                                <select  name="bug_severity" id="optBug_severity"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>                           
+                            <div class="box">
+                                <label for="bug_status"class="searchLabel" name="status">Status</label>
+                                <select  name="bug_status" id="optBug_status"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>
+                            <div class="box" style="display: none;">
+                                <label for="resolution"class="searchLabel" name="resolution">Resolution</label>
+                                <select  name="resolution" id="optResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>
+                        </div>                        
+                    </fieldset>                    
+                </form>
+            </div>
+            <div class="modal"><div class="loadingLabel">Options Loading</div></div>
         </div>  
         <div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
             <form>
@@ -2111,73 +2330,75 @@
                     <div class="modal"></div>
                 </div>               
                 <div id="Attachments">
+
+                    <div id="attTableDiv"  class="ui-widget-content ui-corner-all">
+                        <table id="attachmentTable" class="ui-widget ui-widget-content">
+                            <thead>
+                                <tr class="ui-widget-header ">
+                                    <th>
+                                        Attachments
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>                       
+                        </table>
+                        <div class="modal"></div>
+                    </div>
+
                     <form  action="ajax_UploadAttachment.php" method="post" enctype="multipart/form-data" target="upload_target">
-                        <div id="attTableDiv"  class="ui-widget-content ui-corner-all">
-                            <table id="attachmentTable" class="ui-widget ui-widget-content">
-                                <thead>
-                                    <tr class="ui-widget-header ">
-                                        <th>
-                                            Attachments
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                </tbody>                       
-                            </table>
-                            <div class="modal"></div>
-                        </div>
-                    </form>
-                    <table id="attachmentAddTable" class="ui-widget ui-widget-content ui-corner-all">
-                        <thead>
-                            <tr class="ui-widget-header ">
-                                <th colspan="2">
-                                    Add Attachment
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <label for="attachmentFileName">File:</label>
-                                </td>
-                                <td>
-                                    <input id="attachmentFileName" name="file_name" type="file"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <label for="attachmentDescription">Description:</label>
-                                </td>
-                                <td>
-                                    <input name="summary" style="width: 300px;" id="attachmentDescription"type="text"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <label  for="attachmentIsPatch">Is Patch:</label>
-                                </td>
-                                <td>
-                                    <input name="is_patch" id="attachmentIsPatch"type="checkbox"/>
-                                </td>
-                            </tr>                               
-                            <tr>
-                                <td>
-                                    <label for="attachmentComment">Bug Comment:</label>
-                                </td>
-                                <td>
-                                    <input name="comment" style="width: 300px;" id="attachmentComment"type="text"/>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <input type="hidden" name="ids" id="attachmentBugId" value=""/>
-                                </td>
-                                <td>
-                                    <input style="float:right;"  type="submit" value="Submit"id="btnAttachmentSubmit"/>
-                                </td>
-                            </tr>
-                        </tbody>                       
-                    </table>                        
+                        <table id="attachmentAddTable" class="ui-widget ui-widget-content ui-corner-all">
+                            <thead>
+                                <tr class="ui-widget-header ">
+                                    <th colspan="2">
+                                        Add Attachment
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <label for="attachmentFileName">File:</label>
+                                    </td>
+                                    <td>
+                                        <input id="attachmentFileName" name="file_name" type="file"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label for="attachmentDescription">Description:</label>
+                                    </td>
+                                    <td>
+                                        <input name="summary" style="width: 300px;" id="attachmentDescription"type="text"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <label  for="attachmentIsPatch">Is Patch:</label>
+                                    </td>
+                                    <td>
+                                        <input name="is_patch" id="attachmentIsPatch"type="checkbox"/>
+                                    </td>
+                                </tr>                               
+                                <tr>
+                                    <td>
+                                        <label for="attachmentComment">Bug Comment:</label>
+                                    </td>
+                                    <td>
+                                        <input name="comment" style="width: 300px;" id="attachmentComment"type="text"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <input type="hidden" name="ids" id="attachmentBugId" value=""/>
+                                    </td>
+                                    <td>
+                                        <input style="float:right;"  type="submit" value="Submit"id="btnAttachmentSubmit"/>
+                                    </td>
+                                </tr>
+                            </tbody>                       
+                        </table>     
+                    </form>                    
                     <div style="clear: both;"></div>
 
                     <div class="modal"></div>
@@ -2194,27 +2415,27 @@
                         </div>
                         <div style="float: left; width:100%">
                             <div class="box">
-                                <label for="product"class="searchLabel">Product:</label>
+                                <label for="product"class="searchLabel" name="product">Product</label>
                                 <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="version"class="searchLabel">Version</label>
+                                <label for="version"class="searchLabel" name="version">Version</label>
                                 <select  name="version" id="searchVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="bug_severity"class="searchLabel">Severity:</label>
+                                <label for="bug_severity"class="searchLabel" name="severity">Severity</label>
                                 <select  name="bug_severity" id="searchBug_severity"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="priority"class="searchLabel">Priority</label>
+                                <label for="priority"class="searchLabel" name="priority">Priority</label>
                                 <select  name="priority" id="searchPriority"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="bug_status"class="searchLabel">Status:</label>
+                                <label for="bug_status"class="searchLabel" name="status">Status</label>
                                 <select  name="bug_status" id="searchBug_status"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="resolution"class="searchLabel">Resolution:</label>
+                                <label for="resolution"class="searchLabel" name="resolution">Resolution</label>
                                 <select  name="resolution" id="searchResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                         </div>                        
@@ -2249,16 +2470,18 @@
             </div>
             <div class="modal"></div>
         </div>
-
-        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Backlog" > 
-            <li class="bigBanners">Backlog</li>      
-        </ul> 
-        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Archive">
-            <li class="bigBanners">Archive</li>      
-        </ul>    
-        <ul class="tablists cmVoice {cMenu: 'contextMenuColumn'}" id="Limbo">
-            <li class="bigBanners">Limbo</li>      
-        </ul> 
+        <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
+            <span class="bigBanners">Backlog</span>
+            <ul id="Backlog"class="tablists"></ul>                                    
+        </div>
+        <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
+            <span class="bigBanners">Archive</span>
+            <ul id="Archive"class="tablists"></ul>                                    
+        </div>
+        <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
+            <span class="bigBanners">Limbo</span>
+            <ul id="Limbo"class="tablists"></ul>                                    
+        </div>
         <div class="toolbar">                
             <button class="btnTab">Backlog</button>
             <button class="btnTab">Archive</button>
@@ -2317,10 +2540,19 @@
         </div>
         <div id="setPriority" class="mbmenu">
         </div>
+        <div id="sortKeyOptions" class="mbmenu">
+            <a value="id">Bug ID</a>
+            <a value="priority">Priority</a>
+            <a value="summary">Summary</a>
+            <a value="last_change_time">Last Edited</a>
+            <a value="deadline">Deadline</a>
+        </div>
         <div class="mbmenu" id="contextMenuColumn">            
             <a class="{menu:'moveAllCards'}">Move All Cards to</a>
             <a rel="separator"> </a>
             <a action="addCardToCol()">Add Card</a>
+            <a rel="separator"> </a>
+            <a class="{menu:'sortKeyOptions'}">Sort by</a>
         </div> 
         <iframe id="secretIFrame" src="" style="display:none; visibility:hidden;"></iframe>
         <iframe id="upload_target" name="upload_target" src="#" style=" display:none; visibility:hidden;"></iframe>   
