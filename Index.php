@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
     <head>
         <title>Eckhardt Optics Kanban Board</title>
@@ -90,12 +89,15 @@
                     placeholder: "ui-state-highlight",
                     forcePlaceholderSize: true,
                     tolerance: 'pointer',
-                    cursorAt: { top: 15 }
+                    cursorAt: { top: 15 },
+                    cancel: "li:has(.loading)",
+                    //The items parameter expects only a selector which prevents the use of Jquery so here I have made a(likely very inefficent) selector which selects every li with a card in it that isn't loading
+                    items: "li:has(.card):not(:has(.loading))"  
                 }).disableSelection();
                 
                 //Initially diables the sorting of tabbed items
                 $(".tablists").sortable("disable");                                                               
-                
+                              
                 //Method that opens, closes, and switches the tabs appropriately
                 function handleTabLists(tablist){
                     var container = $(tablist).parent();
@@ -126,8 +128,7 @@
                 $(".toolbar .btnTab").click(function(){
                     var tab =  $(this).text();
                     handleTabLists("#"+tab);
-                });
-                
+                });                
 
                 //Handles the add card button
                 $("#btnAddCard").click(function(){                    
@@ -142,7 +143,7 @@
                 });
                 
                 $("#btnOptions").click(function(){
-                     getCompsVers(null, "dialogOptions");
+                    getCompsVers(null, "dialogOptions");
                     $("#dialogOptions ").dialog("open");
                 });               
                    
@@ -158,8 +159,16 @@
                     
                     ajaxSearch(numResults,0);
                 }); 
+                
+                //Handles the add card button
+                $("#AddFilterOption").live( "click", function(){  
+                    
+                    var filter =  $("#filterFieldOption").val();
+                    alert(filter);
+                    $("#"+filter).parent().show();
+                }); 
                    
-                $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit").button();  
+                $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit, #AddFilterOption").button();  
                  
                 //Pulls up the edit menu whenever a card is double clicked                       
                 $(".card").live( "dblclick", function () {
@@ -176,7 +185,7 @@
                     
                     if (!$(this).hasClass("loading"))
                     {
-                        e.stopPropagation();
+                       
                     }
                     
                 });
@@ -276,7 +285,16 @@
                     }
                 });
                 
-                
+                //Creates the options dialog
+                $( "#dialogSort" ).dialog({
+                    autoOpen: false,
+                    resizable: false,
+                    height: 175,
+                    width: 550,
+                    show: { effect: 'blind'},
+                    hide: "explode",
+                    modal: true                    
+                });
                                 
                 //Creates the options dialog
                 $( "#dialogOptions" ).dialog({
@@ -288,210 +306,15 @@
                     hide: "explode",
                     modal: true,
                     buttons: {
-                        Save: function() {
-                            //Stores each selection made in the options menu
-                            $("#dialogOptions #prioIconTable tbody tr").each(function(){
-                                var name = $(this).find("td").first().text();
-                                if ($(this).find("input[type=radio]:checked").length == 0)
-                                {
-                                    var iconClass = "none"; 
-                                }
-                                else
-                                {
-                                    iconClass = $(this).find("input[type=radio]:checked").val(); 
-                                }
-                                
-                                prioMap[name] = iconClass;
-                            });
-                            
-                            $("#dialogOptions #jobColorTable tbody tr").each(function(){
-                                var name = $(this).find("td").first().text();
-                                
-                                //This finds the color of the color preview. Returns an RGB string, hopefully this will work
-                                var color = $(this).find("td").last().find("div").find("div").css("background-color");                                 
-                                
-                                jobMap[name] = color;
-                            });
-                            
-                            //Creates a true copy of the boardFilterOptions
-                            var oldFilter = $.extend(true, {}, boardFilterOptions);
-                            
-                            //Finds all of the selected values
-                            $("#dialogOptions select").each(function(){ 
-                                var name = $(this).siblings("label").attr("name");; 
-                                var value = $(this).val();
-                                boardFilterOptions[name] = value;
-                            });
-                           
-                            //Removes all null values
-                            for (var index in boardFilterOptions)
-                            {
-                                if (boardFilterOptions[index] == null)
-                                {
-                                    delete boardFilterOptions[index];
-                                }
-                            }
-                           
-                           
-                           
-                            $.ajax({
-                                url: "ajax_write_options.php",
-                                type: "POST",
-                                data: {
-                                    boardFilterOptions: boardFilterOptions,
-                                    prioMap: prioMap,
-                                    jobMap: jobMap
-                                },    
-                                dataType: "json",
-                                    
-                                success: function(data, status){
-                                        
-                                        
-                                    if (data.error)
-                                    {
-                                        alert(data.error);
-                                    }
-                                    else if (!data.success)
-                                    {
-                                        alert("Something is wrong");
-                                    }
-                                    else 
-                                    {
-                                        //TODO Need to find a way to compare each associative array
-                                        if (/*!$(boardFilterOptions).compare(oldFilter)*/ true)
-                                        {
-                                            //If the old filter isn't the same as the new filter, we need to refilter the page 
-                                            //First we remove all cards
-                                            $(".card").each(function(){
-                                                $(this).parent().remove();
-                                            });
-                                            
-                                            $("#dialogOptions").dialog("close");     
-                                            
-                                            //Now we repopulate the page according to the new filter
-                                            boardCardPopulate();    
-
-                                             
-                                        }
-                                        else
-                                        {
-                                            $(".card").each(function(){
-                                                var prio = $(this).data("priority").replace(/\s+/g, ''); 
-                                                if (prioMap[prio]=="none")
-                                                {
-                                                    $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "none");
-                                                }
-                                                else
-                                                {
-                                                    var icon = prioMap[prio];
-                                                    var url = "images/icons/"+icon+".png";
-                                                    $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
-                                                }
-                                            
-                                                var job = $(this).data("bug_severity").replace(/\s+/g, ''); 
-                                                var color = jobMap[job];
-                                            
-                                                $(this).css("background-color", color);
-                                                
-                                                $("#dialogOptions").dialog("close");  
-                                            });
-                                        }
-                                        //Now that we have made changes to 
-                                        
-                                                                                 
-                                    }
-                                       
-                                },
-                                error: function(jqXHR, textStatus, errorThrown){
-                                    alert("(Fields)There was an error:" + textStatus);
-                                }
-                            }); 
-                        },                    
-                        //Resets all the feilds to null to allow a fresh dialog window each time
+                        Save: function(){
+                            dialogOptionsSave()                   
+                        },
                         Close: function() {
                             $( this ).dialog( "close" );
                         }
                     }
                 });
-                
-                function makeRowPrioOptions(prioName){
-  
-                    var row = $('<tr><td>'+prioName+'</td></tr>');
-                    
-                    var td = $("<td><form></form></td>");
-                    var iconDiv = $("<div id='"+prioName+"radiodiv'></div>"); 
-                    
-                    //This for loop autiomatically populates the prioIcon options selection
-                    for (i=0; i<18; i++)
-                    {
-                        var icon = "icon"+i;
-                        var id = prioName+"."+icon;
-                        //Note that the new radio id is prioname.icon#
-                        var input = $("<input type='radio' id='"+id+"' name='radio' value='"+icon+"' />");
-                        var label = $("<label for='"+id+"' style='float: left;'>");
-                        var url = 'images/icons/'+icon+'.png';
-                        var div = $("<div class='prioBack'><div class='prioIcon' style='background-image: url("+escape(url)+")!important;'></div></div>");
-                        label.append(div);
-                        iconDiv.append(input, label);                                  
-                    }
-                    
-                    //In addition to all of the icons we want to have a "no icon" button
-                    var id = prioName+".none";
-                    var input = $("<input type='radio' id='"+id+"' name='radio' value='none' />");
-                    var label = $("<label for='"+id+"' style='float: left;'>");
-                    var div = $("<div class='prioBack'><div class='prioIcon' >No Icon</div></div>");
-                    label.append(div);
-                    iconDiv.append(input, label);         
-                    
-                    td.find("form").append(iconDiv);                    
-                    row.append(td);
-                    
-                    $(row).find("input[type=radio][value="+prioMap[prioName]+"]").attr("checked","checked");
-                    $("#dialogOptions #prioIconTable tbody").append(row);
-                    
-                    $("#"+prioName+"radiodiv").buttonset();
-                    
-                    
-                }
-                
-                function makeRowJobColorOptions(job){
-                    job = job.replace(/\s+/g, '');
-                    var id = job+"Color";
-                    var row = $('<tr><td>'+job+'</td></tr>');
-                    
-                    var color = jobMap[job];
-                    
-                    var td = $("<td><div id='"+id+"' class='colorSelector'><div style='background-color:"+color+"'></div></div></td>");
-                    
-                    row.append(td);
-                    
-                    //We do this because the ColorPicker plugin requires Hex 
-                    color = rgb2hex(color)
-
-                    //$(row).find("input[type=radio][value="+prioMap[job]+"]").attr("checked","checked");
-                    $("#dialogOptions #jobColorTable tbody").append(row);
-                    
-                    $('#'+id).ColorPicker({
-                        color: color,
-                        onChange: function (hsb, hex, rgb) {
-                            $('#'+id+' div').css('backgroundColor', /*'rgb('+rgb.r+', '+rgb.g+', '+rgb.b+')'*/'#'+ hex);
-                        }
-                       
-                    });
-                    
-                    
-                    
-                }   
-                
-                //This function converts rgb colors to their hex equivalent
-                function rgb2hex(rgb){
-                    rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
-                    return "#" +
-                        ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
-                        ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
-                        ("0" + parseInt(rgb[3],10).toString(16)).slice(-2);
-                }
-                
+                                
                 //Creates the search dialog box
                 $( "#dialogSearch" ).dialog({
                     autoOpen: false,
@@ -613,7 +436,8 @@
                 
                 
                 //Handles the moveCardTo submenu moveCardTo
-                $("#mb_moveCardTo table").live("click" , function(){                    
+                $("#mb_moveCardTo table").live("click" , function(){                      
+                
                     var card = $($.mbMenu.lastContextMenuEl).parent();
                     var newLi = $('<li></li>').append(card);
                     var a = $(this).find("a");
@@ -701,10 +525,9 @@
                 
                 });
                                             
-                //Updates the cards position whenever it is moved
-                $( ".column, .tablists" ).sortable({
-                    receive: function(event, ui) { 
-                        
+                //Updates the cards position whenever it is moved and also checks to make sure that the card isn't loading
+                $( ".column, .tablists" ).sortable({                    
+                    receive: function(event, ui) {                         
                         var col = $(this).attr("id");
                         var cardId = $(">div",ui.item).attr("id");
                         updatePosition(col, cardId);
@@ -885,7 +708,8 @@
                 };                                                        
                 
                 //Sets the priority of the card 
-                $("#mb_setPriority table").live("click", function(){
+                $("#mb_setPriority table").live("click", function(){                  
+                    
                     //Finds the anchor
                     var a = $(this).find("a");
                     
@@ -960,6 +784,7 @@
                     $("#secretIFrame").attr("src","ajax_DownloadAttachment.php?id="+id);
                  
                 })
+                $("#sortRadioDiv").buttonset()
                 
             });
               
@@ -1160,7 +985,7 @@
                 
                     if (card.data("resolution") !== "" && card.data("resolution") != undefined)
                     {
-                        $("#resolution").show();
+                        $("#resolution").parent().show();
                         $("#resolution").val(card.data("resolution"));
                     }
                     $("#attachmentBugId").val(cardId);
@@ -1177,6 +1002,9 @@
                 
                     //Sets the default priority to medium
                     $("#priority").val("Medium");
+                    
+                    //A new card should never have a resolution:
+                    $("#resolution").parent().hide();
                     
                     var first = $("#bug_severity option").first().val();                
                     dialogDisplay(first);
@@ -1246,6 +1074,12 @@
                     //Clears the attachments
                     $("#attachmentTable tbody").empty();   
                     
+                    //We want to hide this incase it is showing
+                    $("#resolution").parent().hide();
+                       
+                    //We also want to make sure that the resolution field no longer has a value:
+                    $("#resolution").val("");
+                    
                     //Also we want to do a card refresh just in case the user closed the dialog after it was reopened without ever saving the data to the server
                     //cardDataRefresh(cardId);
                 }
@@ -1311,17 +1145,14 @@
                 
             }                                
             
-            function editCardContextMenu() {
-                
+            function editCardContextMenu() {                
                 editCard($($.mbMenu.lastContextMenuEl).attr("id"));
             }           
             
             function addCardToCol() {
                 //Finds and saves the column that was right clicked
                 var startCol = $($.mbMenu.lastContextMenuEl).find("ul").attr("id"); 
-                
-                alert(startCol);
-                
+
                 //Presets the form to open with the correct column selected                
                 $("#cf_whichcolumn").val(startCol);
                 addCard();
@@ -1335,7 +1166,7 @@
                 //Handles special case when the Attachments button is selected
                 if (index == 1){                     
                     //Gets the ID of the current card being edited
-                    var cardId = $("#dialogAddEditCard #edit-tabs a").first().attr("value"); 
+                    var cardId = $($.mbMenu.lastContextMenuEl).attr("id"); 
                     getAttachments(cardId);
                 }
             }                       
@@ -1506,6 +1337,22 @@
                             $("#Details").removeClass("loading");
                             $("#Details .loadingLabel").remove();
                             $( "#dialogAddEditCard" ).dialog( "close" ); 
+                            $(document).buildContextualMenu(
+                            {
+                                menuWidth:200,
+                                overflow:2,
+                                menuSelector: ".menuContainer",
+                                iconPath:"ico/",
+                                hasImages:false,
+                                fadeInTime:200,
+                                fadeOutTime:100,
+                                adjustLeft:0,
+                                adjustTop:0,
+                                opacity:.99,
+                                shadow:true,
+                                closeOnMouseOut:true,
+                                onContextualMenu:function(o,e){}
+                            });
                         }
                         
                     },
@@ -1548,22 +1395,7 @@
                         
                 });
                     
-                $(document).buildContextualMenu(
-                {
-                    menuWidth:200,
-                    overflow:2,
-                    menuSelector: ".menuContainer",
-                    iconPath:"ico/",
-                    hasImages:false,
-                    fadeInTime:200,
-                    fadeOutTime:100,
-                    adjustLeft:0,
-                    adjustTop:0,
-                    opacity:.99,
-                    shadow:true,
-                    closeOnMouseOut:true,
-                    onContextualMenu:function(o,e){}
-                });
+                /**/
                 displayHandler(newCard);
             }
 
@@ -2106,7 +1938,13 @@
             
             function sortColumn(colId, sortkey, order)
             {                
-                var col = $("#"+colId);                    
+                var col = $("#"+colId);
+                
+                //Sets the default for the ordxer to ascending if, for whatever reason, the order is not one of these settings
+                if (order != "asc" && order != "desc")
+                {
+                    order = "asc";
+                }                
                 
                 $('>li', col).tsort('div',{data:sortkey, order:order});
             }
@@ -2147,6 +1985,23 @@
                                 postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time);                                
                             }
                             
+                            $(document).buildContextualMenu(
+                            {
+                                menuWidth:200,
+                                overflow:2,
+                                menuSelector: ".menuContainer",
+                                iconPath:"ico/",
+                                hasImages:false,
+                                fadeInTime:200,
+                                fadeOutTime:100,
+                                adjustLeft:0,
+                                adjustTop:0,
+                                opacity:.99,
+                                shadow:true,
+                                closeOnMouseOut:true,
+                                onContextualMenu:function(o,e){}
+                            });
+                            
                             $("body").removeClass("loading");
                         }
                     }
@@ -2164,15 +2019,290 @@
                 });
             }
            
-           
+            function dialogOptionsSave()
+            {
+                //Stores each selection made in the options menu
+                $("#dialogOptions #prioIconTable tbody tr").each(function(){
+                    var name = $(this).find("td").first().text();
+                    if ($(this).find("input[type=radio]:checked").length == 0)
+                    {
+                        var iconClass = "none"; 
+                    }
+                    else
+                    {
+                        iconClass = $(this).find("input[type=radio]:checked").val(); 
+                    }
+                                
+                    prioMap[name] = iconClass;
+                });
+                            
+                $("#dialogOptions #jobColorTable tbody tr").each(function(){
+                    var name = $(this).find("td").first().text();
+                                
+                    //This finds the color of the color preview. Returns an RGB string, hopefully this will work
+                    var color = $(this).find("td").last().find("div").find("div").css("background-color");                                 
+                                
+                    jobMap[name] = color;
+                });
+                            
+                //Creates a true copy of the boardFilterOptions
+                var oldFilter = $.extend(true, {}, boardFilterOptions);
+                            
+                //Finds all of the selected values
+                $("#dialogOptions select").each(function(){ 
+                    var name = $(this).siblings("label").attr("name");; 
+                    var value = $(this).val();
+                    boardFilterOptions[name] = value;
+                });
+                           
+                //Removes all null values
+                for (var index in boardFilterOptions)
+                {
+                    if (boardFilterOptions[index] == null)
+                    {
+                        delete boardFilterOptions[index];
+                    }
+                }
+                                                                                 
+                $.ajax({
+                    url: "ajax_write_options.php",
+                    type: "POST",
+                    data: {
+                        boardFilterOptions: boardFilterOptions,
+                        prioMap: prioMap,
+                        jobMap: jobMap
+                    },    
+                    dataType: "json",
+                                    
+                    success: function(data, status){
+                                        
+                                        
+                        if (data.error)
+                        {
+                            alert(data.error);
+                        }
+                        else if (!data.success)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {
+                            //TODO Need to find a way to compare each associative array
+                            if (/*!$(boardFilterOptions).compare(oldFilter)*/ true)
+                            {
+                                //If the old filter isn't the same as the new filter, we need to refilter the page 
+                                //First we remove all cards
+                                $(".card").each(function(){
+                                    $(this).parent().remove();
+                                });
+                                            
+                                $("#dialogOptions").dialog("close");     
+                                            
+                                //Now we repopulate the page according to the new filter
+                                boardCardPopulate();    
+
+                                             
+                            }
+                            else
+                            {
+                                $(".card").each(function(){
+                                    var prio = $(this).data("priority").replace(/\s+/g, ''); 
+                                    if (prioMap[prio]=="none")
+                                    {
+                                        $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "none");
+                                    }
+                                    else
+                                    {
+                                        var icon = prioMap[prio];
+                                        var url = "images/icons/"+icon+".png";
+                                        $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
+                                    }
+                                            
+                                    var job = $(this).data("bug_severity").replace(/\s+/g, ''); 
+                                    var color = jobMap[job];
+                                            
+                                    $(this).css("background-color", color);
+                                                
+                                    $("#dialogOptions").dialog("close");  
+                                });
+                            }
+                            //Now that we have made changes to 
+                                        
+                                                                                 
+                        }
+                                       
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("(Fields)There was an error:" + textStatus);
+                    }
+                }); 
+            }
+            
+            function makeRowPrioOptions(prioName){
+  
+                var row = $('<tr><td>'+prioName+'</td></tr>');
+                    
+                var td = $("<td><form></form></td>");
+                var iconDiv = $("<div id='"+prioName+"radiodiv'></div>"); 
+                    
+                //This for loop autiomatically populates the prioIcon options selection
+                for (i=0; i<18; i++)
+                {
+                    var icon = "icon"+i;
+                    var id = prioName+"."+icon;
+                    //Note that the new radio id is prioname.icon#
+                    var input = $("<input type='radio' id='"+id+"' name='radio' value='"+icon+"' />");
+                    var label = $("<label for='"+id+"' style='float: left;'>");
+                    var url = 'images/icons/'+icon+'.png';
+                    var div = $("<div class='prioBack'><div class='prioIcon' style='background-image: url("+escape(url)+")!important;'></div></div>");
+                    label.append(div);
+                    iconDiv.append(input, label);                                  
+                }
+                    
+                //In addition to all of the icons we want to have a "no icon" button
+                var id = prioName+".none";
+                var input = $("<input type='radio' id='"+id+"' name='radio' value='none' />");
+                var label = $("<label for='"+id+"' style='float: left;'>");
+                var div = $("<div class='prioBack'><div class='prioIcon' >No Icon</div></div>");
+                label.append(div);
+                iconDiv.append(input, label);         
+                    
+                td.find("form").append(iconDiv);                    
+                row.append(td);
+                    
+                $(row).find("input[type=radio][value="+prioMap[prioName]+"]").attr("checked","checked");
+                $("#dialogOptions #prioIconTable tbody").append(row);
+                    
+                $("#"+prioName+"radiodiv").buttonset();
+                    
+                    
+            }
+                
+            function makeRowJobColorOptions(job){
+                job = job.replace(/\s+/g, '');
+                var id = job+"Color";
+                var row = $('<tr><td>'+job+'</td></tr>');
+                    
+                var color = jobMap[job];
+                    
+                var td = $("<td><div id='"+id+"' class='colorSelector'><div style='background-color:"+color+"'></div></div></td>");
+                    
+                row.append(td);
+                    
+                //We do this because the ColorPicker plugin requires Hex 
+                color = rgb2hex(color)
+
+                //$(row).find("input[type=radio][value="+prioMap[job]+"]").attr("checked","checked");
+                $("#dialogOptions #jobColorTable tbody").append(row);
+                    
+                $('#'+id).ColorPicker({
+                    color: color,
+                    onChange: function (hsb, hex, rgb) {
+                        $('#'+id+' div').css('backgroundColor', /*'rgb('+rgb.r+', '+rgb.g+', '+rgb.b+')'*/'#'+ hex);
+                    }
+                       
+                });
+                    
+                    
+                    
+            }   
+                
+            //This function converts rgb colors to their hex equivalent
+            function rgb2hex(rgb){
+                rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+                return "#" +
+                    ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
+                    ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
+                    ("0" + parseInt(rgb[3],10).toString(16)).slice(-2);
+            }
+            
+            //NOTE:This method makes the following assumptions: every card should have the same data and there should always be a card on the board
+            function dialogSortOpen(colId)
+            {   
+                
+                /*Not sure if I want to do this in this manner, makes too many assumptions
+                 *
+                //First we populate the sort criteria selection box if it has been already:
+                if ($("#sortCriteriaSelect").children().length == 0)
+                {
+                    //Stores a complete duplicate of the random card data  
+                    var cardData = $.extend(true, {}, $(".card").first().data());
+                
+                    //Appends each value name
+                    for (var index in cardData)
+                    {
+                        //Right now this appends a metadata option as well, for now I will simply filter it out
+                        if (index != "metadata")
+                        {
+                            var option = $("<option>").val(index).text(index);
+                            $("#sortCriteriaSelect").append(option);   
+                        }                    
+                    }
+                }*/
+                
+                //Sets the sort menu's title
+                $( "#dialogSort" ).dialog( "option", "title", "Sort "+colId);
+                
+                $( "#dialogSort" ).dialog( "option", "buttons", { 
+                    "Sort": function() {   
+                        var order = $("#sortRadioDiv").find("input[type=radio]:checked").val();                      
+                        
+                        var sortkey = $("#sortCriteriaSelect").val();
+                        
+                        //Calls my sort function which does the actual sorting
+                        sortColumn(colId, sortkey, order);
+                        
+                        $( this ).dialog( "close" );
+                    },
+                    Cancel: function() {
+                        $( this ).dialog( "close" );
+                    }   
+                });   
+                $( "#dialogSort" ).dialog("open");
+            }
+            
+            function sortContextHelper()
+            {                
+                //Finds the column that was right clicked
+                var columnId = $($.mbMenu.lastContextMenuEl).find("ul").attr("id");
+                                   
+                //Passes that columnId to the dialogSortOpen function
+                dialogSortOpen(columnId);
+            }
         </script>
     </head>
     <body>
+        <div id="dialogSort" class="ui-dialog-content ui-widget-content">
+            <h1>Sort Criteria</h1>
+            <div style="width: auto; float: left;">
+                <select id="sortCriteriaSelect">
+                    <option value="id">Bug ID</option>
+                    <option value="summary">Summary</option>
+                    <option value="priority">Priority</option>
+                    <option value="last_change_time">Last Time Edited</option>
+                    <option value="deadline">Deadline</option>                                     
+                </select>
+            </div>
+            <div style="float: left; margin: 10px; margin-left: 5px;">
+                <form>
+                    <div id="sortRadioDiv">   
+                        <span>
+                            <label for="ascRadio">Ascending</label>
+                            <input id="ascRadio" value="asc" type="radio" name="radio"/> 
+                        </span>     
+                        <span>
+                            <label for="descRadio">Descending</label> 
+                            <input id="descRadio" value="desc" type="radio" name="radio"/>  
+                        </span>                 
+                    </div>
+                </form>
+            </div>
+        </div>  
         <div id="dialogOptions" class="ui-dialog-content ui-widget-content"  title="Options" >
             <div>
-                <h1>
+                <h2>
                     Priority Icon Assignments:
-                </h1>
+                </h2>
                 <table id="prioIconTable">
                     <tbody>
 
@@ -2180,9 +2310,9 @@
                 </table>
             </div>
             <div style="float:initial">
-                <h1>
+                <h2>
                     <br>Job Type Card Color Assignments:
-                </h1>
+                </h2>
                 <table id="jobColorTable">
                     <tbody>
 
@@ -2190,13 +2320,25 @@
                 </table>              
             </div>
             <div style="float: left;">
-                <h1>
+                <h2>
                     <br>Board Card Filter
-                </h1>
+                </h2>
+                <h1>Specify which bugs you want to be displayed on the Kanban board</h1>
+                <p>Add Filter by: 
+                    <select  id="filterFieldOption"  class="text ui-widget-content ui-corner-all" >
+                        <option value="optProduct">Product</option>
+                        <option value="optVersion">Version</option>
+                        <option value="optBug_severity">Severity</option>
+                        <option value="optBug_status">Status</option>
+                        <option value="optResolution">Resolution</option>
+
+                    </select>
+                    <button id="AddFilterOption">Add</button>
+                </p>               
                 <form style="height:300px;">
                     <fieldset style="margin-top: 10px;">                        
                         <div style="float: left; width:100%">
-                            <div  class="box">
+                            <div  class="box" >
                                 <label for="product"class="searchLabel" name="product">Product</label>
                                 <select  name="product" id="optProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
@@ -2323,11 +2465,11 @@
                             <label for="Comments">Comments:</label>
                             <div id="Comments" class="ui-widget-content ui-corner-all">
                                 <div id ="accordion" class="ui-accordion ui-widget ui-helper-reset ui-accordion-icons"> </div>  
-                                <div class="modal"></div>
+                                <div class="modal"><div class="loadingLabel">Loading Comments</div></div>
                             </div>
                         </div>                            
                     </fieldset>
-                    <div class="modal"></div>
+                    <div class="modal"><div class="loadingLabel">Loading Fields</div></div>
                 </div>               
                 <div id="Attachments">
 
@@ -2343,7 +2485,7 @@
                             <tbody>
                             </tbody>                       
                         </table>
-                        <div class="modal"></div>
+                        <div class="modal"><div class="loadingLabel">Loading Attachments</div></div>
                     </div>
 
                     <form  action="ajax_UploadAttachment.php" method="post" enctype="multipart/form-data" target="upload_target">
@@ -2399,9 +2541,7 @@
                             </tbody>                       
                         </table>     
                     </form>                    
-                    <div style="clear: both;"></div>
-
-                    <div class="modal"></div>
+                    <div style="clear: both;"></div>                  
                 </div>
             </div>
         </div>   
@@ -2462,13 +2602,13 @@
                             <tbody>
                             </tbody>
                         </table>  
-                        <div class="modal"></div> 
+                        <div class="modal"><div class="loadingLabel">Loading Results</div></div> 
 
                     </div>
 
                 </div>                
             </div>
-            <div class="modal"></div>
+            <div class="modal"><div class="loadingLabel">Loading Fields</div></div>
         </div>
         <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
             <span class="bigBanners">Backlog</span>
@@ -2539,20 +2679,13 @@
         <div id="moveAllCards" class="mbmenu">
         </div>
         <div id="setPriority" class="mbmenu">
-        </div>
-        <div id="sortKeyOptions" class="mbmenu">
-            <a value="id">Bug ID</a>
-            <a value="priority">Priority</a>
-            <a value="summary">Summary</a>
-            <a value="last_change_time">Last Edited</a>
-            <a value="deadline">Deadline</a>
-        </div>
+        </div>       
         <div class="mbmenu" id="contextMenuColumn">            
             <a class="{menu:'moveAllCards'}">Move All Cards to</a>
             <a rel="separator"> </a>
             <a action="addCardToCol()">Add Card</a>
             <a rel="separator"> </a>
-            <a class="{menu:'sortKeyOptions'}">Sort by</a>
+            <a action="sortContextHelper()">Sort Column</a>
         </div> 
         <iframe id="secretIFrame" src="" style="display:none; visibility:hidden;"></iframe>
         <iframe id="upload_target" name="upload_target" src="#" style=" display:none; visibility:hidden;"></iframe>   

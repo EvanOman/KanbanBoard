@@ -154,7 +154,7 @@
                 });
             });
         },
-        buildContextualMenu:  function (options){
+        buildContextualMenu:  function (options){         
             return this.each (function ()
             {
                 var thisMenu = this;
@@ -191,7 +191,7 @@
                     $(cm).css({
                         cursor:"default"
                     });
-                    $(cm).bind("contextmenu","mousedown",function(event){
+                    $(cm).bind("contextmenu","mousedown",function(event){ 
                         event.preventDefault();
                         event.stopPropagation();
                         event.cancelBubble=true;
@@ -378,7 +378,7 @@
                         menuVoice.addClass("textBox");
                         if ($.browser.msie) menuVoice.css({
                             maxWidth:op.options.menuWidth
-                            });
+                        });
                         this.isOpener=true;
                     }
                     if(isDisabled){
@@ -613,6 +613,6 @@
                 });
         }
     });
-    $.fn.buildMenu = $.mbMenu.buildMenu;
+    $.fn.buildMenu = $.mbMenu.buildMenu;    
     $.fn.buildContextualMenu = $.mbMenu.buildContextualMenu;
 })(jQuery);
