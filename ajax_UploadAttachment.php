@@ -46,9 +46,23 @@ if ($contents === false) {
 }
 
 $bugzilla->addMember("data", $contents, "base64");
-$ret = $bugzilla->submit()
+$ret = $bugzilla->submit();
+
+header('Content-Type: text/html; charset=iso-8859-1');
 ?>
-<script language="javascript" type="text/javascript" src="Index.php">
-    var json = <?php echo $ret; ?>;
-    parent.stopUpload(json);
-</script>  
+<!DOCTYPE html>
+<html>
+    <head>
+        <title></title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <script language="javascript" type="text/javascript">
+            var json = <?php echo $ret; ?>;
+            parent.stopUpload(json);
+    
+        </script>  
+    </head>
+    <body>
+        Script Test
+    </body>
+</html>
+

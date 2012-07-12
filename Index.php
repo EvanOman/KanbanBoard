@@ -37,6 +37,12 @@
             var boardFilterOptions = {
                 "method": "Bug.search"
             };
+            var cardChangeData = [];
+            
+            var getCompsVersXHR = $.Deferred();
+            var getNamesXHR = $.Deferred();
+            var getAccProXHR = $.Deferred();
+            var componentData = null;
             
             function initialize()
             {                                
@@ -61,7 +67,8 @@
                             //We dont want this function to run until the initialize function completes but we also want the document to be ready
                             $(document).ready(function() {
                                 //First things first we want to populoate the board with the correct cards:
-                                boardCardPopulate();})
+                                boardCardPopulate();
+                            });
                         }
                         
                     },
@@ -73,7 +80,166 @@
             initialize();                        
             
             $(document).ready(function() {
-         
+            
+                getCompsVersXHR = $.ajax({
+                    //Need this to be completed before other actions occur:
+                    //async: false,
+                    url: "ajax_POST.php",
+                    type: "POST",
+                    data: {
+                        "method": "Bug.fields",
+                        "names": ["component", "version"],
+                        "value_field": "product"                            
+                    },    
+                    dataType: "json",
+                    beforeSend: function() {
+                        $('#Details, #dialogSearch, #dialogOptions').addClass("loading"); 
+                    },
+                    success: function(data){                                              
+                        if (data.result.faultString != null)
+                        {
+                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {   
+                            componentData =  data.result.fields;                                                   
+                        }  
+                                                                                                                                                       
+                        //We want to make sure that the values are appended before we close the loading modal screen
+                        $('#Details, #dialogSearch, #dialogOptions').removeClass("loading"); 
+                           
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("(Fields)There was an error:" + textStatus);
+                    }
+                });
+                
+                //An Ajax call that finds all accessible product ids. 
+                getAccProXHR = $.ajax({
+                    url: "ajax_POST.php",
+                    type: "POST",  
+                    data:{
+                        "method": "Product.get_accessible_products"
+                    },
+                    dataType: "json",
+                    success: function(data){
+                        
+                        if (data.result.faultString != null)
+                        {
+                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        
+                        var productIds = data.result.ids;
+                        getNames(productIds);
+                        
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });
+                
+                //setup the dialog with the proper field values for the bug_severity dropdown           
+                //The Array of fields that we want to find values for
+                var formFields = ["priority","bug_severity", "bug_status", "resolution", "cf_whichcolumn", "rep_platform", "op_sys"];
+                
+                //A single Ajax call that finds all the specified field option values                
+                $.ajax({
+                    url: "ajax_POST.php",
+                    //async: false,
+                    type: "POST",
+                    data: {
+                        "method": "Bug.fields",
+                        "names": formFields
+                    },    
+                    dataType: "json",
+                    
+                    success: function(data, status){
+                        
+                      
+                        if (data.result.faultString != null)
+                        {
+                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else 
+                        {                                                      
+                            for (var j in data.result.fields)
+                            {
+                                var fieldName = data.result.fields[j].name;                                
+                                
+                                //remove all <option>s from the specified select
+                                $("#Details select[name="+fieldName+"]").empty();
+                                
+                                //Priority has a context menue that needs to be populated as well
+                                if (fieldName == "priority")
+                                {
+                                    //Populates the priority context menu as well
+                                    for (var i in data.result.fields[j].values) 
+                                    {    
+                                        //get the value
+                                        var name = data.result.fields[j].values[i].name;
+                                        var sortkey = data.result.fields[j].values[i].sort_key;
+                                        
+                                        prioSortKey[name]=sortkey;
+
+                                        //create an option element with the inner html being the name
+                                        var a = $("<a>").html(name);
+                                                                                
+                                        //append the option to the context menu
+                                        $("#setPriority").append(a);
+                                        
+                                        makeRowPrioOptions(name);
+                                    }  
+                                }
+                                //This if and for statement populates the table of color options
+                                if (fieldName == "bug_severity")
+                                {
+                                    for (var i in data.result.fields[j].values) 
+                                    {    
+                                        //get the value
+                                        var name = data.result.fields[j].values[i].name;
+                                        
+                                        //Creater a row in the options dialog for that job name
+                                        makeRowJobColorOptions(name);
+                                    }
+                                    
+                                }
+                                                              
+                                //iterate through all the allowed values for this field
+                                for (var i in data.result.fields[j].values) 
+                                {    
+                                    //get the value
+                                    var name = data.result.fields[j].values[i].name;
+                                   
+                                    //create an option element with a value and the inner html being the name
+                                    var option = $("<option>").val(name).html(name);
+
+                                    //append the option to the <select>
+                                    $("select[name="+fieldName+"]").append(option);
+                                }
+                                
+                                
+                            }
+                        }
+                        
+                    },
+                    error: function(jqXHR, textStatus){
+                        alert("(Fields)There was an error:" + textStatus);
+                    }
+                });
+                
+                           
                 $('body').addClass("loading");
                 
                 $("#btnCommentSubmit").live("click", function(e){
@@ -159,24 +325,17 @@
                     
                     ajaxSearch(numResults,0);
                 }); 
-                
-                //Handles the add card button
-                $("#AddFilterOption").live( "click", function(){  
-                    
-                    var filter =  $("#filterFieldOption").val();
-                    alert(filter);
-                    $("#"+filter).parent().show();
-                }); 
+                                
                    
-                $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit, #AddFilterOption").button();  
+                $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit, #toggleFilterOption").button();  
                  
                 //Pulls up the edit menu whenever a card is double clicked                       
                 $(".card").live( "dblclick", function () {
                     
                     if (!$(this).hasClass("loading"))
                     {
-                        $( "#edit-tabs" ).tabs("select", 0);
-                        editCard($(this).attr("id"));
+                        $( "#edit-tabs" ).tabs("select", 0);                        
+                        editCard($(this).data());
                     }
                     
                 });
@@ -327,9 +486,7 @@
                     buttons: {                                      
                         //Resets all the feilds to null to allow a fresh dialog window each time
                         //TODO: Do we still want this?
-                        /*Close: function() {
-                            $( this ).dialog( "close" );
-                        }*/
+                        
                     }
                 });
                 
@@ -337,9 +494,7 @@
                 $( "#dialogAddEditCard" ).dialog({
                     autoOpen: false,
                     minHeight: 650,
-                    minWidth: 1060,
-                    /*height: 560,
-                    width: 1060,*/
+                    minWidth: 1060,                                       
                     show: { effect: 'highlight', complete: function() { $("#summary").focus();}},
                     hide: "explode",
                     modal: true,
@@ -524,6 +679,55 @@
                     getCompsVers(name, "dialogOptions");
                 
                 });
+                
+                //When the filter options select changes we have two cases: 
+                //1.The filter is already on the board in which case we want to change the button to a remove(maybe toggle?)
+                //2.The filter is not yet shown and needs to be displayed to the page(which is the default functionality)
+                //I think that all of this can be handled with the .toggle() method
+                $("#filterFieldOption").change(function () {
+                    var field = $(this).val();
+                    
+                    if ($("#"+field).parent().is(":visible") )
+                    {
+                        //Handles the case if the field is already being shown:
+                        
+                        //First we need to change the text of the button to fit the action it will perform
+                        //Need to destroy button before changing the text because otherwise the styling gets funky
+                        $("#toggleFilterOption").button("destroy").text("Remove").button();
+                        
+                        $("#toggleFilterOption").live( "click", function(){                                                                                                         
+                            
+                            //Hides the field's container
+                            $("#"+field).parent().hide();
+                            
+                            //Makes sure any values stored are reset to null(or in this case an empty string "")
+                            $("#"+field).val(""); 
+                            
+                            //Then trigger the change to refresh the button
+                            $("#filterFieldOption").change();
+                        });   
+                    }
+                    else
+                    {
+                        //Handles the case if the field is not being shown:
+                        
+                        //First we need to change the text of the button to fit the action it will perform
+                        //Need to destroy button before changing the text because otherwise the styling gets funky
+                        $("#toggleFilterOption").button("destroy").text("Add").button();
+                        
+                        $("#toggleFilterOption").live( "click", function(){                                                                                                         
+                            
+                            //Makes sure any values stored are reset to null(or in this case an empty string "")
+                            $("#"+field).val(""); 
+                            
+                            //Hides the field's container
+                            $("#"+field).parent().show();  
+                            
+                            //Then trigger the change to refresh the button
+                            $("#filterFieldOption").change();
+                        });   
+                    }
+                });
                                             
                 //Updates the cards position whenever it is moved and also checks to make sure that the card isn't loading
                 $( ".column, .tablists" ).sortable({                    
@@ -534,178 +738,11 @@
                     }
                 });                          
                 
-                //setup the dialog with the proper field values for the bug_severity dropdown           
-                //The Array of fields that we want to find values for
-                var formFields = ["priority","bug_severity", "bug_status", "resolution", "cf_whichcolumn", "rep_platform", "op_sys"];
+               
                                                 
-                //A single Ajax call that finds all the specified field option values                
-                $.ajax({
-                    url: "ajax_POST.php",
-                    //async: false,
-                    type: "POST",
-                    data: {
-                        "method": "Bug.fields",
-                        "names": formFields
-                    },    
-                    dataType: "json",
-                    
-                    success: function(data, status){
-                        
-                      
-                        if (data.result.faultString != null)
-                        {
-                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                        }
-                        else 
-                        {                                                      
-                            for (var j in data.result.fields)
-                            {
-                                var fieldName = data.result.fields[j].name;                                
-                                
-                                //remove all <option>s from the specified select
-                                $("#Details select[name="+fieldName+"]").empty();
-                                
-                                //Priority has a context menue that needs to be populated as well
-                                if (fieldName == "priority")
-                                {
-                                    //Populates the priority context menu as well
-                                    for (var i in data.result.fields[j].values) 
-                                    {    
-                                        //get the value
-                                        var name = data.result.fields[j].values[i].name;
-                                        var sortkey = data.result.fields[j].values[i].sort_key;
-                                        
-                                        prioSortKey[name]=sortkey;
-
-                                        //create an option element with the inner html being the name
-                                        var a = $("<a>").html(name);
-                                                                                
-                                        //append the option to the context menu
-                                        $("#setPriority").append(a);
-                                        
-                                        makeRowPrioOptions(name);
-                                    }  
-                                }
-                                //This if and for statement populates the table of color options
-                                if (fieldName == "bug_severity")
-                                {
-                                    for (var i in data.result.fields[j].values) 
-                                    {    
-                                        //get the value
-                                        var name = data.result.fields[j].values[i].name;
-                                        
-                                        //Creater a row in the options dialog for that job name
-                                        makeRowJobColorOptions(name);
-                                    }
-                                    
-                                }
-                                                              
-                                //iterate through all the allowed values for this field
-                                for (var i in data.result.fields[j].values) 
-                                {    
-                                    //get the value
-                                    var name = data.result.fields[j].values[i].name;
-                                   
-                                    //create an option element with a value and the inner html being the name
-                                    var option = $("<option>").val(name).html(name);
-
-                                    //append the option to the <select>
-                                    $("select[name="+fieldName+"]").append(option);
-                                }
-                                
-                                
-                            }
-                        }
-                        
-                    },
-                    error: function(jqXHR, textStatus){
-                        alert("(Fields)There was an error:" + textStatus);
-                    }
-                }); 
-
                 
-                
-                //An Ajax call that finds all accessible product ids. 
-                $.ajax({
-                    url: "ajax_POST.php",
-                    type: "POST",  
-                    data:{
-                        "method": "Product.get_accessible_products"
-                    },
-                    dataType: "json",
-                    success: function(data){
-                        
-                        if (data.result.faultString != null)
-                        {
-                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                        }
-                        
-                        var productIds = data.result.ids;
-                        getNames(productIds);
-                        
-                    },
-                    error: function(jqXHR, textStatus, errorThrown){
-                        alert("There was an error:" + textStatus);
-                    }
-                });
-                
-                //A function that finds the name associated with each each id that is passed in. Very slow, consider revision
-                function getNames(productIds){
-                    $.ajax({
-                        url: "ajax_POST.php",
-                        type: "POST",  
-                        data:{
-                            "method": "Product.get",
-                            "ids": productIds
-                        },
-                        dataType: "json",
-                        success: function(data){
-                        
-                            if (data.result.faultString != null)
-                            {
-                                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                            }
-                            else if (!data.result)
-                            {
-                                alert("Something is wrong");
-                            }
-                            else
-                            {
-                                for (var i in data.result.products)
-                                {
-                                    var name = data.result.products[i].name;
-                                
-                                    //create an option element with a value and the inner html being the name
-                                    var option = $("<option>").val(name).html(name);
 
-                                    //append the option to the <select>
-                                    $("select[name=product]").append(option);
-                                } 
-                                //Automatically populates the components and version fields based off of the first(default) product
-                                var firstProduct = $("#Details select[name=product] option").first().html();
-                            
-                            
-                                getCompsVers([firstProduct], "Details");
-                                getCompsVers(null, "search");
-                                getCompsVers(null, "dialogOptions");
-                            }
-                                
-                        
-                        },
-                        error: function(jqXHR, textStatus, errorThrown){
-                            alert("There was an error:" + textStatus);
-                        }
-                    });
-                    
-                };                                                        
+                                                           
                 
                 //Sets the priority of the card 
                 $("#mb_setPriority table").live("click", function(){                  
@@ -784,8 +821,18 @@
                     $("#secretIFrame").attr("src","ajax_DownloadAttachment.php?id="+id);
                  
                 })
-                $("#sortRadioDiv").buttonset()
                 
+                $("#sortRadioDiv").buttonset();
+                
+                   
+                $( "#bugs tbody" ).on("click", "tr td a", function (e){
+                    e.preventDefault();
+                    var cardId = $(this).text();
+                           
+                    editCard($("#"+cardId).data());
+                });
+                        
+                 
             });
               
               
@@ -860,62 +907,39 @@
                     var tr = '<tr><td><div><a href="#" value="'+att.id+'">'+att.summary+'</a> ('+att.file_name+patch+')</div><div>'+date+' '+time+', '+att.creator +'</div></td></tr>';
                     $("#attachmentTable tbody").append(tr);                                                               
                 }
-            }
-            
-            var componentData = null;
+            }                     
         
             //Retrieves all of the available components and versions for a given product. Now revised to pull down all the products and components once and then reuse the info
             function getCompsVers(name, dialogID){
-                if (componentData == null)
+            
+                if ($("#product option").length != 0)
                 {
-                    $.ajax({
-                        //Need this to be completed before other actions occur:
-                        //async: false,
-                        url: "ajax_POST.php",
-                        type: "POST",
-                        data: {
-                            "method": "Bug.fields",
-                            "names": ["component", "version"],
-                            "value_field": "product"                            
-                        },    
-                        dataType: "json",
-                        beforeSend: function() {
-                            $('#Details, #dialogSearch, #dialogOptions').addClass("loading"); 
-                        },
-                        success: function(data, status){
-                        
-                      
-                            if (data.result.faultString != null)
-                            {
-                                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                            }
-                            else if (!data.result)
-                            {
-                                alert("Something is wrong");
-                            }
-                            else 
-                            {   
-                                componentData =  data.result.fields;                                                   
-                            }                            
-                            //Here we call a function that refreshes the field values only which prevents an infinite recursive loop(editCard calls getCompVers)
-                            dialogFields();
-                            
-                            //This line triggers the search page's 'change' function which then updates the component field to be non empty
-                            $("#searchProduct, #optProduct").change();
-                             
-                            //Sets the proper fields for the options menu
-                            setBoardFilterValues();
-                             
-                            //We want to make sure that the values are appended before we close the loading modal screen
-                            $('#Details, #dialogSearch, #dialogOptions').removeClass("loading"); 
-                           
-                        },
-                        error: function(jqXHR, textStatus, errorThrown){
-                            alert("(Fields)There was an error:" + textStatus);
-                        }
-                    });
+                    compsVersFieldPopulate(name, dialogID);            
                 }
-               
+                else 
+                {
+                    $.when(getCompsVersXHR,getNamesXHR).done(function(){
+                        debugger;
+                        if ($("#dialogAddEditCard").dialog("isOpen"))
+                        {
+                            var card = $("#"+$("#dialogAddEditCard").data("cardId"));
+                                    
+                            dialogFields(card.data());
+                        }
+                                                                                   
+                        //This line triggers the search page's 'change' function which then updates the component field to be non empty
+                        $("#searchProduct, #optProduct").change();
+                    
+                        //Sets the proper fields for the options menu
+                        setBoardFilterValues();
+                        
+                        compsVersFieldPopulate(name, dialogID);    
+                    });  
+                }                                                                   
+            }
+            
+            function compsVersFieldPopulate(name, dialogID)
+            {
                 for (var j in componentData)
                 { 
             
@@ -951,55 +975,49 @@
                             $("#"+dialogID+" select[name="+fieldName+"]").append(option);
                         }                                                                                                 
                     }                                                                                                     
-                }              
+                }        
             }
             
             //Here I have separated the field population and dialog configuration to allow getCompsVers to refresh the fields after it finishes loading
             //I have also added functionality to allow the 
-            function dialogFields()
-            {
-                
-                //Gets the ID of the current card being edited
-                var cardId = $("#dialogAddEditCard #edit-tabs a").first().attr("value");
-                           
+            function dialogFields(fieldValues)
+            {                                                         
                 //Note that the Add Card Dialog is set so that the tabs have a valuer of 0. We only want specific values for the edit dialog
-                if (cardId != 0)
-                {
-                    var card = $('#'+cardId);
-                    //This method has been modified to allow for immediate retireval(the components and versions are stored, ajax only called once)
-                    getCompsVers([card.data("product")], "Details");
+                if (fieldValues != null)
+                { //This method has been modified to allow for immediate retireval(the components and versions are stored, ajax only called once)
+                    getCompsVers([fieldValues["product"]], "Details");
                     //Changes the edit dialog to have the correct fields for the selected card's Product.                 
                     //Populates the fields
-                    $("#summary").val(card.data("summary"));
-                    $("#bug_severity").val(card.data("bug_severity"));
-                    $("#user").val(card.data("user"));
-                    $("#priority").val(card.data("priority"));
-                    $("#cf_whichcolumn").val(card.data("cf_whichcolumn"));
-                    $("#deadline").val(card.data("deadline"));
-                    $("#product").val(card.data("product"));  
-                    $("#version").val(card.data("version"));
-                    $("#component").val(card.data("component"));                
-                    $("#bug_status").val(card.data("status"));
-                    $("#op_sys").val(card.data("op_sys"));
-                    $("#rep_platform").val(card.data("rep_platform"));                                                
+                    $("#summary").val(fieldValues["summary"]);
+                    $("#bug_severity").val(fieldValues["bug_severity"]);
+                    $("#user").val(fieldValues["user"]);
+                    $("#priority").val(fieldValues["priority"]);
+                    $("#cf_whichcolumn").val(fieldValues["cf_whichcolumn"]);
+                    $("#deadline").val(fieldValues["deadline"]);
+                    $("#product").val(fieldValues["product"]);  
+                    $("#version").val(fieldValues["version"]);
+                    $("#component").val(fieldValues["component"]);                
+                    $("#bug_status").val(fieldValues["status"]);
+                    $("#op_sys").val(fieldValues["op_sys"]);
+                    $("#rep_platform").val(fieldValues["rep_platform"]);                                                
                 
-                    if (card.data("resolution") !== "" && card.data("resolution") != undefined)
+                    if (fieldValues["resolution"] !== "" && fieldValues["resolution"] != undefined)
                     {
                         $("#resolution").parent().show();
-                        $("#resolution").val(card.data("resolution"));
+                        $("#resolution").val(fieldValues["resolution"]);
                     }
-                    $("#attachmentBugId").val(cardId);
+                    $("#attachmentBugId").val(fieldValues["id"]);
                 
                     //Sets the dialog background to the correct color
-                    dialogDisplay(card.data("bug_severity"));
+                    dialogDisplay(fieldValues["bug_severity"]);
                 }
                 else {
                     //If cardId is 0 then we know that we are in the add card dialog and consequently we want to ensure that all fields are empty(including the comments)
                     $("#Details input, #Details textarea, #Details select:not(#cf_whichcolumn)").val("");    
-                                        
+                   
                     //We want the default value for Status for a new card to be "NEW", not unconfirmed
                     $("#bug_status").val("NEW");
-                
+                    
                     //Sets the default priority to medium
                     $("#priority").val("Medium");
                     
@@ -1016,10 +1034,14 @@
                 }
             }
             
-            function editCard(cardId) {          
-                var card = $('#'+cardId);
+            function editCard(fieldValues) { 
                 
-                var lastEditTime = new Date(card.data("last_change_time"));
+                debugger;
+                var cardId = fieldValues["id"];
+                
+                $("#dialogAddEditCard").data("cardId", cardId);
+                
+                var lastEditTime = new Date(fieldValues["last_change_time"]);
                 
                 lastEditTime = lastEditTime.toLocaleDateString() + " at " + lastEditTime.toLocaleTimeString();
                 
@@ -1034,10 +1056,10 @@
                     $(this).attr({
                         "value": cardId
                     });                                  
-                });
+                });                                                                              
                 
                 //Now that we have the correct ID, we populate the fields:
-                dialogFields();
+                dialogFields(fieldValues);
                 
                 //Pulls down the comments when dialog is opened
                 getComments(cardId);                
@@ -1055,6 +1077,7 @@
                             
                     },
                     Cancel: function() {
+                        
                         $( this ).dialog( "close" );
                     }   
                 });
@@ -1088,7 +1111,9 @@
                 
             }
             
-            function addCard() {                  
+            function addCard() { 
+            
+                $("#dialogAddEditCard").data("cardId", 0);
                 
                 //Adds add card specifc dialog properties
                 $("#edit-tabs ul li:not(:first-child)").hide();
@@ -1111,8 +1136,8 @@
                 });
                 
                 //Now that we have the correct ID, we populate the fields:
-                dialogFields();
-                                              
+                dialogFields(null);
+                                        
                 $( "#dialogAddEditCard" ).dialog( "option", "buttons", { "Save Card": function() {
                         if($( "#summary" ).val()=="")
                         {
@@ -1145,8 +1170,10 @@
                 
             }                                
             
-            function editCardContextMenu() {                
-                editCard($($.mbMenu.lastContextMenuEl).attr("id"));
+            function editCardContextMenu() { 
+                var id = $($.mbMenu.lastContextMenuEl).attr("id");
+                var data = $("#"+id).data();
+                editCard(data);
             }           
             
             function addCardToCol() {
@@ -1404,7 +1431,24 @@
             function ajaxEditBug(col, component, ids, priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform, resolution){  
             
                 var card = $("#"+ids);
-
+                                
+                cardChangeData[ids] = $.extend({}, card.data(), {
+                    "id": ids,
+                    "summary": summary,
+                    "bug_severity": severity,
+                    "priority": priority,
+                    "product": product,
+                    "component": component,
+                    "version": version,
+                    "user": user,
+                    "cf_whichcolumn": col,
+                    "deadline": deadline,
+                    "status": status,
+                    "op_sys": op_sys,
+                    "rep_platform": rep_platform,
+                    "resolution": resolution
+                });
+                
                 //Adds loading icon to a card being saved
                 card.addClass("loading");
                                                 
@@ -1424,7 +1468,7 @@
                     "resolution": resolution
                 }
                 
-              
+                
                 //Appends the card to the correct column(Don't want to update the cards position twice)
                 if (col != card.data("cf_whichcolumn"))
                 {
@@ -1447,24 +1491,8 @@
                     {
                         //remove it from the data being posted
                         delete postData[index];
-                    }
-                    //We use an else here because if the posted data is the same as the card data, we wont need to save it
-                    else 
-                    {
-                       
-                        //Here we store the sent data to the card. Yes this is presumptive since we don't know if Bugzilla will accept the information but if it doesn't, we use the stored data below to populate the dialog
-                        //fields and show the Bugzilla error. This way we preserve the form data and keep prompting form edits until Bugzilla likes the data
-                        //TODO Need to address case if someone cancels out of the form after the prompt. Then the card will have different data than Bugzilla. On Cancel call a card refresh??
-                        card.data(index, postData[index]);
-                         
-                    }
-                    
-                }                                
-                
-                //Updates the card's text
-                $('#'+ids+" .cardText").html(summary);
-                
-                displayHandler(card);       
+                    }                   
+                }                                                 
                                                
                 //Then after we filtered out the unneccary fields we need to check if anything is left, otherwise there is no need to send the post
                 if (postData!=null)
@@ -1485,7 +1513,7 @@
                                 alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
                                 
                                 //If an error occurs we reopen the edit card dialog with the freshly entered form data
-                                editCard(ids);
+                                editCard(cardChangeData[ids]);
                                 
                             }
                             else if (!data.result)
@@ -1493,21 +1521,31 @@
                                 alert("Something is wrong");
                                 
                                 //If an error occurs we reopen the edit card dialog with the freshly entered form data
-                                editCard(ids);
+                                editCard(cardChangeData[ids]);
                             }
                             else 
-                            {
-                                //Now that the card has successfully loaded, we remove the loading class
-                                card.removeClass("loading");
+                            {                                                                                                
+                                //Updates the card's text
+                                $('#'+ids+" .cardText").html(summary);
+                
+                                displayHandler(card);
+                                
+                                //Here we save the changeData to the local
+                                card.data(cardChangeData[ids]);
+                                
+                                //Then delete the changeData
+                                delete cardChangeData[ids];
                                 
                                 //We also need to update the last edit time:
                                 updateLastChanged(ids);
                             }
+                            card.removeClass("loading");
                         
                         },
                         error: function(jqXHR, textStatus, errorThrown){
                             alert("There was an error:" + textStatus);
                         }
+                        
                     });
                 
                 }
@@ -1692,9 +1730,10 @@
                         $("#dialogNoResults").dialog("open");                           
                     }
                     else {
-                        for (var i in bug){                                                                                    
+                        for (var i in bug){ 
+                            var data = $("#"+bug[i].id).data();
                             $( "#bugs tbody" ).append( "<tr>" +
-                                "<td><a href='#Details' onClick='editCard("+bug[i].id+");'>"+bug[i].id+"</a></td>" + 
+                                "<td><a href='#'>"+bug[i].id+"</a></td>" + 
                                 "<td>"+bug[i].product+"</td>" + 
                                 "<td>"+bug[i].version+"</td>" +
                                 "<td>"+bug[i].assigned_to+"</td>" +
@@ -1702,7 +1741,7 @@
                                 "<td>"+bug[i].resolution+"</td>" +
                                 "<td>"+bug[i].summary+"</td>" +
                                 "</tr>" );                                           
-                        }
+                        }                     
                     }
                             
                     //This line finds the number of rows(that is the the number of results) in our table. We subtract 1 to account for the header
@@ -2010,13 +2049,10 @@
             
             function setBoardFilterValues()
             {
-                //Finds all of the selected values
-                $("#dialogOptions select").each(function(){ 
-                    
-                    var name = $(this).siblings("label").text();; 
-                    
-                    $(this).val(boardFilterOptions[name]);                    
-                });
+                for (var index in boardFilterOptions)
+                {
+                    //First we want to find the .box holding the index value and set that select's value to the spec
+                }
             }
            
             function dialogOptionsSave()
@@ -2048,8 +2084,8 @@
                 //Creates a true copy of the boardFilterOptions
                 var oldFilter = $.extend(true, {}, boardFilterOptions);
                             
-                //Finds all of the selected values
-                $("#dialogOptions select").each(function(){ 
+                //Finds all of the selected values in boxes that are visible
+                $("#dialogOptions .box:visible select").each(function(){ 
                     var name = $(this).siblings("label").attr("name");; 
                     var value = $(this).val();
                     boardFilterOptions[name] = value;
@@ -2269,6 +2305,60 @@
                 //Passes that columnId to the dialogSortOpen function
                 dialogSortOpen(columnId);
             }
+            
+            
+                
+                
+                
+            //A function that finds the name associated with each each id that is passed in. Very slow, consider revision
+            function getNames(productIds){
+                getNamesXHR = $.ajax({
+                    url: "ajax_POST.php",
+                    type: "POST",  
+                    data:{
+                        "method": "Product.get",
+                        "ids": productIds
+                    },
+                    dataType: "json",
+                    success: function(data){
+                        
+                        if (data.result.faultString != null)
+                        {
+                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                        }
+                        else if (!data.result)
+                        {
+                            alert("Something is wrong");
+                        }
+                        else
+                        {
+                            for (var i in data.result.products)
+                            {
+                                var name = data.result.products[i].name;
+                                
+                                //create an option element with a value and the inner html being the name
+                                var option = $("<option>").val(name).html(name);
+
+                                //append the option to the <select>
+                                $("select[name=product]").append(option);
+                            }                                                                
+                                
+                            //Automatically populates the components and version fields based off of the first(default) product
+                            var firstProduct = $("#Details select[name=product] option").first().html();
+                               
+                            getCompsVers([firstProduct], "Details");
+                            getCompsVers(null, "search");
+                            getCompsVers(null, "dialogOptions");
+                        }
+                                
+                        
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                        alert("There was an error:" + textStatus);
+                    }
+                });
+                    
+            };             
         </script>
     </head>
     <body>
@@ -2331,9 +2421,10 @@
                         <option value="optBug_severity">Severity</option>
                         <option value="optBug_status">Status</option>
                         <option value="optResolution">Resolution</option>
+                        <option value="optPriority">Priority</option>
 
                     </select>
-                    <button id="AddFilterOption">Add</button>
+                    <button id="toggleFilterOption">Toggle Filter</button>
                 </p>               
                 <form style="height:300px;">
                     <fieldset style="margin-top: 10px;">                        
@@ -2357,6 +2448,10 @@
                             <div class="box" style="display: none;">
                                 <label for="resolution"class="searchLabel" name="resolution">Resolution</label>
                                 <select  name="resolution" id="optResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                            </div>
+                            <div class="box" style="display: none;">
+                                <label for="priority"class="searchLabel" name="priority">Priority</label>
+                                <select  name="priority" id="optPriority"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                         </div>                        
                     </fieldset>                    
@@ -2688,7 +2783,7 @@
             <a action="sortContextHelper()">Sort Column</a>
         </div> 
         <iframe id="secretIFrame" src="" style="display:none; visibility:hidden;"></iframe>
-        <iframe id="upload_target" name="upload_target" src="#" style=" display:none; visibility:hidden;"></iframe>   
+        <iframe id="upload_target" name="upload_target" src="blank.html" style=" display:none; visibility:hidden;"></iframe>   
         <div class="modal"><div>Board Loading</div></div>
     </body>
 </html>
