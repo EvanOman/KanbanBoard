@@ -1,4 +1,9 @@
 <?php
+
+session_start();
+
+session_write_close();
+
 if (!class_exists('DateTime'))
     require_once('DateTime.class.php');
 include 'class.bugzillaxml.php';

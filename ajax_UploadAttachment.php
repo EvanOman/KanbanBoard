@@ -2,6 +2,10 @@
 /* error_reporting(E_ALL);
   ini_set('display_errors', true); */
 
+session_start();
+
+session_write_close();
+
 if (!class_exists('DateTime'))
     require_once('DateTime.class.php');
 include 'class.bugzillaxml.php';
@@ -57,7 +61,7 @@ header('Content-Type: text/html; charset=iso-8859-1');
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <script language="javascript" type="text/javascript">
             var json = <?php echo $ret; ?>;
-            parent.stopUpload(json);
+            parent.ajaxUploadCallBack(json);
     
         </script>  
     </head>

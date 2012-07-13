@@ -406,7 +406,7 @@ widget visible when the dialog is open*/
 
 }
 #attachmentAddTable{
-    width: 47%;
+    width: 475px;
     margin-left: 25px;
 }
 #searchSummary{
@@ -438,4 +438,9 @@ widget visible when the dialog is open*/
 }
 #dialogOptions form .box{
     display: none;
+}
+#addAttTableDiv{
+    height: auto;
+    width: auto;
+    position: relative;
 }

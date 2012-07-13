@@ -1,3 +1,13 @@
+<?php
+session_start();
+
+if (!isset($_SESSION["login"]) || !isset($_SESSION["password"])) {
+    die(header("location: loginpage.php"));
+}
+
+session_write_close();
+?>
+
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
     <head>
         <title>Eckhardt Optics Kanban Board</title>
@@ -329,6 +339,10 @@
                    
                 $("#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit, #toggleFilterOption").button();  
                  
+                $("#btnAttachmentSubmit").live("click", function(){
+                    $("#addAttTableDiv").addClass("loading");
+                });
+                
                 //Pulls up the edit menu whenever a card is double clicked                       
                 $(".card").live( "dblclick", function () {
                     
@@ -873,6 +887,7 @@
                                 });
                                 
                                 postAttachments(card);
+                                
                                 $("#attTableDiv").removeClass("loading");
                             }                      
                             
@@ -911,15 +926,18 @@
         
             //Retrieves all of the available components and versions for a given product. Now revised to pull down all the products and components once and then reuse the info
             function getCompsVers(name, dialogID){
-            
+                
+                //This case handles when the product names have already been appended and the caller only wants getCompsVers to change the field value
                 if ($("#product option").length != 0)
                 {
                     compsVersFieldPopulate(name, dialogID);            
                 }
                 else 
                 {
+                    //This case handles when the product names have not been appended and the caller wants the new values to be appended for the first time, also want to refresh any open dialog
+                    //This function works by queueing the calls made and perfroming them only when the name ajax calls comeplete
                     $.when(getCompsVersXHR,getNamesXHR).done(function(){
-                        debugger;
+                       
                         if ($("#dialogAddEditCard").dialog("isOpen"))
                         {
                             var card = $("#"+$("#dialogAddEditCard").data("cardId"));
@@ -979,7 +997,6 @@
             }
             
             //Here I have separated the field population and dialog configuration to allow getCompsVers to refresh the fields after it finishes loading
-            //I have also added functionality to allow the 
             function dialogFields(fieldValues)
             {                                                         
                 //Note that the Add Card Dialog is set so that the tabs have a valuer of 0. We only want specific values for the edit dialog
@@ -1035,8 +1052,7 @@
             }
             
             function editCard(fieldValues) { 
-                
-                debugger;
+               
                 var cardId = fieldValues["id"];
                 
                 $("#dialogAddEditCard").data("cardId", cardId);
@@ -1103,8 +1119,9 @@
                     //We also want to make sure that the resolution field no longer has a value:
                     $("#resolution").val("");
                     
-                    //Also we want to do a card refresh just in case the user closed the dialog after it was reopened without ever saving the data to the server
-                    //cardDataRefresh(cardId);
+                    
+                    //And finally we want to clear the add attachment form data
+                    $("#attachmentFileName, #attachmentDescription, #attachmentComment, #attachmentIsPatch").val("");                                        
                 }
             );   
                 $( "#dialogAddEditCard" ).dialog( "open" );
@@ -1144,7 +1161,8 @@
                             $("#dialogInvalid").dialog("open");
                         }
                         else{                                  
-                            
+                            var div = $("<div class='loadingLabel'>Adding Card</div>");
+                            $("#Details .modal").empty().append(div);
                             //Files a new bug in the bugzilla server
                             ajaxCreateCard($("#cf_whichcolumn").val(), $("#component").val(), $("#priority").val(), $("#product").val(),  $("#bug_severity").val(), $("#summary").val(), 
                             $("#version").val(),$("#user").val(),$("#deadline").val(), $("#bug_status").val(),$("#op_sys").val(), $("#rep_platform").val(), $("#commentReplyText").val() );                                                                                       
@@ -1254,6 +1272,9 @@
                 var month = date.getMonth(); 
                 var year = date.getFullYear();
                 var until = daysUntil(year, month, day);
+                
+                card.data("dayUntilDue", until);
+                
                 $(cardRef+ " .iconBar .calBack .calIcon").html(day).attr({"title": "Due: "+ deadline + " ("+until+" days from today)"});
                 if (until <= 7 && until > 0)
                 {
@@ -1317,9 +1338,7 @@
                 $.ajax({
                     url: "ajax_POST.php",
                     type: "POST",
-                    beforeSend: function(){
-                        var div = $("<div class='loadingLabel'>Adding Card</div>");
-                        $("#Details .modal").append(div);
+                    beforeSend: function(){                        
                         $("#Details").addClass("loading");
                     },
                     data: { 
@@ -1359,8 +1378,8 @@
                                                       
                             var now = new Date();
                             
-                            //Now that we have the new card's Id we can post it to the board:
-                            postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status,  op_sys, rep_platform, now);
+                            //Now that we have the new card's Id we can post it to the board:(Note that reolution will be an empty string
+                            postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status,  op_sys, rep_platform, now, "");
                             $("#Details").removeClass("loading");
                             $("#Details .loadingLabel").remove();
                             $( "#dialogAddEditCard" ).dialog( "close" ); 
@@ -1391,7 +1410,7 @@
             }
             
             //Posts a card to the page containing all of the propper information. Used to post new cards and also to populate the board with existing cards
-            function postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform, last_change_time){
+            function postCard(id,col, component,   priority, product, severity, summary, version, user, deadline, status, op_sys, rep_platform, last_change_time, resolution){
                 var newCard = $('<div id="'+id+'" class="card "><div class="cardText">(#'+id+') '+summary+'</div><div class="iconBar"></div><div class="modal"><div>Saving Card</div></div></div>');
                     
                 newCard.addClass("cmVoice {cMenu:\'contextMenuCard\'}, normal");
@@ -1418,7 +1437,10 @@
                     "status": status,
                     "op_sys": op_sys,
                     "rep_platform": rep_platform,
-                    "last_change_time" : last_change_time
+                    "last_change_time" : last_change_time,
+                    "resolution": resolution,
+                    //NOTE This method of saving the sort key instroduces a new dependency: In order for postCard to be called, Bug.Fields(generic) musty first be called
+                    "prioSortKey": prioSortKey[priority]
                         
                 });
                     
@@ -1467,16 +1489,7 @@
                     "rep_platform": rep_platform,
                     "resolution": resolution
                 }
-                
-                
-                //Appends the card to the correct column(Don't want to update the cards position twice)
-                if (col != card.data("cf_whichcolumn"))
-                {
-                    $("#"+col).append(card.parent());
-                }
-                                    
-               
-                
+                               
                 //If the Bug has no resolution we don't want to post anything':
                 if (resolution == undefined || resolution == "")
                 {
@@ -1524,17 +1537,25 @@
                                 editCard(cardChangeData[ids]);
                             }
                             else 
-                            {                                                                                                
-                                //Updates the card's text
-                                $('#'+ids+" .cardText").html(summary);
-                
-                                displayHandler(card);
-                                
+                            {                                                                                                                                                                
                                 //Here we save the changeData to the local
                                 card.data(cardChangeData[ids]);
                                 
                                 //Then delete the changeData
                                 delete cardChangeData[ids];
+                                
+                                //Updates the card's text
+                                $('#'+ids+" .cardText").html("(#"+ids+") "+summary);
+                
+                                displayHandler(card);
+                                
+                                 
+                                //Appends the card to the correct column(Don't want to update the cards position twice)
+                                $("#"+col).append(card.parent());
+                                
+                                    
+               
+                
                                 
                                 //We also need to update the last edit time:
                                 updateLastChanged(ids);
@@ -1900,14 +1921,43 @@
                             alert("Something is wrong");
                         }
                         else 
-                        {                                                          
-                            //Here we empty the card comment data to allow getComments to pull down new comment data
-                            //TODO Find a better way, this is very wasteful. Possibly get all the information that Bugzilla would returna and apppend it in a similar manner as the postComments method? 
-                            $("#"+cardId).data({"comments": null});
+                        {                                                        
+                            //Now that we have successfully posted a comment, we are going to pretend that bugzilla gave us all the data back and save the data 
+                            //First we need the current time
+                            var now = new Date();
                             
-                            getComments(cardId);         
+                            //Now we need to put the info in the right format: 
+                            commentObject = {
+                                //We know that the author isa the user that is logged in(my username will be replaced but the $_SESSION["login"] eventually
+                                "author": "evan.oman@blc.edu",
+                                "bug_id": cardId,
+                                "creator": "evan.oman@blc.edu",
+                                "id": data.result.id,
+                                "text": comment,
+                                //Bugzilla would return the time in an ISO string
+                                "time": now.toISOString()
+                            };
                             
-                            alert("Comment succesfully added."); 
+                            //Here we store the above comment data to the comments section of the card
+                            if ($("#"+cardId).data("comments") != null || $("#"+cardId).data("comments") != undefined)
+                            {
+                                $("#"+cardId).data("comments").push(commentObject);
+                            }
+                            else 
+                            {   var commArr = [];
+                                commArr.push(commentObject);
+                                $("#"+cardId).data("comments", commArr)
+                            }
+                            
+                            //Now that the comment data has been stored, we want to post it but only if the correct dialog is open. I ran into issues where this was called when the next dialog was already
+                            //open. SO we solve this issue by simply checking to make sure the right dialog is open
+                            if ($("#dialogAddEditCard").data("cardId") == cardId)
+                            {
+                                getComments(cardId); 
+                                 
+                                $('#Comments').removeClass("loading"); 
+                            }
+                            
                         }                        
                     },
                     error: function(jqXHR, textStatus, errorThrown){
@@ -1917,8 +1967,8 @@
                  
             }
             
-            function stopUpload(data){
-                alert("here");
+            function ajaxUploadCallBack(data){
+                
                 if (data.result.faultString != null)
                 {
                     alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
@@ -1928,53 +1978,75 @@
                     alert("Something is wrong");
                 }
                 else 
-                {
+                {                                        
                     for (var i in data.result.attachments) {
                         alert("Added Attachment ID: " + i);
+                    
+                    
+                        //In a simlar manner to the sendComments Function, we need to update thge comments with the addition of the comment for this attachment:
+                    
+                        //Now that we have successfully posted a comment, we are going to pretend that bugzilla gave us all the data back and save the data 
+                        //First we need the current time
+                        var now = new Date();
+                        
+                        var comment = "Created attachment " + data.result.attachments[i].id+ " " + data.result.attachments[i].summary;
+                        
+                        var cardId = data.result.attachments[i].bug_id;
+                        
+                        //Now we need to put the info in the right format: 
+                        commentObject = {
+                            //We know that the author isa the user that is logged in(my username will be replaced but the $_SESSION["login"] eventually
+                            "author": data.result.attachments[i].attacher,
+                            "bug_id": cardId,
+                            "creator": data.result.attachments[i].creator,
+                            "id": data.result.attachments[i].id,
+                            "text": comment,            
+                            "time": data.result.attachments[i].creation_time
+                        };
+                        
+                        //Here we store the above comment data to the comments section of the card
+                        if ($("#"+cardId).data("comments") != null || $("#"+cardId).data("comments") != undefined)
+                        {
+                            $("#"+cardId).data("comments").push(commentObject);
+                        }
+                        else 
+                        {
+                            var commArr = [] 
+                            comaArr.push(commentObject);
+                            $("#"+cardId).data("comments", commArr)
+                        }
+                       
+                                                                                                                       
+                        //Here we store the returned attachment data to the attachments section of the card
+                        if ($("#"+cardId).data("attachments") != null || $("#"+cardId).data("attachments") != undefined)
+                        {
+                            $("#"+cardId).data("attachments").push(data.result.attachments[i]);
+                        }
+                        else 
+                        {                                                       
+                            $("#"+cardId).data("attachments", data.result.attachments[i]);
+                        }
+                        
+                        //And finally we want to clear the add attachment form data
+                        $("#attachmentFileName, #attachmentDescription, #attachmentComment, #attachmentIsPatch").val("");
+                                               
+                    }
+                     
+                    //Now that the comment data has been stored, we want to post it but only if the correct dialog is open. I ran into issues where this was called when the next dialog was already
+                    //open. SO we solve this issue by simply checking to make sure the right dialog is open
+                    if ($("#dialogAddEditCard").data("cardId") == cardId)
+                    {
+                        getComments(cardId);
+                            
+                        getAttachments(cardId);
+                                 
+                        $('#Comments, #addAttTableDiv').removeClass("loading");                        
                     }
                 } 
+                
+                
             }
-            
-            //This function refreshes the information of a certain card just in case there is a discrepancy between the server data and the local  data
-            //TODO is this what we want to be doing? It works but I feel like it is very inefficient      
-            function cardDataRefresh(cardId){   
-                var card = $("#"+cardId);
-                //Finds all bugs assigned to me and posts them to the board 
-                $.ajax({
-                    url: "ajax_POST.php",
-                    type: "POST",
-                    beforeSend:function(){
-                        card.addClass("loading");
-                    },
-                    data: { 
-                        "method": "Bug.search",
-                        "id": cardId
-                    },
-                    dataType: "json",
-                    success: function(data, status){
-                        
-                        if (data.result.faultString != null)
-                        {
-                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                        }
-                        else
-                        { 
-                            //Since we don't want any duplicate cards, we have to remove the old card
-                            card.parent().remove();
-                            for (var i in data.result.bugs)
-                            {
-                                var bug = data.result.bugs[i];
-                                postCard(bug.id,bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time);                              
-                            }
-                        }
-                    }
-                });                     
-            }
-            
+                                  
             function sortColumn(colId, sortkey, order)
             {                
                 var col = $("#"+colId);
@@ -1983,8 +2055,8 @@
                 if (order != "asc" && order != "desc")
                 {
                     order = "asc";
-                }                
-                
+                }      
+               
                 $('>li', col).tsort('div',{data:sortkey, order:order});
             }
             
@@ -1995,6 +2067,7 @@
             }
             
             function boardCardPopulate(){
+               
                 //Finds all bugs assigned to me and posts them to the board 
                 $.ajax({
                     url: "ajax_POST.php",
@@ -2006,7 +2079,7 @@
                     //Will evetually just be the map: 
                     ,
                     dataType: "json",
-                    success: function(data, status){
+                    success: function(data){
                         
                         if (data.result.faultString != null)
                         {
@@ -2021,7 +2094,7 @@
                             for (var i in data.result.bugs)
                             {
                                 var bug = data.result.bugs[i];
-                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time);                                
+                                postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time, bug.resolution);                                
                             }
                             
                             $(document).buildContextualMenu(
@@ -2040,6 +2113,7 @@
                                 closeOnMouseOut:true,
                                 onContextualMenu:function(o,e){}
                             });
+                         
                             
                             $("body").removeClass("loading");
                         }
@@ -2368,9 +2442,9 @@
                 <select id="sortCriteriaSelect">
                     <option value="id">Bug ID</option>
                     <option value="summary">Summary</option>
-                    <option value="priority">Priority</option>
+                    <option value="prioSortKey">Priority</option>
                     <option value="last_change_time">Last Time Edited</option>
-                    <option value="deadline">Deadline</option>                                     
+                    <option value="dayUntilDue">Deadline</option>                                     
                 </select>
             </div>
             <div style="float: left; margin: 10px; margin-left: 5px;">
@@ -2584,57 +2658,60 @@
                     </div>
 
                     <form  action="ajax_UploadAttachment.php" method="post" enctype="multipart/form-data" target="upload_target">
-                        <table id="attachmentAddTable" class="ui-widget ui-widget-content ui-corner-all">
-                            <thead>
-                                <tr class="ui-widget-header ">
-                                    <th colspan="2">
-                                        Add Attachment
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <label for="attachmentFileName">File:</label>
-                                    </td>
-                                    <td>
-                                        <input id="attachmentFileName" name="file_name" type="file"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <label for="attachmentDescription">Description:</label>
-                                    </td>
-                                    <td>
-                                        <input name="summary" style="width: 300px;" id="attachmentDescription"type="text"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <label  for="attachmentIsPatch">Is Patch:</label>
-                                    </td>
-                                    <td>
-                                        <input name="is_patch" id="attachmentIsPatch"type="checkbox"/>
-                                    </td>
-                                </tr>                               
-                                <tr>
-                                    <td>
-                                        <label for="attachmentComment">Bug Comment:</label>
-                                    </td>
-                                    <td>
-                                        <input name="comment" style="width: 300px;" id="attachmentComment"type="text"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <input type="hidden" name="ids" id="attachmentBugId" value=""/>
-                                    </td>
-                                    <td>
-                                        <input style="float:right;"  type="submit" value="Submit"id="btnAttachmentSubmit"/>
-                                    </td>
-                                </tr>
-                            </tbody>                       
-                        </table>     
+                        <div id="addAttTableDiv">
+                            <table id="attachmentAddTable" class="ui-widget ui-widget-content ui-corner-all">
+                                <thead>
+                                    <tr class="ui-widget-header ">
+                                        <th colspan="2">
+                                            Add Attachment
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <label for="attachmentFileName">File:</label>
+                                        </td>
+                                        <td>
+                                            <input id="attachmentFileName" name="file_name" type="file"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <label for="attachmentDescription">Description:</label>
+                                        </td>
+                                        <td>
+                                            <input name="summary" class="text ui-widget-content ui-corner-all"style="width: 300px;" id="attachmentDescription"type="text"/>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <label  for="attachmentIsPatch">Is Patch:</label>
+                                        </td>
+                                        <td>
+                                            <input style="width : 20px; margin:0;"name="is_patch" class="text ui-widget-content ui-corner-all" id="attachmentIsPatch"type="checkbox"/>
+                                        </td>
+                                    </tr>                               
+                                    <tr>
+                                        <td>
+                                            <label for="attachmentComment">Bug Comment:</label>
+                                        </td>
+                                        <td>
+                                            <textarea name="comment" style="width: 300px; height: 100px;" class="text ui-widget-content ui-corner-all" id="attachmentComment"></textarea>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <input type="hidden" name="ids" id="attachmentBugId" value=""/>
+                                        </td>
+                                        <td>
+                                            <input style="float:right;"  type="submit" value="Submit"id="btnAttachmentSubmit"/>
+                                        </td>
+                                    </tr>
+                                </tbody>                     
+                            </table>
+                            <div class="modal"><div class="loadingLabel">Uploading Attachment</div></div> 
+                        </div>                        
                     </form>                    
                     <div style="clear: both;"></div>                  
                 </div>

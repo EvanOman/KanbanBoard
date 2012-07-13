@@ -1,59 +1,53 @@
 <?php
+
+session_start();
+
+/* error_reporting(E_ALL);
+  ini_set('display_errors', true); */
+
+if (!class_exists('DateTime'))
+    require_once('DateTime.class.php');
+include 'class.bugzillaxml.php';
 include "config.php";
 
-$params = array(array("login" => userName, "password" => password, "remember"=>true));
+$password = $_POST["password"];
+
+$login = $_POST["login"];
+
+//Finds the method parameter 
+$method = "User.login";
+
+//Here we instantiate a new BugzillaXML object with the passed in method
+$bugzilla = new BugzillaXML($method);
+
+//Now the members are added 
+$bugzilla->addMember("login", $login, "none");
+
+$bugzilla->addMember("password", $password, "none");
 
 
-$params = json_encode($params);
+//Then submit
+$return = $bugzilla->submit(true);
 
-$data = array( "params" => $params, "method" => "User.login","id"=> "bugs");
+//Check if session login successful
+if ($return["faultString"] == null && $return["id"] != null) {
 
+    //Set the user name(from above)
+    $_SESSION["login"] = $login;
 
-// is cURL installed yet?
-if (!function_exists('curl_init')) {
-    die('Sorry cURL is not installed!');
+    //Set the password(from above)
+    $_SESSION["password"] = $password;
+
+    $return = array("result" => $return);
+
+    echo json_encode($return);
+
+    echo $_SESSION["username"];
+} else {
+
+    //Puts the PHP response in a format that the AJAX call can easily parse
+    $return = array("result" => $return);
+
+    echo json_encode($return);
 }
-
-// OK cool - then let's create a new cURL resource handle
-$ch = curl_init();
-
-// Now set some options (most are optional)
-// Set URL to download  
-curl_setopt($ch, CURLOPT_URL, BUGZILLA_URL);
-
-
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-
-curl_setopt($ch, CURLOPT_POST, true);
-
-curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-
-// Include header in result? (1 = yes, 0 = no)
-curl_setopt($ch, CURLOPT_HEADER, 0);
-
-// Should cURL return or print out the data? (true = return, false = print)
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-// Timeout in seconds
-curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-// Download the given URL, and return output
-$output = curl_exec($ch);
-
-if($output === false)
-{
-    echo json_encode(array("error" => array("message"=>'Curl error: ' . curl_error($ch))));
-}
-else 
-{
-    echo $output;
-}
-
-// Close the cURL resource, and free system resources
-curl_close($ch);
-
-
-
 ?>

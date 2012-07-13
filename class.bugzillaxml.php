@@ -1,6 +1,6 @@
 <?php
 
-/* error_reporting(E_ALL);
+/*error_reporting(E_ALL);
   ini_set('display_errors', true); */
 
 class BugzillaXML {
@@ -25,12 +25,14 @@ class BugzillaXML {
         $this->data->params->param->addChild('value');
         $this->data->params->param->value->addChild('struct');
         //Automatically logins  to bugzilla. Should this only be done once with a User.login call?
-        $login = $this->data->params->param->value->struct->addChild('member');
-        $login->addChild('name', 'Bugzilla_login');
-        $login->addChild('value', userName);
-        $password = $this->data->params->param->value->struct->addChild('member');
-        $password->addChild('name', 'Bugzilla_password');
-        $password->addChild('value', password);
+       if (isset($_SESSION["login"]) && isset($_SESSION["password"])) {
+            $login = $this->data->params->param->value->struct->addChild('member');
+            $login->addChild('name', 'Bugzilla_login');
+            $login->addChild('value', $_SESSION["login"] /*"evan.oman@blc.edu"*/);
+            $password = $this->data->params->param->value->struct->addChild('member');
+            $password->addChild('name', 'Bugzilla_password');
+            $password->addChild('value', $_SESSION["password"] /*"password"*/);
+       }
     }
 
     function addMember($name, $value, $valueType) {

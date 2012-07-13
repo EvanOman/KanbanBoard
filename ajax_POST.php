@@ -1,7 +1,12 @@
 <?php
+session_start();
 
-/* error_reporting(E_ALL);
+session_write_close();
+/*error_reporting(E_ALL);
   ini_set('display_errors', true); */
+
+/*$mill = substr(microtime(true),strlen(microtime(true)) - 4 ,4);
+$time['Start Post'] =  date("s").'.'.$mill;*/
 
 if (!class_exists('DateTime'))
     require_once('DateTime.class.php');
@@ -11,10 +16,8 @@ include "config.php";
 //Copies the posted array of fields
 $paramArr = $_POST;
 
-//TODO Sanitize the method as well
-//
-//Finds the method parameter 
-$method = $paramArr['method'];
+//Sanitize the method as well
+$method = filter_var($paramArr["method"], FILTER_SANITIZE_STRING);
 
 //Here we instantiate a new BugzillaXML object with the passed in method
 $bugzilla = new BugzillaXML($method);
@@ -37,4 +40,7 @@ foreach ($paramArr as $k => $v) {
 
 //Then submit
 echo $bugzilla->submit();
+
+
+
 ?>
