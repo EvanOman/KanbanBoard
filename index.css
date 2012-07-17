@@ -355,7 +355,8 @@ widget visible when the dialog is open*/
     width:      200px;
     margin-left: -100px;
     text-align: center;
-    font-size: 20px;    
+    font-size: 20px; 
+    color: gray;
 }
 #commentReplyText{
     width: 95%;
@@ -443,4 +444,17 @@ widget visible when the dialog is open*/
     height: auto;
     width: auto;
     position: relative;
+}
+#removeFilterOption, #addFilterOption {
+    display: none;
+}
+#quickSearchTextBox{
+    width: 100%;
+}
+.toolbar label{
+    font-size: 15px; 
+    color: white;
+}
+.unavailableID{
+    color: red !important;
 }

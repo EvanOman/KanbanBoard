@@ -35,24 +35,22 @@ $bugzilla->addMember("file_name", $_FILES["file_name"]['name'], "string");
 $bugzilla->addMember("content_type", $_FILES["file_name"]['type'], "string");
 $bugzilla->addMember("exclude_fields", array("data"), "string");
 
-if ($_FILES['file_name']['error'] != UPLOAD_ERR_OK) {
-    die(json_encode(array("error" => $_FILES['file_name']['error'])));
-}
 
 $tempName = $_FILES["file_name"]['tmp_name'];
-if (empty($tempName)) {
-    die(json_encode(array("error" => "No file to upload")));
-}
-
 $contents = base64_encode(file_get_contents($tempName));
-if ($contents === false) {
-    die(json_encode(array("error" => "Couldn't get file contents")));
+
+if ($_FILES['file_name']['error'] != UPLOAD_ERR_OK) {
+    $ret = json_encode(array("error" => $_FILES['file_name']['error']."(See documentation for interpertaion)"));
+} else if (empty($tempName)) {
+    $ret = json_encode(array("error" => "No file to upload"));
+} else if ($contents === false) {
+    $ret = json_encode(array("error" => "Couldn't get file contents"));
+} else {
+    $bugzilla->addMember("data", $contents, "base64");
+    $ret = $bugzilla->submit();
+
+    header('Content-Type: text/html; charset=iso-8859-1');
 }
-
-$bugzilla->addMember("data", $contents, "base64");
-$ret = $bugzilla->submit();
-
-header('Content-Type: text/html; charset=iso-8859-1');
 ?>
 <!DOCTYPE html>
 <html>

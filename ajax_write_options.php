@@ -31,7 +31,14 @@ foreach ($_POST["boardFilterOptions"] as $field => $value) {
     }
 }
 
-$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions);
+$blankColumnMap = array();
+foreach ($_POST["blankColumnMap"] as $status => $column) {
+    $status = filter_var($status, FILTER_SANITIZE_STRING);   
+    $column = filter_var($column, FILTER_SANITIZE_STRING);
+    $blankColumnMap[$status] = $column;
+}
+
+$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "blankColumnMap"=> $blankColumnMap);
 
 if (write_ini_file($iniSettings, "kanban.ini", true)) {
     die(json_encode(array("success" => true)));

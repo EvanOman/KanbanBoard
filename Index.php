@@ -26,7 +26,7 @@ session_write_close();
         <script type="text/javascript" src="jquery.ui.resizable.js"></script>
         <script type="text/javascript" src="jquery.ui.dialog.js"></script>
         <script type="text/javascript" src="jquery.ui.datepicker.js"></script>
-        <script type="text/javascript" src="jquery.ui.tabs.js"></script>     
+        <script type="text/javascript" src="jquery.ui.tabs.js"></script>    
         <script type="text/javascript" src="mbMenu.js"></script>
         <script type="text/javascript" src="jquery.metadata.js"></script>
         <script type="text/javascript" src="jquery.hoverIntent.js"></script>
@@ -103,7 +103,7 @@ session_write_close();
                 <div style="height:auto">
                     <table id="defaultColumntable">
                         <tbody>
-                            
+
                         </tbody>
                     </table>
                 </div>
@@ -121,9 +121,11 @@ session_write_close();
                         <option value="optBug_status">Status</option>
                         <option value="optResolution">Resolution</option>
                         <option value="optPriority">Priority</option>
+                        <option value="all">All</option>
 
                     </select>
-                    <button id="toggleFilterOption">Toggle Filter</button>
+                    <button id="addFilterOption">Add Filter</button>
+                    <button id="removeFilterOption">Remove Filter</button>
                 </p>               
                 <form style="height:300px;">
                     <fieldset style="margin-top: 10px;">                        
@@ -173,7 +175,7 @@ session_write_close();
                 </fieldset>
             </form>
         </div>        
-        <div id="dialogInvalid" class="ui-dialog-content ui-widget-content"  title="Invalid Input" >
+        <div id="dialogInvalid" class="ui-dialog-content ui-widget-content"  title="Invalid" >
             <p>Must Specify the Card's Title!!!</p>
         </div>
         <div id="dialogNoResults" class="ui-dialog-content ui-widget-content"  title="No Results" >
@@ -400,7 +402,7 @@ session_write_close();
                             </tbody>
                         </table>  
                         <div class="modal"><div class="loadingLabel">Loading Results</div></div> 
-
+                        <p></p>
                     </div>
 
                 </div>                
@@ -419,7 +421,9 @@ session_write_close();
             <span class="bigBanners">Limbo</span>
             <ul id="Limbo"class="tablists"></ul>                                    
         </div>
-        <div class="toolbar">                
+        <div class="toolbar">  
+            <label for="quickSearchTextBox" >Quick Search</label>
+            <input id="quickSearchTextBox" type="text" class="text ui-widget-content ui-corner-all"/>
             <button class="btnTab">Backlog</button>
             <button class="btnTab">Archive</button>
             <button class="btnTab">Limbo</button>
