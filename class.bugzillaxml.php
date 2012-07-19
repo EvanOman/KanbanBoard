@@ -168,7 +168,7 @@ class BugzillaXML {
         curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-type: text/xml'));
 
         // Timeout in seconds
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 100000);
 
         // Download the given URL, and return output
         $output = curl_exec($ch);

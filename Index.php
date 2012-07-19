@@ -7,8 +7,9 @@ if (!isset($_SESSION["login"]) || !isset($_SESSION["password"])) {
 
 session_write_close();
 ?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en-US" lang="en-US">
+<html>
     <head>
         <title>Eckhardt Optics Kanban Board</title>
         <link type="text/css" href="themes/black-tie/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
@@ -38,11 +39,7 @@ session_write_close();
         <link type="text/css" href="index.css" rel="stylesheet" />
 
         <script type="text/javascript">  
-            //I have to include this function here because it contains a php reference
-            function getGreenwhichTime()
-            {
-                return <?php echo date("O"); ?>;
-            }       
+            var timeOffset = "<?php echo date("O"); ?>";            
         </script>
     </head>
     <body>
@@ -95,6 +92,21 @@ session_write_close();
             </div>
             <div style="float: left;">
                 <h2>
+                    Set WIP Limits:
+                </h2>
+                <h1>
+                    For each column you can add a specific WIP limit(0 means unlimited)
+                </h1>
+                <div >
+                    <table id="WIPSetTable">
+                        <tbody>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div style="float: left;">
+                <h2>
                     Set Default Column Values:
                 </h2>
                 <h1>
@@ -107,7 +119,7 @@ session_write_close();
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div>           
             <div style="float: left;">
                 <h2>
                     <br>Board Card Filter:
@@ -251,11 +263,17 @@ session_write_close();
                                     <select  name="cf_whichcolumn" id="cf_whichcolumn"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;">                               
                                     </select>
                                 </div>
-                                <div style="float: left; margin-left: 10px; display: none;">
+                            </div>
+                            <div style="float: left;">                               
+                                <div style="float: left;  display: none; ">
+                                    <label for="dup_of">Duplicate of:</label>
+                                    <input  type="text"name="dupe_of" id="dupe_of"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;"/>                                                               
+                                </div> 
+                                 <div style="float: left; margin-left: 10px; display: none;">
                                     <label for="resolution">Resolution:</label>
                                     <select  name="resolution" id="resolution"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important;"></select>
                                 </div>
-                            </div>
+                            </div>                          
                         </div>
                         <div id="detailsRight">
                             <label for="Comments">Comments:</label>
@@ -424,6 +442,8 @@ session_write_close();
         <div class="toolbar">  
             <label for="quickSearchTextBox" >Quick Search</label>
             <input id="quickSearchTextBox" type="text" class="text ui-widget-content ui-corner-all"/>
+            <label for="quickSearchField" >by:</label>
+            <select id="quickSearchField" class="text ui-widget-content ui-corner-all"></select>
             <button class="btnTab">Backlog</button>
             <button class="btnTab">Archive</button>
             <button class="btnTab">Limbo</button>

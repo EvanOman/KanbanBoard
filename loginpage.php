@@ -2,7 +2,17 @@
 To change this template, choose Tools | Templates
 and open the template in the editor.
 -->
-<!DOCTYPE html>
+<?php
+session_start();
+
+if (isset($_SESSION["login"]) && isset($_SESSION["password"])) {
+    die(header("location: Index.php"));
+}
+
+session_write_close();
+?>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+
 <html>
     <head>
         <title>Log in</title>
@@ -33,7 +43,6 @@ and open the template in the editor.
                 var password = $("#password").val();        
                 
                 $.ajax({
-                    async: false,
                     url: "ajax_login.php",
                     type: "POST",
                     dataType: "json",
@@ -46,10 +55,13 @@ and open the template in the editor.
                         if (data.result.faultString != null)
                         {
                             alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                            
+                            $("body").removeClass("loading");
                         }
                         else if (!data.result)
                         {
                             alert("Something is wrong");
+                            $("body").removeClass("loading");
                         }
                         else 
                         {

@@ -38,7 +38,15 @@ foreach ($_POST["blankColumnMap"] as $status => $column) {
     $blankColumnMap[$status] = $column;
 }
 
-$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "blankColumnMap"=> $blankColumnMap);
+
+$limitWIP = array();
+foreach ($_POST["limitWIP"] as $col => $limit) {
+    $col = filter_var($col, FILTER_SANITIZE_STRING);   
+    $limit = filter_var($limit, FILTER_SANITIZE_NUMBER_INT);
+    $limitWIP[$col] = $limit;
+}
+
+$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "blankColumnMap"=> $blankColumnMap, "limitWIP" => $limitWIP );
 
 if (write_ini_file($iniSettings, "kanban.ini", true)) {
     die(json_encode(array("success" => true)));
