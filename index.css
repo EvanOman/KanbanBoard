@@ -331,7 +331,7 @@ widget visible when the dialog is open*/
     background-color: white;
     padding: 10px;
     height: 100%;
-    width: 100%;
+    /*width: 100%;*/
     overflow-y: scroll;
     /*-moz-border-radius: 4px; /* Firefox */
     /*-webkit-border-radius: 4px; /* Safari, Chrome */

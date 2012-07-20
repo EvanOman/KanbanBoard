@@ -303,7 +303,13 @@ $(document).ready(function() {
             //The items parameter expects only a selector which prevents the use of Jquery so here I have made a(likely very inefficent) selector which selects every li with a card in it that isn't loading
             items: "li:has(.card):not(:has(.loading))",
             //Updates the cards position whenever it is moved and also checks to make sure that the card isn't loading
-            receive: function(event, ui) {                
+            receive: function(event, ui) {     
+                
+                $(document).trigger("columnChange", ui.sender);
+                
+                $(document).trigger("columnChange", this);
+                
+            /*
                 var col = $(this).attr("id");
                 var cardId = $(">div",ui.item).attr("id");
                 updatePosition(col, cardId);
@@ -311,7 +317,7 @@ $(document).ready(function() {
                 //Here we have ui.sender(the starting column) and the $(this) element(the receiver)            
                 columnWIPCheck($(this));
             
-                columnWIPCheck(ui.sender);
+                columnWIPCheck(ui.sender);*/
             }
         }).disableSelection();
            
@@ -500,10 +506,27 @@ $(document).ready(function() {
     $("#sortRadioDiv").buttonset();
     
     
-    /*-------------Event Handlers-----------------*/  
+    /*-------------Event Handlers-----------------*/    
     
-                   
-    $("#btnCommentSubmit").live("click", function(e){
+    $(document).bind("columnChange", function(event, receiver, sender){
+        
+        var idArr = [];
+        $(".card", $(receiver)).each(function(){
+            idArr.push($(this).data("id"));
+        });
+        
+        if (idArr.length != 0)
+        {
+            updatePosition($(receiver).attr("id"), idArr);     
+        }     
+        
+        columnWIPCheck($(receiver));
+        
+        columnWIPCheck($(sender));
+        
+    });
+       
+    $("#dialogAddEditCard").on("click", "#btnCommentSubmit", function(e){
         //Gets the id of the card to which the comment is being appended
         var cardId = $("#dialogAddEditCard").data("cardId");
                 
@@ -511,7 +534,7 @@ $(document).ready(function() {
     });
     
     //Adds shift-enter submission for the comments section
-    $("#commentReplyText").live("keydown", function(event){
+    $("#dialogAddEditCard").on("keydown", "#commentReplyText",function(event){
         if(event.shiftKey && event.which == 13)
         {
             //Gets the id of the card to which the comment is being appended
@@ -565,7 +588,7 @@ $(document).ready(function() {
         }
     }); 
                                                                         
-    $("#btnAttachmentSubmit").live("click", function(){
+    $("#dialogAddEditCard").on("click","#btnAttachmentSubmit" ,function(){
         
         if ($("#attachmentFileName").val() == "" || $("#attachmentFileName").val() == "")
         {
@@ -613,7 +636,7 @@ $(document).ready(function() {
                 
                 
     //Pulls up the edit menu whenever a card is double clicked                       
-    $(".card").live( "dblclick", function () {
+    $("body").on( "dblclick", ".card" ,function () {
                     
         if (!$(this).hasClass("loading"))
         {
@@ -624,22 +647,26 @@ $(document).ready(function() {
     });
                 
          
-    $("#mb_sortKeyOptions table").live("click",function(){
+    /*$("#contextMenuCard").on("click","#mb_sortKeyOptions table" ,function(){
         var colId = $($.mbMenu.lastContextMenuEl).attr("id");
-                    
+        
+        var value = reverseKeyLookup(colSortKeyMap, colId);
+        
+        alert(value);
+        
         var sortKey = $(this).find("a").attr("value");                                         
                     
         var order = "desc";
                     
         closeContextMenu();
                     
-        sortColumn(colId, sortKey, order);
+        sortColumn(value, sortKey, order);
                     
                     
-    });
+    });*/
                                                         
-    //Handles the moveallCards submenu 
-    $("#mb_moveAllCards table").live("click", function(){
+    //Handles the moveallCards submenu(not the best selector but thats all that would work)
+    $("body").on("click","#mb_moveAllCards table" , function(){
         //Finds and saves the column that was right clicked
         var startCol = $($.mbMenu.lastContextMenuEl).attr("id");       
         var a = $(this).find("a");
@@ -677,7 +704,7 @@ $(document).ready(function() {
                 
                 
     //Handles the moveCardTo submenu moveCardTo
-    $("#mb_moveCardTo table").live("click" , function(){                      
+    $("body").on("click" ,"#mb_moveCardTo table" ,function(){                      
                 
         var a = $(this).find("a");
         var column = a.html();
@@ -824,7 +851,7 @@ $(document).ready(function() {
         }
     });
     
-    $("#addFilterOption").live( "click", function(){                                                                                                         
+    $("#dialogOptions").on( "click","#addFilterOption" ,function(){                                                                                                         
         var field = $("#filterFieldOption").val();  
         
         if (field != "all")
@@ -854,7 +881,7 @@ $(document).ready(function() {
         
     });
     
-    $("#removeFilterOption").live( "click", function(){                                                                                                         
+    $("#dialogOptions").on( "click","#removeFilterOption" ,function(){                                                                                                         
         var field = $("#filterFieldOption").val();   
                         
         if (field != "all")
@@ -884,7 +911,7 @@ $(document).ready(function() {
     });   
     
     //Sets the priority of the card 
-    $("#mb_setPriority table").live("click", function(){                  
+    $("body").on("click", "#mb_setPriority table",function(){                  
                     
         //Finds the anchor
         var a = $(this).find("a");
@@ -950,13 +977,15 @@ $(document).ready(function() {
         }
     });
                 
-    $('#accordion .header').live("click",function() {
+    $('#accordion').on("click",'.header' ,function() {
         $(this).next().toggle("slow");
         return false;
-    }).next().hide();
+        
+        $('.header').next().hide();
+    });
     
                 
-    $("#attachmentTable tbody tr a").live("click", function(e){
+    $("#attachmentTable").on("click", "tbody tr a",function(e){
         e.preventDefault();
         var id = $(this).attr("value");
         $("#secretIFrame").attr("src","ajax_DownloadAttachment.php?id="+id);
@@ -2101,7 +2130,7 @@ function postComments(card){
 
 }
 
-$(".commentReplyLink").live("click", function(e){
+$("#dialogAddEditCard").on("click",".commentReplyLink" ,function(e){
     e.stopPropagation();
     var ids = $(this).closest("div").attr("id");
     var quote = "(In response to "+ids+"): '"+$("#"+ids+" p").text()+"'\n";
@@ -2422,9 +2451,11 @@ function dialogOptionsOpen()
         $(".column").each(function(){
             //get the value
             var col = $(this).attr("id");
-                                        
+            
+            var value = reverseKeyLookup(colSortKeyMap, col);
+            
             //Create a row in the options dialog for that column name
-            makeRowWIPSet(col);
+            makeRowWIPSet(value);
         });
     } 
     
@@ -2948,6 +2979,17 @@ function appendCard(card, col, status)
     
     column.append(newLi);
     
+    
+    if (card.data("cards") == undefined)
+    {
+        column.data("cards", []);
+    }
+    else
+    {
+        column.data("cards").push(card.data("id"));   
+    }
+   
+    
     columnWIPCheck(column);
 }
 
@@ -2979,9 +3021,16 @@ function makeRowColumnOptions(name)
 
 function columnWIPCheck(column)
 {
+    var colID = column.attr("id");
+          
+    colID = reverseKeyLookup(colSortKeyMap, colID);    
+    
+    
+    
+    
     var numCards = $(".card", column).length;
     
-    var wipLimit = limitWIP[column.attr("id")];
+    var wipLimit = limitWIP[colID];
     
     if (wipLimit != 0)
     {
@@ -3300,7 +3349,7 @@ function reverseKeyLookup(object, value)
     {
         if (object[index] == value)    
         {
-           return index;      
+            return index;      
         }
     }
     
