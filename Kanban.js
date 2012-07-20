@@ -10,8 +10,17 @@ var cardChangeData = [];
 var getCompsVersXHR = $.Deferred();
 var getNamesXHR = $.Deferred();
 var getAccProXHR = $.Deferred();
+var getFormFieldsXHR = $.Deferred();
 var componentData = null;
 var blankColumnMap = {};
+
+var columnNest = {};
+
+var tabColumns = ["Backlog", "Limbo", "Archive"];
+            
+var colSortKeyMap = {};
+            
+var colDivChar = "?";
 
 var bugzillaFieldtoParam = {
     "bug_status": "status", 
@@ -29,6 +38,15 @@ var bugzillaFieldtoParam = {
     "resolution": "resolution"
 };
 
+var fieldTypeMap = [
+"<label></label><input type='text'/>", //0 maps to unknown so we just give it a text input
+"<label></label><input type='text'/>", //1 maps to free text so we just give it a text input
+"<label></label><select></select>", //2 maps tyo a drop down menu so we know that we want a select
+"<label></label><select multiple='multiple'></select>",//3 maps to a multiple selection so we want a select with multiple specified
+"<label></label><input type='text'/>",//4 means a date box, we will eventually add the date picker UI to these fields
+"<label></label><input type='number'/>",//The last two types are BUg Id and url so we will simply addd inputs
+"<label></label><input type='url'/>"
+]
 
 function initialize()
 {            
@@ -54,8 +72,9 @@ function initialize()
 
                 //We dont want this function to run until the initialize function completes but we also want the document to be ready
                 $(document).ready(function() {
-                    //First things first we want to populoate the board with the correct cards:
-                    boardCardPopulate();
+                    //First things first we want to populoate the board with the correct cards:                    
+                    boardCardPopulate(); 
+                   
                 });
             }
 
@@ -67,6 +86,8 @@ function initialize()
 }
 initialize();  
 
+
+/*---------------------------------------------------------------------------BEGIN DOCUMENT READY ------------------------------------------------------------------------*/
 $(document).ready(function() {
     //Add a loading class to the dialogs so they cant be used until all of the fields are loaded
     $('body, #Details, #dialogSearch, #dialogOptions').addClass("loading"); 
@@ -143,7 +164,7 @@ $(document).ready(function() {
     var formFields = ["priority","bug_severity", "bug_status", "resolution", "cf_whichcolumn", "rep_platform", "op_sys"];
                 
     //A single Ajax call that finds all the specified field option values                
-    $.ajax({
+    getFormFieldsXHR = $.ajax({
         url: "ajax_POST.php",
         //async: false,
         type: "POST",
@@ -153,7 +174,7 @@ $(document).ready(function() {
         },    
         dataType: "json",
                     
-        success: function(data, status){
+        success: function(data){
                         
                       
             if (data.result.faultString != null)
@@ -165,14 +186,36 @@ $(document).ready(function() {
                 alert("Something is wrong");
             }
             else 
-            {                                                      
+            {  
+                //Instead of merely populating existing fields, I am going to actually build the dialog add/edit
+                //menu based off of the Bugzilla field-type parameter which has the following map:
+                /* 
+                 *Number    Form Type
+                 *  0        Unknown
+                 *  1        Free Text(iput type=text?)
+                 *  2        Drop Down(Select)
+                 *  3        Multiple-Selection Box(Select multiple = multiple)
+                 *  4        Large Text Box(textarea)
+                 *  5        Date/Time(detepicker)
+                 *  6        Bug Id(input type=number?)
+                 *  7        Bug URLs(input)               
+                 */
                 for (var j in data.result.fields)
                 {
+                    //Gets the backend name for the field
                     var fieldName = data.result.fields[j].name;                                
-                                
-                    //remove all <option>s from the specified select
-                    $("#Details select[name="+fieldName+"]").empty();
-                                
+                    
+                    //Gets the display name for the field
+                    var fieldDisplayName = data.result.fields[j].display_name; 
+                    
+                    //Finds the field type number:
+                    var fieldType = data.result.fields[j].type;
+                    
+                    //Pulls the appropriate HTML from our map 
+                    var html = $(fieldTypeMap[fieldType]);                                       
+                    
+                    //Adds the html to the each dialog that we want:
+                    
                     //Priority has a context menue that needs to be populated as well
                     if (fieldName == "priority")
                     {
@@ -180,74 +223,105 @@ $(document).ready(function() {
                         for (var i in data.result.fields[j].values) 
                         {    
                             //get the value
-                            var name = data.result.fields[j].values[i].name;
+                            var prio = data.result.fields[j].values[i].name;
                             var sortkey = data.result.fields[j].values[i].sort_key;
                                         
-                            prioSortKey[name]=sortkey;
+                            prioSortKey[prio]=sortkey;
 
                             //create an option element with the inner html being the name
-                            var a = $("<a>").html(name);
+                            var a = $("<a>").html(prio);
                                                                                 
                             //append the option to the context menu
                             $("#setPriority").append(a);                                                                    
                         }  
-                    }                                             
-                    //iterate through all the allowed values for this field
-                    for (var i in data.result.fields[j].values) 
-                    {    
-                        //get the value
-                        var nameVal = data.result.fields[j].values[i].name;
-                                   
-                        //create an option element with a value and the inner html being the name
-                        var option = $("<option>").val(nameVal).html(nameVal);
-
-                        //append the option to the <select>
-                        $("select[name="+fieldName+"]").append(option);
                     }
                     
-                    //Stores the parameter name for eacfh field in that field's data                    
-                    setFieldData(fieldName);
+                    //Need to create the column-ID map:
+                    if (fieldName == "cf_whichcolumn")
+                    {
+                        //Populates the priority context menu as well
+                        for (var k in data.result.fields[j].values) 
+                        {    
+                            //get the value
+                            var colName = data.result.fields[j].values[k].name;
+                            var columnID = data.result.fields[j].values[k].sort_key;                            
+                            colSortKeyMap[colName] = "column_"+columnID;
+                                                                                    
+                        } 
+                        //Starts the column appending process
+                        buildBoardHelper();
+                        
+                        
+                    }
+                    else
+                    {
+                        //iterate through all the allowed values for this field
+                        for (var i in data.result.fields[j].values) 
+                        {    
+                            //get the value
+                            var nameVal = data.result.fields[j].values[i].name;
+                                   
+                            //create an option element with a value and the inner html being the name
+                            var option = $("<option>").val(nameVal).html(nameVal);
+
+                            //append the option to the <select>
+                            $("select[name="+fieldName+"]").append(option);
+                        }
                     
-                               
+                        //Stores the parameter name for eacfh field in that field's data                    
+                        setFieldData(fieldName);            
+                    }                                                                               
                 }
+                
             }
                         
         },
         error: function(jqXHR, textStatus){
             alert("(Fields)There was an error:" + textStatus);
         }
-    });                              
+    });       
+    
+   
  
            
     /*-------------Jquery UI Initialization---------------------*/       
     
-    //Enables the sortable behavior that allows the reordering of the cards
-    $( ".column,.tablists" ).sortable({
-        connectWith: ".column,.tablists",
-        placeholder: "ui-state-highlight",
-        forcePlaceholderSize: true,
-        tolerance: 'pointer',
-        cursorAt: {
-            top: 15
-        },
-        cancel: "li:has(.loading)",
-        //The items parameter expects only a selector which prevents the use of Jquery so here I have made a(likely very inefficent) selector which selects every li with a card in it that isn't loading
-        items: "li:has(.card):not(:has(.loading))",
-        //Updates the cards position whenever it is moved and also checks to make sure that the card isn't loading
-        receive: function(event, ui) {                
-            var col = $(this).attr("id");
-            var cardId = $(">div",ui.item).attr("id");
-            updatePosition(col, cardId);
+    //These features require that the columns be initialized:
+    //We need to wait for the columns to be added
+    $.when(getFormFieldsXHR).done(function(){
+    
+        //Enables the sortable behavior that allows the reordering of the cards
+        $( ".column,.tablists" ).sortable({
+            connectWith: ".column,.tablists",
+            placeholder: "ui-state-highlight",
+            forcePlaceholderSize: true,
+            tolerance: 'pointer',
+            cursorAt: {
+                top: 15
+            },
+            cancel: "li:has(.loading)",
+            //The items parameter expects only a selector which prevents the use of Jquery so here I have made a(likely very inefficent) selector which selects every li with a card in it that isn't loading
+            items: "li:has(.card):not(:has(.loading))",
+            //Updates the cards position whenever it is moved and also checks to make sure that the card isn't loading
+            receive: function(event, ui) {                
+                var col = $(this).attr("id");
+                var cardId = $(">div",ui.item).attr("id");
+                updatePosition(col, cardId);
             
-            //Here we have ui.sender(the starting column) and the $(this) element(the receiver)            
-            columnWIPCheck($(this));
+                //Here we have ui.sender(the starting column) and the $(this) element(the receiver)            
+                columnWIPCheck($(this));
             
-            columnWIPCheck(ui.sender);
-        }
-    }).disableSelection();
+                columnWIPCheck(ui.sender);
+            }
+        }).disableSelection();
            
-    //Initially diables the sorting of tabbed items
-    $(".tablists").sortable("disable");                                                               
+        //Initially diables the sorting of tabbed items
+        $(".tablists").sortable("disable");  
+        
+        
+        
+        
+    });
     
     //Adds button styling to all the buttons
     $(/*"#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit, #addFilterOption, #removeFilterOption, #btnLogout"*/ "button").button(); 
@@ -453,7 +527,7 @@ $(document).ready(function() {
    
     //Handles the tab buttons dynamically
     $(".toolbar").on("click", ".btnTab", function(){
-        var tab =  $(this).text();
+        var tab =  colSortKeyMap[$(this).text()];
         handleTabLists("#"+tab);
     });                
 
@@ -464,6 +538,7 @@ $(document).ready(function() {
         //Sets a default value for the coloumn field(this way the context menu's addCard still works)
         $("#cf_whichcolumn").val("Limbo");
     }); 
+        
     $("#btnSearchCard").click(function(){
         getCompsVers(null, "search");
         $("#dialogSearch ").dialog("open");
@@ -550,7 +625,7 @@ $(document).ready(function() {
                 
          
     $("#mb_sortKeyOptions table").live("click",function(){
-        var colId = $($.mbMenu.lastContextMenuEl).find("ul").attr("id");
+        var colId = $($.mbMenu.lastContextMenuEl).attr("id");
                     
         var sortKey = $(this).find("a").attr("value");                                         
                     
@@ -566,27 +641,35 @@ $(document).ready(function() {
     //Handles the moveallCards submenu 
     $("#mb_moveAllCards table").live("click", function(){
         //Finds and saves the column that was right clicked
-        var startCol = $($.mbMenu.lastContextMenuEl).find("ul").attr("id");
-        ;  
+        var startCol = $($.mbMenu.lastContextMenuEl).attr("id");       
         var a = $(this).find("a");
         var endCol = a.html();
                     
-        if (startCol != endCol)
+        if (startCol != colSortKeyMap[endCol])
         {
             //Cycles through each card in the specified column and moves them into the ending column
             var colArr = [];
-            $("#"+startCol+" .card").each(function(){
-                        
-                var newLi = $('<li></li>').append(this);
-                $("#"+endCol).append(newLi); 
-                var cardId = $(this).attr("id");
-                colArr.push(cardId);
+            $("#"+startCol+" .card").each(function(){ 
+                
+                var card = $(this);
+                
+                if (!card.hasClass("loading"))
+                {
+                    var cardId = card.data("id");
+                
+                    var status = card.data("status");
+                
+                    appendCard(card, endCol, status);
+                
+                    colArr.push(cardId);     
+                }
+                
                         
             });
             updatePosition(endCol, colArr);
                     
-            //Previously the moveall method moved the cards but left all of the <li>s behind. This removes those
-            $("#"+startCol+" li").remove();
+            //Previously the moveall method moved the cards but left all of the <li>s behind. This removes those but not the loading card that wasnt moved
+            $("#"+startCol+" li:not(:has(.loading))").remove();
         }
                     
         closeContextMenu(); 
@@ -596,13 +679,16 @@ $(document).ready(function() {
     //Handles the moveCardTo submenu moveCardTo
     $("#mb_moveCardTo table").live("click" , function(){                      
                 
-        var card = $($.mbMenu.lastContextMenuEl).parent();
-        var newLi = $('<li></li>').append(card);
         var a = $(this).find("a");
         var column = a.html();
                     
         $("#"+column).append(card);
-        var cardId = $($.mbMenu.lastContextMenuEl).attr("id");
+        
+        var card = $($.mbMenu.lastContextMenuEl);                
+        var cardId = card.data("id");                
+        var status = card.data("status");
+                
+        appendCard(card, column, status);
                     
         updatePosition(column, cardId);
                                        
@@ -942,25 +1028,7 @@ $(document).ready(function() {
     });
                 
    
-    /*----------------------Other--------------------------------*/
-   
-    //Populates the context menu and add card menu with the correct columns(will need to be called after the column have been built:
-    $("body .tablists, body .column").each(function(){
-        var col = $(this).attr("id");
-                    
-        var anc = $("<a>").html(col);
-        var option = $("<option>").html(col);
-                    
-        //append the option to the context menu
-        $("#moveAllCards, #moveCardTo").append(anc);
-                    
-        //append the option to the <select>
-        $("#Details #cf_whichcolumn").append(option);
-    });
-                
-                
-   
-   
+/*----------------------Other--------------------------------*/                                             
 });
               
               
@@ -1140,8 +1208,8 @@ function compsVersFieldPopulate(name, dialogID)
                 }         
             } else{
                 //If name is null we will simply display all options
-                var comp = componentData[j].values[k].name;
-                var option = $("<option>").val(comp).html(comp);
+                comp = componentData[j].values[k].name;
+                option = $("<option>").val(comp).html(comp);
                 $("#"+dialogID+" select[name="+fieldName+"]").append(option);
             }                                                                                                 
         }                                                                                                     
@@ -1158,7 +1226,7 @@ function dialogFields(fieldValues)
         //Changes the edit dialog to have the correct fields for the selected card's Product.                 
         //Populates the fields
         $("#summary").val(fieldValues["summary"]);
-        $("#bug_severity").val(fieldValues["bug_severity"]);
+        $("#bug_severity").val(fieldValues["severity"]);
         $("#user").val(fieldValues["user"]);
         $("#priority").val(fieldValues["priority"]);
         $("#cf_whichcolumn").val(fieldValues["cf_whichcolumn"]);
@@ -1248,7 +1316,7 @@ function editCard(fieldValues) {
                     debugger;
                     sendComment(cardId);    
                 }
-                */
+ */
                 
                 //Sends the field info to Bugzilla to be processed
                 ajaxEditBug($("#cf_whichcolumn").val(), $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#bug_severity").val(), $("#summary").val(), $("#version").val(),$("#user").val(),
@@ -1361,10 +1429,12 @@ function editCardContextMenu() {
 
 function addCardToCol() {
     //Finds and saves the column that was right clicked
-    var startCol = $($.mbMenu.lastContextMenuEl).find("ul").attr("id"); 
-
+    var startCol = $($.mbMenu.lastContextMenuEl).attr("id"); 
+    
+    var value = reverseKeyLookup(colSortKeyMap, startCol);
+    
     //Presets the form to open with the correct column selected                
-    $("#cf_whichcolumn").val(startCol);
+    $("#cf_whichcolumn").val(value);
     addCard();
 }
 
@@ -1605,7 +1675,7 @@ function ajaxEditBug(col, component, ids, priority, product, severity, summary, 
     }                                                 
 
     //Then after we filtered out the unneccary fields we need to check if anything is left, otherwise there is no need to send the post
-    if (postData!=null)
+    if (postData != null)
     {
         //Now we add some specific property for post data that need to be sent no matter what:
         postData["method"] = "Bug.update";                    
@@ -1677,7 +1747,16 @@ function updatePosition(column, cardIds)
     {
         cardIds = [cardIds];
     }
-
+    
+    //This function takes in either the bugzilla column or the local column id so these lines set the id correctly
+    if (colSortKeyMap[column] == undefined)    
+    {    
+        var bugzillaColumn = reverseKeyLookup(colSortKeyMap, column);    
+    }
+    else
+    {
+        bugzillaColumn = column;     
+    }
     //Automatically updates the card's position both in local data and server data. Waiting on Bug.update Resolution                                                
     $.ajax({
         url: "ajax_POST.php",
@@ -1690,7 +1769,7 @@ function updatePosition(column, cardIds)
         data: { 
             "method": "Bug.update",
             "ids": cardIds,                        
-            "cf_whichcolumn": column
+            "cf_whichcolumn": bugzillaColumn
         },
         dataType: "json",
         success: function(data, status){
@@ -1998,7 +2077,7 @@ function postComments(card){
             }
             else
             {
-                var commId = "Comment"+i;         
+                commId = "Comment"+i;         
             }                    
             var commText = comArr[i].text;
             var commAuthor = comArr[i].author;
@@ -2011,10 +2090,10 @@ function postComments(card){
             var spanTime = $('<span style="margin-left: 5px;">').text(date+" "+time);                    
 
             var anchorReply = $('<a href="#" class="commentReplyLink" style="float: right;">').text("Reply");
-            var header = $('<h3 class="header">').append(anchorAuthor,spanTime, anchorReply, anchorName);                    
+            var headerinfo = $('<h3 class="header">').append(anchorAuthor,spanTime, anchorReply, anchorName);                    
             var p = $('<p>').text(commText);
-            var comm = $('<div class="commDiv" id="'+commId+'">').append(header, p);                      
-            $("#Comments #accordion").append(comm);
+            var commDiv = $('<div class="commDiv" id="'+commId+'">').append(headerinfo, p);                      
+            $("#Comments #accordion").append(commDiv);
         }       
 
         $('#Comments').removeClass("loading");
@@ -2237,46 +2316,51 @@ function boardCardPopulate(){
             }
             else
             {
-                for (var i in data.result.bugs)
-                {
-                    var bug = data.result.bugs[i];
-                    postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time, bug.resolution, bug.dupe_of);                                
-                }
-               
-                $(document).buildContextualMenu(
-                {
-                    menuWidth:200,
-                    overflow:2,
-                    menuSelector: ".menuContainer",
-                    iconPath:"ico/",
-                    hasImages:false,
-                    fadeInTime:200,
-                    fadeOutTime:100,
-                    adjustLeft:0,
-                    adjustTop:0,
-                    opacity:.99,
-                    shadow:true,
-                    closeOnMouseOut:true,
-                    onContextualMenu:function(o,e){}
-                });
-                //Need to check each column for WIP limit violations
-                $(".column").each(function(){
-                    columnWIPCheck($(this));  
-                });
-                
-                var data = $(".card").first().data();
-                
-                for (var index in data)
-                {
-                    if (index != "metadata")
+                //We need to wait for the columns to be added
+                $.when(getFormFieldsXHR).done(function(){
+                    //Then we can add the cards
+                    for (var i in data.result.bugs)
                     {
-                        var option = $("<option>"+index+"</option>");
-                                
-                        $("#quickSearchField").append(option);
+                        var bug = data.result.bugs[i];
+                        postCard(bug.id,/*bug.cf_whichcolumn*/ bug.cf_whichcolumn, bug.component, bug.priority, bug.product, bug.severity, bug.summary, bug.version, bug.creator, bug.deadline, bug.status, bug.op_sys, bug.platform, bug.last_change_time, bug.resolution, bug.dupe_of);                                
                     }
-                }
+               
+                    $(document).buildContextualMenu(
+                    {
+                        menuWidth:200,
+                        overflow:2,
+                        menuSelector: ".menuContainer",
+                        iconPath:"ico/",
+                        hasImages:false,
+                        fadeInTime:200,
+                        fadeOutTime:100,
+                        adjustLeft:0,
+                        adjustTop:0,
+                        opacity:.99,
+                        shadow:true,
+                        closeOnMouseOut:true,
+                        onContextualMenu:function(o,e){}
+                    });
+                    //Need to check each column for WIP limit violations
+                    $(".column").each(function(){
+                        columnWIPCheck($(this));  
+                    });
                 
-                $("body").removeClass("loading");
+                    var cardData = $(".card").first().data();
+                
+                    for (var index in cardData)
+                    {
+                        if (index != "metadata")
+                        {
+                            var option = $("<option>"+index+"</option>");
+                                
+                            $("#quickSearchField").append(option);
+                        }
+                    }
+                
+                    $("body").removeClass("loading");
+                }); 
+                
             }
         }
     });
@@ -2642,7 +2726,7 @@ function dialogSortOpen(colId)
 function sortContextHelper()
 {                
     //Finds the column that was right clicked
-    var columnId = $($.mbMenu.lastContextMenuEl).find("ul").attr("id");
+    var columnId = $($.mbMenu.lastContextMenuEl).attr("id");
 
     //Passes that columnId to the dialogSortOpen function
     dialogSortOpen(columnId);
@@ -2853,12 +2937,13 @@ function appendCard(card, col, status)
     var newLi = $('<li></li>').append(card);
 
     //Here we check the location of the card. if the card has no specified column(or oesn't match any of the columns on the board) we place it in a column based on its status
-    var column = $("#"+col.replace(/\s+/g, ''));
+    
+    var column = $("#"+colSortKeyMap[col]);
     //if the length is 0 we know that column doesn't exist so we rest col to a default
     if (column.length == 0)  
     {        
         col = blankColumnMap[status];
-        column = $("#"+col.replace(/\s+/g, ''));
+        column = $("#"+colSortKeyMap[col]);
     }
     
     column.append(newLi);
@@ -3100,6 +3185,127 @@ function setFieldData(fieldName)
             $(this).data("parameter", fieldName);
         }); 
     }
+}
+
+function buildBoardHelper()
+{
+    for (var index in colSortKeyMap)   
+    { 
+        var id = colSortKeyMap[index];
+        
+        if (index == "---")
+        {
+            continue;
+        }
+        /*else if(!$.isNumeric(i))
+        {
+            continue;
+        }*/
+        else if (tabColumns.indexOf(index) >= 0 )
+        {
+            var colHtml = '<div class="tablistsCon cmVoice {cMenu: \'contextMenuColumn\'}"><span class="bigBanners">'+index+'</span>\
+                                <ul id="'+ id +'"class="tablists"></ul></div>';
+                                
+            $(".columnContainer").prepend(colHtml);
+                                
+            var buttonHtml = '<button class="btnTab">'+index+'</button>';
+                                
+            $("#btnAddCard").before(buttonHtml);
+                                
+                                
+        }
+        else
+        {
+            $.extend(true, columnNest, buildColumnNestObject(index));
+        }
+                   
+        var anc = $("<a>").html(index);
+        var option = $("<option>").html(index);
+                    
+        //append the option to the context menu
+        $("#moveAllCards, #moveCardTo").append(anc);
+                    
+        //append the option to the <select>
+        $("#Details #cf_whichcolumn").append(option);
+    }
+    $(".columnContainer").append(buildBoard(columnNest, ""));
+    
+    $(".btnTab").button();
+                                
+}
+
+function buildColumnNestObject(column)
+{
+    var nest = {}; 
+                               
+    var columnSplit = column.split(colDivChar);
+                    
+    if (columnSplit.length == 1)
+    {
+        var col = columnSplit[0];
+        nest[col] = [];                     
+    }
+    else
+    {                    
+        var name = columnSplit[0];
+                            
+        columnSplit.splice(0,1);
+                                                                                    
+        nest[name] = buildColumnNestObject(columnSplit.join(colDivChar));                                                                                                             
+    }
+                
+    return nest;
+                    
+}  
+            
+function buildBoard(nest, fullName)
+{
+    var html = "";
+    for (var index in nest)
+    {
+        if ( fullName == "")
+        {
+            var name = index;
+        }
+        else
+        {
+            name = fullName  +colDivChar+ index;
+        }
+                        
+                        
+                    
+        if (nest[index].length != undefined && nest[index].length == 0)
+        {                        
+            html +=  "<div class=\"columnCon \"><span class=\"banners\">"+index+"</span><ul id=\""+colSortKeyMap[name]+"\" class=\"column cmVoice {cMenu: \'contextMenuColumn\'}\" > </ul> </div>";   
+        }
+        else
+        {
+            html += '<div  class="dubColumn"><span class="dubBanners">'+index+'</span>';
+                        
+            html += buildBoard(nest[index],name);
+                        
+            html += "</div>";
+                        
+                        
+        }
+    }
+                           
+    return html;
+                
+}
+
+function reverseKeyLookup(object, value)
+{
+    for (var index in object)
+    {
+        if (object[index] == value)    
+        {
+           return index;      
+        }
+    }
+    
+    return -1;
+    
 }
 
 //An object comparison algorithm taken from stackoverflow: http://stackoverflow.com/questions/1068834/object-comparison-in-javascript

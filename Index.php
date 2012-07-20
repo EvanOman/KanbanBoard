@@ -269,7 +269,7 @@ session_write_close();
                                     <label for="dup_of">Duplicate of:</label>
                                     <input  type="text"name="dupe_of" id="dupe_of"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;"/>                                                               
                                 </div> 
-                                 <div style="float: left; margin-left: 10px; display: none;">
+                                <div style="float: left; margin-left: 10px; display: none;">
                                     <label for="resolution">Resolution:</label>
                                     <select  name="resolution" id="resolution"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important;"></select>
                                 </div>
@@ -427,66 +427,65 @@ session_write_close();
             </div>
             <div class="modal"><div class="loadingLabel">Loading Fields</div></div>
         </div>
-        <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
-            <span class="bigBanners">Backlog</span>
-            <ul id="Backlog"class="tablists"></ul>                                    
-        </div>
-        <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
-            <span class="bigBanners">Archive</span>
-            <ul id="Archive"class="tablists"></ul>                                    
-        </div>
-        <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
-            <span class="bigBanners">Limbo</span>
-            <ul id="Limbo"class="tablists"></ul>                                    
-        </div>
-        <div class="toolbar">  
-            <label for="quickSearchTextBox" >Quick Search</label>
-            <input id="quickSearchTextBox" type="text" class="text ui-widget-content ui-corner-all"/>
-            <label for="quickSearchField" >by:</label>
-            <select id="quickSearchField" class="text ui-widget-content ui-corner-all"></select>
-            <button class="btnTab">Backlog</button>
-            <button class="btnTab">Archive</button>
-            <button class="btnTab">Limbo</button>
-            <button id="btnAddCard" >Add Card</button>
-            <button id="btnSearchCard" >Advanced Search</button>
-            <button id="btnOptions">Options</button>
-            <button id="btnLogout">Log out</button>
-        </div>
-        <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-            <span class="banners">Ready</span>
-            <ul id="Ready"class="column"></ul>                                    
-        </div>
-
-        <div class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}" >
-            <span class="dubBanners">Development</span>
-            <div  class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="banners">Doing</span>
-                <ul id="DevDoing" class="column"></ul>
+        <div class="columnContainer">
+            <!--div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="bigBanners">Backlog</span>
+                <ul id="Backlog"class="tablists"></ul>                                    
+            </div>
+            <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="bigBanners">Archive</span>
+                <ul id="Archive"class="tablists"></ul>                                    
+            </div>
+            <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="bigBanners">Limbo</span>
+                <ul id="Limbo"class="tablists"></ul>                                    
+            </div-->
+            <div class="toolbar">  
+                <label for="quickSearchTextBox" >Quick Search</label>
+                <input id="quickSearchTextBox" type="text" class="text ui-widget-content ui-corner-all"/>
+                <label for="quickSearchField" >by:</label>
+                <select id="quickSearchField" class="text ui-widget-content ui-corner-all"></select>               
+                <button id="btnAddCard" >Add Card</button>
+                <button id="btnSearchCard" >Advanced Search</button>
+                <button id="btnOptions">Options</button>
+                <button id="btnLogout">Log out</button>
+            </div>
+            <!--div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="banners">Ready</span>
+                <ul id="Ready"class="column"></ul>                                    
+            </div>
+    
+            <div class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}" >
+                <span class="dubBanners">Development</span>
+                <div  class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                    <span class="banners">Doing</span>
+                    <ul id="DevDoing" class="column"></ul>
+                </div>
+                <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                    <span class="banners">Done</span>
+                    <ul id="DevDone" class="column"></ul>
+                </div>
+            </div>
+    
+            <div id="Build" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
+                <span class="dubBanners">Build</span>
+                <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                    <span class="banners">Doing</span>
+                    <ul id="BuildDoing" class="column"></ul>
+                </div>
+                <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
+                    <span class="banners">Done</span>
+                    <ul id="BuildDone" class="column"> </ul>
+                </div>
             </div>
             <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="banners">Done</span>
-                <ul id="DevDone" class="column"></ul>
-            </div>
-        </div>
-
-        <div id="Build" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
-            <span class="dubBanners">Build</span>
-            <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="banners">Doing</span>
-                <ul id="BuildDoing" class="column"></ul>
+                <span class="banners">Test</span>
+                <ul id="Test" class="column" > </ul>            
             </div>
             <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="banners">Done</span>
-                <ul id="BuildDone" class="column"> </ul>
-            </div>
-        </div>
-        <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-            <span class="banners">Test</span>
-            <ul id="Test" class="column" > </ul>            
-        </div>
-        <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-            <span class="banners">Ready for Release</span>
-            <ul id="ReadyforRelease" class="column"> </ul>
+                <span class="banners">Ready for Release</span>
+                <ul id="ReadyforRelease" class="column"> </ul>
+            </div-->
         </div>
         <div class="mbmenu" id="contextMenuCard">
             <a action="editView(0)">View Card Details</a>
