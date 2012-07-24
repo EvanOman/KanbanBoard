@@ -482,3 +482,8 @@ widget visible when the dialog is open*/
     height: 100%; 
     float: left;
 }
+.sorting-selected{
+    -moz-box-shadow: 0 0 4px 4px #fbec88;
+    -webkit-box-shadow: 0 0 4px 4px #fbec88;
+    box-shadow: 0 0 4px 4px #fbec88;
+}

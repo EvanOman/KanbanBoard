@@ -22,6 +22,9 @@ var colSortKeyMap = {};
             
 var colDivChar = "?";
 
+//The base element for determing shift selection
+var baseShiftClickItem;
+
 var bugzillaFieldtoParam = {
     "bug_status": "status", 
     "bug_severity": "severity",
@@ -190,16 +193,16 @@ $(document).ready(function() {
                 //Instead of merely populating existing fields, I am going to actually build the dialog add/edit
                 //menu based off of the Bugzilla field-type parameter which has the following map:
                 /* 
-                 *Number    Form Type
-                 *  0        Unknown
-                 *  1        Free Text(iput type=text?)
-                 *  2        Drop Down(Select)
-                 *  3        Multiple-Selection Box(Select multiple = multiple)
-                 *  4        Large Text Box(textarea)
-                 *  5        Date/Time(detepicker)
-                 *  6        Bug Id(input type=number?)
-                 *  7        Bug URLs(input)               
-                 */
+             *Number    Form Type
+             *  0        Unknown
+             *  1        Free Text(iput type=text?)
+             *  2        Drop Down(Select)
+             *  3        Multiple-Selection Box(Select multiple = multiple)
+             *  4        Large Text Box(textarea)
+             *  5        Date/Time(detepicker)
+             *  6        Bug Id(input type=number?)
+             *  7        Bug URLs(input)               
+             */
                 for (var j in data.result.fields)
                 {
                     //Gets the backend name for the field
@@ -296,18 +299,52 @@ $(document).ready(function() {
             placeholder: "ui-state-highlight",
             forcePlaceholderSize: true,
             tolerance: 'pointer',
+            appendTo: 'body',
             cursorAt: {
                 top: 15
             },
             cancel: "li:has(.loading)",
             //The items parameter expects only a selector which prevents the use of Jquery so here I have made a(likely very inefficent) selector which selects every li with a card in it that isn't loading
             items: "li:has(.card):not(:has(.loading))",
+            start: function(event, ui)
+            {
+                $(".column .sorting-selected, .tablists .sorting-selected").parent().hide();
+            },
+            stop: function(event, ui)
+            {
+                var sortColumn = ui.item.parent().attr("id");
+                
+                var idArr = [];
+                
+                $(".sorting-selected").each(function(){
+                    var col = $(this).closest("ul").attr("id");
+                   
+                    if (col != sortColumn)
+                    {
+                        idArr.push($(this).attr("id"));  
+                        
+                        appendCard($(this), reverseKeyLookup(colSortKeyMap, sortColumn), $(this).data("status"))
+                    }
+                   
+                });
+                
+                if (idArr.length)
+                {
+                    updatePosition(sortColumn, idArr);
+                }
+                
+                
+                
+                $(".sorting-selected").removeClass("sorting-selected").parent().show();
+            },
             //Updates the cards position whenever it is moved and also checks to make sure that the card isn't loading
             receive: function(event, ui) {     
                 
                 $(document).trigger("columnChange", ui.sender);
                 
                 $(document).trigger("columnChange", this);
+                
+            // $(".sorting-selected").parent().show();                
                 
             /*
                 var col = $(this).attr("id");
@@ -318,6 +355,20 @@ $(document).ready(function() {
                 columnWIPCheck($(this));
             
                 columnWIPCheck(ui.sender);*/
+            }, 
+            helper: function(event, element){
+                if (!$(".sorting-selected").length)
+                {
+                    return element;
+                }
+                else
+                {
+                    var div = $("<div></div>");
+                    
+                    $(".sorting-selected").clone().appendTo(div);
+                    
+                    return div;
+                }                                                   
             }
         }).disableSelection();
            
@@ -508,6 +559,121 @@ $(document).ready(function() {
     
     /*-------------Event Handlers-----------------*/    
     
+    $( ".columnContainer" ).on( "click",".column, .tablists" ,function(e) {
+        $('.sorting-selected').removeClass('sorting-selected');
+    });
+    
+    $( ".columnContainer" ).on( "click",".card" ,function(e) { 
+        
+        e.stopPropagation();
+        
+        if (e.ctrlKey)
+        { 
+            $(this).toggleClass('sorting-selected');
+        }
+        else if (e.shiftKey)
+        {
+            if (!$('.sorting-selected').length)
+            {
+                $(this).toggleClass('sorting-selected');                                
+            }
+            else
+            {
+                $('.sorting-selected').removeClass('sorting-selected');
+                
+                //Re adds the class to the end elements
+                $("#"+baseShiftClickItem).addClass('sorting-selected');
+                $(this).addClass('sorting-selected');
+                
+                
+                var startCol = $("#"+baseShiftClickItem).closest("ul").attr("id");
+               
+                var endCol = $(this).closest("ul").attr("id");
+                
+                var startIndex = $("#"+baseShiftClickItem).parent().index(); 
+                   
+                var endIndex = $(this).parent().index(); 
+               
+                if (startCol == endCol)
+                {                           
+                    if (startIndex < endIndex)
+                    {
+                        $("#"+startCol +" li:gt("+startIndex+"):lt("+endIndex+") .card").addClass('sorting-selected');  
+                    }
+                    else
+                    {
+                        $("#"+startCol +" li:gt("+endIndex+"):lt("+startIndex+") .card").addClass('sorting-selected');       
+                    }
+                    
+                }
+                else
+                {
+                    var startColKey = parseInt(startCol.substr(7));
+                     
+                    var endColKey = parseInt(endCol.substr(7));
+                    $(".column").filter(function(){
+                        var colID = $(this).attr("id");
+                       
+                        //Grtabs the number part of our column id                       
+                        var colKey = parseInt(colID.substr(7));
+                       
+                        if (startColKey < endColKey)
+                        {
+                            if (colKey > startColKey && colKey < endColKey)
+                            {
+                                return true;
+                            }                                
+                        }
+                        else
+                        {
+                            if (colKey < startColKey && colKey > endColKey)
+                            {
+                                return true;
+                            }   
+                        }
+                        
+                        return false;
+                            
+                    }).find(".card").addClass("sorting-selected"); 
+                    
+                    if (startColKey < endColKey)
+                    {
+                        $("#"+startCol+" li:gt("+startIndex+") .card").addClass("sorting-selected");
+                        $("#"+endCol+" li:lt("+endIndex+") .card").addClass("sorting-selected");
+                    }
+                    else
+                    {
+                        $("#"+startCol+" li:lt("+startIndex+") .card").addClass("sorting-selected");
+                        $("#"+endCol+" li:gt("+endIndex+") .card").addClass("sorting-selected");     
+                    }
+                }
+            }
+            var col = $(this).closest("ul").attr("id");
+            
+            
+            
+            
+        }
+        else
+        {
+            $('.sorting-selected').removeClass('sorting-selected');
+             
+            $(this).toggleClass('sorting-selected');
+        }
+        
+        if ($('.sorting-selected').length == 1)
+        {
+            baseShiftClickItem = $('.sorting-selected').attr("id");                                
+        }
+    });
+    
+
+    $(".columnContainer" ).on( "sortreceive", ".column, .tablists" ,function(event, ui) {
+        $('.card.sorting-selected').parent().appendTo($(this));
+    });
+    
+    
+    //Add card partameter to this event and call update position on it
     $(document).bind("columnChange", function(event, receiver, sender){
         
         var idArr = [];
@@ -1345,7 +1511,7 @@ function editCard(fieldValues) {
                     debugger;
                     sendComment(cardId);    
                 }
- */
+*/
                 
                 //Sends the field info to Bugzilla to be processed
                 ajaxEditBug($("#cf_whichcolumn").val(), $("#component").val(), cardId, $("#priority").val(), $("#product").val(), $("#bug_severity").val(), $("#summary").val(), $("#version").val(),$("#user").val(),
@@ -2979,7 +3145,7 @@ function appendCard(card, col, status)
     
     column.append(newLi);
     
-    
+    /*
     if (card.data("cards") == undefined)
     {
         column.data("cards", []);
@@ -2988,7 +3154,7 @@ function appendCard(card, col, status)
     {
         column.data("cards").push(card.data("id"));   
     }
-   
+ */
     
     columnWIPCheck(column);
 }
