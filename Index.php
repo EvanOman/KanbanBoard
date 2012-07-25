@@ -8,10 +8,10 @@ if (!isset($_SESSION["login"]) || !isset($_SESSION["password"])) {
 session_write_close();
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
-
 <html>
     <head>
         <title>Eckhardt Optics Kanban Board</title>
+        <link rel="icon" type="image/png" href="images/eckopIcon.png" />
         <link type="text/css" href="themes/black-tie/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
         <link type="text/css" href="demos.css" rel="stylesheet" />
         <link type="text/css" href="menu_black.css" rel="stylesheet" />
@@ -39,7 +39,8 @@ session_write_close();
         <link type="text/css" href="index.css" rel="stylesheet" />
 
         <script type="text/javascript">  
-            var timeOffset = "<?php echo date("O"); ?>";            
+            var timeOffset = "<?php echo date("O"); ?>"; 
+            var userEmail =  "<?php echo $_SESSION["login"]; ?>";
         </script>
     </head>
     <body>
@@ -202,78 +203,23 @@ session_write_close();
                 </ul>
                 <div id="Details" style="height: 500px;">
                     <fieldset>
-                        <div id="detailsTop" style="float:top; max-height: 80px;">
+                        <div id="detailsTop" style="max-height: 80px;">
                             <label for="summary">Title:</label>
                             <textarea  name="summary" id="summary" class="text ui-widget-content ui-corner-all" style="width:990px; height: 40px; max-height: 60px;"  ></textarea>
                         </div>
                         <div id="detailsLeft"style="float: left;">
-                            <label for="product">Product:</label>
-                            <select  name="product" id="product"  class="text ui-widget-content ui-corner-all" ></select>
-                            <label for="component">Component:</label>
-                            <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" ></select>
-                            <div style="float: top">
-                                <div style="float: left;">
-                                    <label for="version">version</label>
-                                    <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                </div>
-                                <div style="float: left; margin-left: 10px;">
-                                    <label for="bug_severity">Severity:</label>
-                                    <select  name="bug_severity" id="bug_severity"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important; "></select>
-                                </div>
+                            <div style="width: 100%; margin: 5px;">
+                                <label for="product">Product:</label>
+                                <select  name="product" id="product"  class="text ui-widget-content ui-corner-all" ></select>
                             </div>
-                            <div style="float: top">
-                                <div style="float: left;">
-                                    <label for="bug_status">Status:</label>
-                                    <select  name="bug_status" id="bug_status"  class="text ui-widget-content ui-corner-all"style=" width:135px !important; " ></select>
-                                </div>
-                                <div style="float: left; margin-left: 10px;">
-                                    <label for="user">Assigned User:</label>
-                                    <select  name="user" id="user"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">   
-                                        <option></option>
-                                        <option>User 1</option>
-                                        <option>User 2</option>
-                                        <option>User 3</option>
-                                        <option>User 4</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div style="float: top">
-                                <div style="float: left; width: ">
-                                    <label for="priority">Priority:</label>
-                                    <select  name="priority" id="priority"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                </div>
-                                <div style="float: left; margin-left: 10px;">
-                                    <label for="deadline">Deadline:</label>
-                                    <input type="text" name="deadline" id="deadline" class="Dates text ui-widget-content ui-corner-all" style=" width:135px !important; "/>
-                                </div>
-                            </div>
-                            <div style="float: top">
-                                <div style="float: left;">
-                                    <label for="op_sys">Operating System</label>
-                                    <select  name="op_sys" id="op_sys"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                </div>
-                                <div style="float: left; margin-left: 10px;">
-                                    <label for="rep_platform">Hardware</label>
-                                    <select  name="rep_platform" id="rep_platform"  class="text ui-widget-content ui-corner-all" style=" width:135px !important; ">    </select>
-                                </div>
-                            </div>
-                            <div style="float: left;">
-                                <div style="float: left; ">
-                                    <label for="cf_whichcolumn">Into Column:</label>
-                                    <select  name="cf_whichcolumn" id="cf_whichcolumn"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;">                               
-                                    </select>
-                                </div>
-                            </div>
-                            <div style="float: left;">                               
-                                <div style="float: left;  display: none; ">
-                                    <label for="dup_of">Duplicate of:</label>
-                                    <input  type="text"name="dupe_of" id="dupe_of"  class="text ui-widget-content ui-corner-all" style=" width:135px !important;"/>                                                               
-                                </div> 
-                                <div style="float: left; margin-left: 10px; display: none;">
-                                    <label for="resolution">Resolution:</label>
-                                    <select  name="resolution" id="resolution"  class=" text ui-widget-content ui-corner-all" style=" width:135px !important;"></select>
-                                </div>
+                            <div style="width: 100%; margin: 5px;">
+                                <label for="component">Component:</label>
+                                <select  name="component" id="component"  class="text ui-widget-content ui-corner-all" ></select>
                             </div>                          
+                            <div style=" width:135px; margin: 5px; float:left;">
+                                <label for="version">version</label>
+                                <select  name="version" id="version"  class=" text ui-widget-content ui-corner-all">    </select>
+                            </div>                                                   
                         </div>
                         <div id="detailsRight">
                             <label for="Comments">Comments:</label>
@@ -427,19 +373,7 @@ session_write_close();
             </div>
             <div class="modal"><div class="loadingLabel">Loading Fields</div></div>
         </div>
-        <div class="columnContainer">
-            <!--div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="bigBanners">Backlog</span>
-                <ul id="Backlog"class="tablists"></ul>                                    
-            </div>
-            <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="bigBanners">Archive</span>
-                <ul id="Archive"class="tablists"></ul>                                    
-            </div>
-            <div class="tablistsCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="bigBanners">Limbo</span>
-                <ul id="Limbo"class="tablists"></ul>                                    
-            </div-->
+        <div class="columnContainer">          
             <div class="toolbar">  
                 <label for="quickSearchTextBox" >Quick Search</label>
                 <input id="quickSearchTextBox" type="text" class="text ui-widget-content ui-corner-all"/>
@@ -449,43 +383,7 @@ session_write_close();
                 <button id="btnSearchCard" >Advanced Search</button>
                 <button id="btnOptions">Options</button>
                 <button id="btnLogout">Log out</button>
-            </div>
-            <!--div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="banners">Ready</span>
-                <ul id="Ready"class="column"></ul>                                    
-            </div>
-    
-            <div class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}" >
-                <span class="dubBanners">Development</span>
-                <div  class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                    <span class="banners">Doing</span>
-                    <ul id="DevDoing" class="column"></ul>
-                </div>
-                <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                    <span class="banners">Done</span>
-                    <ul id="DevDone" class="column"></ul>
-                </div>
-            </div>
-    
-            <div id="Build" class="dubColumn cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="dubBanners">Build</span>
-                <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                    <span class="banners">Doing</span>
-                    <ul id="BuildDoing" class="column"></ul>
-                </div>
-                <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                    <span class="banners">Done</span>
-                    <ul id="BuildDone" class="column"> </ul>
-                </div>
-            </div>
-            <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="banners">Test</span>
-                <ul id="Test" class="column" > </ul>            
-            </div>
-            <div class="columnCon cmVoice {cMenu: 'contextMenuColumn'}">
-                <span class="banners">Ready for Release</span>
-                <ul id="ReadyforRelease" class="column"> </ul>
-            </div-->
+            </div>           
         </div>
         <div class="mbmenu" id="contextMenuCard">
             <a action="editView(0)">View Card Details</a>
