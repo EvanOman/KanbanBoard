@@ -82,6 +82,21 @@ session_write_close();
     </script>
 </head>
 <body>
+    <!--div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
+        <form>
+            <fieldset
+                <div style="float: top">
+                    <div style="float: top;">
+                        <label for="login">User Name</label>
+                        <textarea  name="login" id="login"  class="text ui-widget-content ui-corner-all" style="width: 100%;">    </textarea>
+                    </div>
+                    <div style="float: top;">
+                        <label for="password">Password</label>
+                        <textarea  name="password" id="password"  class="text ui-widget-content ui-corner-all" style="width: 100%;">    </textarea>
+                    </div>
+            </fieldset>
+        </form>
+    </div-->        
     <form id="loginForm">
         <fieldset>
             <div style="float: top">

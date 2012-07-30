@@ -12,15 +12,16 @@ var getNamesXHR = $.Deferred();
 var getAccProXHR = $.Deferred();
 var getFormFieldsXHR = $.Deferred();
 var componentData = null;
-var blankColumnMap = {};
+
+var allowedColumnMap = {};
+var defaultColumnMap = {};
 
 var columnNest = {};
 
 var tabColumns = ["Backlog", "Limbo", "Archive"];
             
 var colSortKeyMap = {};
-            
-var colDivChar = "?";
+
 
 //The base element for determing shift selection
 var baseShiftClickItem;
@@ -36,7 +37,7 @@ function initialize()
     $.ajax({
         url: "ajax_get_options.php",
         dataType: "json",                    
-        success: function(data, status){                                                
+        success: function(data){                                                
             if (data.error)
             {
                 alert(data.error);
@@ -50,9 +51,11 @@ function initialize()
                 prioMap = data.options.prioIcons;
                 jobMap = data.options.jobColors;
                 boardFilterOptions =  data.options.boardFilterOptions;
-                blankColumnMap = data.options.blankColumnMap;
+                allowedColumnMap = data.options.allowedColumnMap;
+                defaultColumnMap = data.options.defaultColumnMap;
                 limitWIP = data.options.limitWIP;
-
+                colDivChar = data.options.colDivChar.colDivChar;
+                
                 //We dont want this function to run until the initialize function completes but we also want the document to be ready
                 $(document).ready(function() {
                     //First things first we want to populoate the board with the correct cards:                    
@@ -164,16 +167,16 @@ $(document).ready(function() {
                 //Instead of merely populating existing fields, I am going to actually build the dialog add/edit
                 //menu based off of the Bugzilla field-type parameter which has the following map:
                 /* 
-                 *Number    Form Type
-                 *  0        Unknown
-                 *  1        Free Text(iput type=text?)
-                 *  2        Drop Down(Select)
-                 *  3        Multiple-Selection Box(Select multiple = multiple)
-                 *  4        Large Text Box(textarea)
-                 *  5        Date/Time(datepicker)
-                 *  6        Bug Id(input type=number?)
-                 *  7        Bug URLs(input)               
-                 */
+             *Number    Form Type
+             *  0        Unknown
+             *  1        Free Text(iput type=text?)
+             *  2        Drop Down(Select)
+             *  3        Multiple-Selection Box(Select multiple = multiple)
+             *  4        Large Text Box(textarea)
+             *  5        Date/Time(datepicker)
+             *  6        Bug Id(input type=number?)
+             *  7        Bug URLs(input)               
+             */
                 for (var j in data.result.fields)
                 {
                     
@@ -235,7 +238,7 @@ $(document).ready(function() {
                     
                      
                     //Appends the field to the dialogs
-                    $("#detailsLeft").append(html);
+                    $("#detailsLeft, #optFilterDiv, #searchFieldsDiv").append(html);
                   
                     
                     //Priority has a context menue that needs to be populated as well
@@ -267,19 +270,18 @@ $(document).ready(function() {
                             var colName = data.result.fields[j].values[k].name;
                             var columnID = data.result.fields[j].values[k].sort_key;                            
                             colSortKeyMap[colName] = "column_"+columnID;                            
-                                         
-                            var anc = $("<a>").html(colName).attr("value", colSortKeyMap[colName]);                            
+                            
+                            if (colName != "---")
+                            {
+                                var anc = $("<a>").html(colName).attr("value", colSortKeyMap[colName]);                            
                     
-                            //append the option to the context menu
-                            $("#moveAllCards, #moveCardTo").append(anc);
-                    
+                                //append the option to the context menu
+                                $("#moveAllCards, #moveCardTo").append(anc);    
+                            }                                               
                         } 
                         //Starts the column appending process
                         buildBoardHelper();                                                
                     }
-                   
-                   
-                   
                     
                     if ( fieldType == 2 || fieldType == 3)
                     {
@@ -337,9 +339,11 @@ $(document).ready(function() {
                 }
             },
             stop: function(event, ui)
-            {
+            {                    
+                var condition = ($(ui.item).data("isSorted") || typeof($(ui.item).data("isSorted")) == "undefined");
+                
                 //If the card we are moving is part of a selected group we need to move the group wherever the card moves to
-                if ($(ui.item).find(".card").hasClass("sorting-selected"))
+                if ($(ui.item).find(".card").hasClass("sorting-selected") && condition)
                 {
                     var sortColumn = ui.item.parent().attr("id");
                 
@@ -352,31 +356,45 @@ $(document).ready(function() {
                         if (col != sortColumn)
                         {
                             cardArr.push($(this));                      
-                        }
-                   
+                        }                   
                     });
                 
                     if (cardArr.length)
                     {
                         appendCard(cardArr, sortColumn);
-                    }
-                
-                
-                
-                
+                    }                                                                
                     $(".sorting-selected").removeClass("sorting-selected").parent().show();     
                 }
                 
+                $(".sorting-selected:hidden").parent().show();        
             },
             //Updates the cards position whenever it is moved
             receive: function(event, ui) {     
-                //Updates the card's stored position
-                var cardId = ui.item.find(".card").attr("id");
                 
-                updatePosition($(this).attr("id"),cardId );
+                var cardId = ui.item.find(".card").attr("id");
+                var status = $("#"+cardId).data("status");
+                var col = $(this);                
+                var colID = reverseKeyLookup(colSortKeyMap, col.attr("id"));
+                
+                if (allowedColumnMap[status].indexOf(colID) == -1)
+                {
+                    $(ui.item).data("isSorted", false);
+                    alert(colID + " is not a valid Column choice for the "+status+" status");                    
+                    $(ui.sender).sortable('cancel');   
+                    //$(ui.item).data("isSorted");
+                }
+                else
+                {                   
+                    //Updates the card's stored position
+                    updatePosition(col.attr("id"),cardId );
                                 
-                $(document).trigger("columnChange", [$(ui.sender).attr("id"), $(this).attr("id")]);
-                     
+                    $(document).trigger("columnChange", [$(ui.sender).attr("id"), $(this).attr("id")]); 
+                    
+                    $(ui.item).data("isSorted", true);
+                                                                      
+                }
+                
+                $(".sorting-selected:hidden").parent().show();                               
             }, 
             helper: function(event, element){
                 
@@ -578,7 +596,20 @@ $(document).ready(function() {
     
     
     /*-------------Event Handlers-----------------*/    
-  
+    
+    //Sets a change on the default column choice to make sure that the defaulted column is listed as an allowed column
+    $( "#defaultColumnDiv " ).on( "change",".box select:not([multiple='multiple'])" ,function(e) {
+        var defVal = $(this).val();
+        
+        var multiple = $(this).siblings("[multiple='multiple']"); 
+        
+        var valArr = multiple.val();
+        
+        valArr.push(defVal);
+        
+        multiple.val(valArr);
+    }); 
+     
     $( ".columnContainer" ).on( "click",".column, .tablists" ,function(e) {
         $('.sorting-selected').removeClass('sorting-selected');
     });
@@ -731,8 +762,7 @@ $(document).ready(function() {
     }); 
         
     $("#btnSearchCard").click(function(){
-        getCompsVers(null, "search");
-        $("#dialogSearch ").dialog("open");
+        dialogSearchOpen();        
     });
                 
     $("#btnOptions").click(function(){        
@@ -918,27 +948,7 @@ $(document).ready(function() {
         }
                    
     });
-                
-    //When the bug status is chanbged to resolved, Bugzilla requires a valid resolution. This function shows a resolution select field when neccessary on the Options menu
-    $("#optBug_status").change(function () {
-        var status = $(this).val();
-                    
-        //Only adds a new select field if the status is resolved and the Resolution field doesn't already exist
-        if (status == "RESOLVED")
-        {
-            $("#optResolution").parent().show();
-        }
-        else if (status != "RESOLVED")
-        {
-            //If the status doesn't equal resolved we remove the resolution box because we can't have a NEW bug with a resolution
-            $("#optResolution").parent().hide();
-                       
-            //We also want to make sure that the resolution field no longer has a value:
-            $("#optResolution").val("");
-        }
-                   
-    });
-                
+                                   
     //Populates the components field based off of the selected product
     $("#product").change(function () {
                 
@@ -958,9 +968,9 @@ $(document).ready(function() {
     });
                 
     //Populates the components field of the search menu based off of the selected product                
-    $("#optProduct").change(function () {
+    $("#optFilterDiv").on("change","select[name'product']", function () {
         //Grabs the selected values
-        var name = $(this).val();                
+        var name = $(this).val();
         getCompsVers(name, "dialogOptions");
                 
     });
@@ -973,7 +983,7 @@ $(document).ready(function() {
         
         if (field != "all")
         { 
-            if ($("#"+field).parent().is(":visible") )
+            if ($(field).parent().is(":visible") )
             {
                 $("#addFilterOption").hide();
                 $("#removeFilterOption").show(); 
@@ -987,7 +997,7 @@ $(document).ready(function() {
         else
         {
             //If the number of visible filters is equal to the number of total filter we knbow that all of the possible filters are being shown
-            if ($("#dialogOptions .box select").length == $("#dialogOptions .box select:visible").length)
+            if ($("#dialogOptions #optFilterDiv .box select").length == $("#dialogOptions #optFilterDiv .box select:visible").length)
             {
                 $("#addFilterOption").hide();
                 $("#removeFilterOption").show();
@@ -1009,7 +1019,7 @@ $(document).ready(function() {
             //$("#"+field).val(""); 
                             
             //Shows the field's container
-            $("#"+field).parent().show();  
+            $(field).parent().show();  
                             
             //Then trigger the change to refresh the button
             $("#filterFieldOption").change();     
@@ -1019,9 +1029,9 @@ $(document).ready(function() {
             $("#filterFieldOption option").each(function(){
                 var filter = $(this).val();
                
-                $("#"+filter).val("");
+                $(filter).val("");
                
-                $("#"+filter).parent().show();
+                $(filter).parent().show();
                 
                 //Then trigger the change to refresh the button
                 $("#filterFieldOption").change();
@@ -1036,10 +1046,10 @@ $(document).ready(function() {
         if (field != "all")
         {
             //Hides the field's container
-            $("#"+field).parent().hide();
+            $(field).parent().hide();
                             
             //Makes sure any values stored are reset to null(or in this case an empty string "")
-            $("#"+field).val(""); 
+            $(field).val(""); 
                             
             //Then trigger the change to refresh the button
             $("#filterFieldOption").change();
@@ -1049,12 +1059,107 @@ $(document).ready(function() {
             $("#filterFieldOption option").each(function(){
                 var filter = $(this).val();
                
-                $("#"+filter).val("");
+                $(filter).val("");
                
-                $("#"+filter).parent().hide();
+                $(filter).parent().hide();
                
                 //Then trigger the change to refresh the button
                 $("#filterFieldOption").change();
+            });
+        }
+    });   
+    
+    //Same as above, just for the search dialog   
+    $("#searchFieldOption").change(function () {
+        var field = $(this).val();
+        
+        if (field != "all")
+        { 
+            if ($(field).parent().is(":visible") )
+            {
+                $("#addSearchField").hide();
+                $("#removeSearchField").show(); 
+            }
+            else
+            {
+                $("#removeSearchField").hide(); 
+                $("#addSearchField").show();
+            }
+        }
+        else
+        {
+            //If the number of visible filters is equal to the number of total filter we knbow that all of the possible filters are being shown
+            if ($("#dialogSearch .box select").length == $("#dialogSearch .box select:visible").length)
+            {
+                $("#addSearchField").hide();
+                $("#removeSearchField").show();
+            }                
+            else
+            {
+                $("#removeSearchField").hide(); 
+                $("#addSearchField").show();    
+            }
+        }
+    });
+    
+    $("#dialogSearch").on( "click","#addSearchField" ,function(){
+        
+        
+        var field = $("#searchFieldOption").val();  
+        
+        if (field != "all")
+        {
+            //Makes sure any values stored are reset to null(or in this case an empty string "")
+            //$("#"+field).val(""); 
+                            
+            //Shows the field's container
+            $(field).parent().show();  
+                            
+            //Then trigger the change to refresh the button
+            $("#searchFieldOption").change();     
+        }
+        else
+        {
+            $("#searchFieldOption option").each(function(){
+                var filter = $(this).val();
+               
+                $(filter).val("");
+               
+                $(filter).parent().show();
+                
+                //Then trigger the change to refresh the button
+                $("#searchFieldOption").change();
+            });
+        }
+        
+    });
+    
+    $("#dialogSearch").on( "click","#removeSearchField" ,function(){ 
+        
+        var field = $("#searchFieldOption").val();   
+                        
+        if (field != "all")
+        {
+            //Hides the field's container
+            $(field).parent().hide();
+                            
+            //Makes sure any values stored are reset to null(or in this case an empty string "")
+            $(field).val(""); 
+                            
+            //Then trigger the change to refresh the button
+            $("#searchFieldOption").change();
+        }
+        else
+        {
+            $("#searchFieldOption option").each(function(){
+                var filter = $(this).val();
+               
+                $(filter).val("");
+               
+                $(filter).parent().hide();
+               
+                //Then trigger the change to refresh the button
+                $("#searchFieldOption").change();
             });
         }
     });   
@@ -1339,20 +1444,18 @@ function getCompsVers(name, dialogID){
             }
 
             //This line triggers the search page's 'change' function which then updates the component field to be non empty
-            $("#searchProduct, #optProduct").change();
+            $("#searchProduct, #optFilterDiv select[name='product']").change();
 
             //Sets the proper fields for the options menu
             setBoardFilterValues();
 
             compsVersFieldPopulate(name, dialogID);
             
-            //We need to wait until all the values in all the fields are entered    
-            //shows the current filters being applied
-            for (var index in boardFilterOptions)
-            {
-                $("#dialogOptions .box label[name='"+index+"']").parent().show();
-                $("#dialogOptions .box label[name='"+index+"']").siblings("select").val(boardFilterOptions[index]);
-            }         
+            //We need to wait until all the values in all the fields are entered so we call dialogFilter options with a false condition(loads everything but doesn't open)
+            dialogOptionsOpen(false);
+            
+            dialogSearchOpen(false);
+              
             
             //Triggers the filter select 
             $("#filterFieldOption").change();
@@ -1522,12 +1625,20 @@ function editCard(fieldVals) {
                     debugger;
                     sendComment(cardId);    
                 }
- */
+*/
+                var col = $("#Details select[name='cf_whichcolumn']").val();
+                
+                var status =  $("#Details select[name='bug_status']").val();
+           
                 if ($("input[name=dupe_of]").length && $("input[name=dupe_of]").val() == "")
                 {
                     $("#dialogInvalid p").text("You must specify a valid bug ID if this bug is a duplicate");
                     
                     $("#dialogInvalid").dialog("open");                        
+                }                                
+                else if (allowedColumnMap[status].indexOf(col) == -1)       
+                {
+                    alert(col + " is not a valid Column choice for the "+status+" status");   
                 }
                 else
                 {
@@ -1596,13 +1707,22 @@ function addCard() {
             //Want to make sure all of the fields have loaded before allowing the use of the save button
             if (!$("#Details").hasClass("loading"))
             {
+                var col = $("#Details select[name='cf_whichcolumn']").val();
+                
+                var status =  $("#Details select[name='bug_status']").val();                             
+                
                 if($( "#Details textarea[name=summary]" ).val()=="" || $("#commentReplyText").val() == "")
                 {
                     $("#dialogInvalid p").text("You must specify a valid title and description");
                     
                     $("#dialogInvalid").dialog("open");
                 }
-                else{                                  
+                else if (allowedColumnMap[status].indexOf(col) == -1)       
+                {
+                    alert(col + " is not a valid Column choice for the "+status+" status");   
+                }
+                else
+                {                                  
                     var div = $("<div class='loadingLabel'>Adding Card</div>");
                     $("#Details .modal").empty().append(div);
                     //Files a new bug in the bugzilla server
@@ -1892,14 +2012,17 @@ function ajaxEditBug()
                 {      
                     cardChangeData[ids]["cf_whichcolumn"] = colSortKeyMap[cardChangeData[ids]["cf_whichcolumn"]];
                     
-                    if (card.data("cf_whichcolumn" )!= cardChangeData[ids]["cf_whichcolumn"])
+                    var oldCol = card.data("cf_whichcolumn" );
+                                    
+                    //Here we save the changeData to the local
+                    card.data(cardChangeData[ids]);
+                    
+                    if (oldCol != cardChangeData[ids]["cf_whichcolumn"])
                     {
                         appendCard(card, cardChangeData[ids]["cf_whichcolumn"]);  
                     }
-                                           
-                    //Here we save the changeData to the local
-                    card.data(cardChangeData[ids]);
-
+                          
+                    
                     //Then delete the changeData
                     delete cardChangeData[ids];
 
@@ -2000,20 +2123,32 @@ var advSearchResults = [];
 
 function ajaxSearch(limit, pageNum) { 
 
+   
+
     //Checks to see if we already have this page's search results. If not we retrieve the results from bugzilla. If we already have them we simply access the cache. 
     if (typeof(advSearchResults[pageNum]) == "undefined")
     {                                                                                     
         var searchArr = {};
-
-        //Finds all of the selected values
-        $("#dialogSearch select").each(function(){ 
-            //Here I am selecting the field's parameter data bbecause that stores the paramter name to be passed in to bugzilla
-            var name = $(this).data("parameter");
             
-            var value = $(this).val();
-            searchArr[name] = value;
-        });
-
+        if ($("#dialogSearch .box:visible").length)
+        {      
+            //Finds all of the selected values in boxes that are visible
+            $("#dialogSearch .box:visible select, #searchSummary").each(function(){ 
+                //Grabs the field's parameter data storing the bugzilla parameter name
+                var name = $(this).attr("name");  
+            
+                //Checks to see if the field name in question is found in the fieldtoparam map and if so switches the fields accordingly
+                if (typeof(bugzillaFieldtoParam[name])!="undefined")
+                {
+                    name =  bugzillaFieldtoParam[name];
+                }
+           
+                var value = $(this).val();
+            
+                searchArr[name] = value;
+            });
+        }
+       
         //Removes all null values and makes array switches if neccessary
         for (var index in searchArr)
         {
@@ -2555,14 +2690,87 @@ function setBoardFilterValues()
         }
 }
 
-function dialogOptionsOpen()
-{        
+function dialogSearchOpen(condition)
+{ 
     //Makes sure we have the correct componenet and versions
-    getCompsVers(null, "dialogOptions");
+    getCompsVers(null, "search");
+    
+    //If the select menu's length is 1 we know that the set up code hasn't been called yet  
+    if ($("#dialogSearch #searchFieldOption option").length == 1)
+    {     
+        //Changes the select fields that were appended to the correct form
+        $("#searchFieldsDiv select").each(function(){
+            
+           
+            
+            var field = $(this);
+           
+            //turns it into a multple select
+            field.attr("multiple", "multiple");
         
-    //Populates the prioIconTable if it doesn't already exist
-    if ($("#prioIconTable tbody tr").length == 0)
+            //Adds the box class which gives the correct styling
+            field.parent().addClass("box");
+        
+            //Adds ther correct syling to the label
+            field.siblings("label").addClass("searchLabel");
+            
+            //Populates thes filter select field
+            var option = $("<option>").text(field.siblings("label").text()).val("#searchFieldsDiv select[name="+field.attr("name")+"]");
+        
+            $("#searchFieldOption").append(option);
+            
+        });
+        
+        //We only want the selects to show, not the inputs
+        $("#searchFieldsDiv input").parent().remove();
+    }
+    
+                    
+    //Hides all of the fields
+    $("#searchFieldsDiv .box select").parent().hide();
+      
+        
+    if (condition || typeof(condition) == "undefined")
     {
+        $("#dialogSearch").dialog("open");     
+    }
+    
+    //Triggers the filter select(after the duialog is open because otherwise the select's are always hidden)
+    //Then trigger the change to refresh the button
+    $("#searchFieldOption").change();
+}
+
+function dialogOptionsOpen(condition)
+{    //Populates the fields if they don't already exist
+    if (!$("#prioIconTable tbody tr").length)
+    {    
+        //Makes sure we have the correct componenet and versions
+        getCompsVers(null, "dialogOptions");
+    
+        //Changes the select fields that were appended to the correct form
+        $("#optFilterDiv select").each(function(){
+            
+            var field = $(this);
+           
+            //turns it into a multple select
+            field.attr("multiple", "multiple");
+        
+            //Adds the box class which gives the correct styling
+            field.parent().addClass("box");
+        
+            //Adds ther correct syling to the label
+            field.siblings("label").addClass("searchLabel");
+            
+            //Populates thes filter select field
+            var option = $("<option>").text(field.siblings("label").text()).val("#optFilterDiv select[name="+field.attr("name")+"]");
+        
+            $("#filterFieldOption").append(option);            
+        });
+    
+        //We only want the selects to show, not the inputs
+        $("#optFilterDiv input").parent().remove();
+            
+    
         //This each statement populates the table of color options                      
         $("#Details select[name=priority] option").each(function(){
             var name = $(this).val().replace(/\s+/g, '');
@@ -2570,11 +2778,8 @@ function dialogOptionsOpen()
             //Creater a row in the options dialog for that priority name
             makeRowPrioOptions(name);
         });
-    }
     
-    //Populates the jobColorTable if it doesn't already exist
-    if ($("#jobColorTable tbody tr").length == 0)
-    {
+
         //This each statement populates the table of color options                  
         $("#Details select[name=bug_severity] option").each(function(){
             var name = $(this).val().replace(/\s+/g, '');
@@ -2582,23 +2787,26 @@ function dialogOptionsOpen()
             //Creater a row in the options dialog for that job name
             makeRowJobColorOptions(name); 
         });
-    }
+    
+        $("#dialogOptions #prioIconTable tbody tr").each(function(){
+            var prioName = $(this).find("td").first().text();
+            $(this).find("input[type=radio][value="+prioMap[prioName]+"]").attr("checked","checked").button("refresh");
+        });
+        
    
-    //Populates the defaultColumntable if it doesn't already exist
-    if ($("#defaultColumntable tbody tr").length == 0)
-    {
         //This each statement populates the table of color options
-        $("#Details select[name=bug_status] option").each(function(){
+        $("#Details select[name=bug_status]").first().children().each(function(){
             //get the value
             var name = $(this).val().replace(/\s+/g, '');
                                         
             //Creater a row in the options dialog for that job name
-            makeRowColumnOptions(name);
+            makeColumnOptions(name);
         });
-    } 
-    //Populates the WIPSetTable if it doesn't already exist
-    if ($("#WIPSetTable tbody tr").length == 0)
-    {
+        
+        $("#defaultColumnDiv .box").show();
+        
+        
+    
         //This each statement populates the table of WIP limit assignments
         $(".column").each(function(){
             //get the value
@@ -2609,22 +2817,93 @@ function dialogOptionsOpen()
             //Create a row in the options dialog for that column name
             makeRowWIPSet(value);
         });
-    } 
+     
     
+    }           
     
+    //Hides all of the filters
+    $("#dialogOptions #optFilterDiv .box select").parent().hide();
     
-    //We need to wait until all the values in all the fields are entered    
     //shows the current filters being applied
     for (var index in boardFilterOptions)
     {
-        $("#dialogOptions .box label[name='"+index+"']").parent().show();
-        $("#dialogOptions .box label[name='"+index+"']").siblings("select").val(boardFilterOptions[index]);
-    }         
-                    
-    $("#dialogOptions").dialog("open");
+        var value = boardFilterOptions[index];
+        
+        if (value != "")
+        {
+            //Checks to see if the field name in question is found in the fieldtoparam map and if so switches the fields accordingly
+            if (reverseKeyLookup(bugzillaFieldtoParam, index) != -1)
+            {
+                index =  reverseKeyLookup(bugzillaFieldtoParam, index);
+            }
+        
+        
+            $("#dialogOptions #optFilterDiv .box select[name='"+index+"']").parent().show();
+            $("#dialogOptions #optFilterDiv .box select[name='"+index+"']").val(value);     
+        }       
+    }
+    
+    //Sets the colDivChar to the appropriate value
+    $("#columnCharText").val(colDivChar);
+    
+    //Sets the card color
+    /*job = job.replace(/\s+/g, '');
+    var id = job+"Color";
+    var row = $('<tr><td>'+job+'</td></tr>');
+
+    var color = jobMap[job];
+
+    var td = $("<td><div id='"+id+"' class='colorSelector'><div style='background-color:"+color+"'></div></div></td>");
+
+    row.append(td);
+
+    //We do this because the ColorPicker plugin requires Hex 
+    color = rgb2hex(color)*/
+
+    $("#dialogOptions #jobColorTable tbody tr").each(function(){
+        var job = $(this).find("td").first().text();
+        
+        var id = job+"Color";
+        
+        var color = jobMap[job];
+        
+        color = rgb2hex(color);
+        
+        $("#"+id + " div").css("background-color", color)
+        
+        $('#'+id).ColorPicker({       
+            color: color,        
+            onChange: function (hsb, hex, rgb) {
+                $('#'+id+' div').css('backgroundColor','#'+ hex);
+            }
+
+        });
+    });
+  
+    //Sets the allowed and default column values
+    $("#defaultColumnDiv .box select[multiple='multiple']").each(function(){
+        var status = $(this).attr("name");
+        $(this).val(allowedColumnMap[status]);
+        $(this).siblings("select:not([multiple='multiple'])").val(defaultColumnMap[status]);
+       
+    });
+    
+    if (condition || typeof(condition) == "undefined")
+    {
+        $("#dialogOptions").dialog("open");     
+    }
+    
+    //Sets the WIP values
+    $("#dialogOptions #WIPSetTable tbody tr").each(function(){
+        var col =  $(this).find("td").first().text();
+        var input = $(this).find("input[type='number']");
+        var value = limitWIP[col];
+        input.val(value);
+    })
     
     //Triggers the filter select(after the duialog is open because otherwise the select's are always hidden)
-    $("#filterFieldOption").trigger("change");
+    //Then trigger the change to refresh the button
+    $("#filterFieldOption").change();
 }
 
 function dialogOptionsSave()
@@ -2667,20 +2946,28 @@ function dialogOptionsSave()
     //Creates a true copy of the boardFilterOptions
     var oldFilter = $.extend(true, {}, boardFilterOptions);
 
-    if ($("#dialogOptions .box:visible select").length != 0)
+    if ($("#dialogOptions #optFilterDiv .box:visible select").length != 0)
     {      
         //Finds all of the selected values in boxes that are visible
-        $("#dialogOptions .box:visible select").each(function(){ 
+        $("#dialogOptions #optFilterDiv .box:visible select").each(function(){ 
             //Grabs the field's parameter data storing the bugzilla parameter name
-            var name = $(this).data("parameter");         
+            var name = $(this).attr("name");  
+            
+            //Checks to see if the field name in question is found in the fieldtoparam map and if so switches the fields accordingly
+            if (typeof(bugzillaFieldtoParam[name])!="undefined")
+            {
+                name =  bugzillaFieldtoParam[name];
+            }
+           
             var value = $(this).val();
+            
             boardFilterOptions[name] = value;
         });
 
         //Removes all null values
         for (var index in boardFilterOptions)
         {
-            if (boardFilterOptions[index] == null)
+            if (boardFilterOptions[index] == null || boardFilterOptions[index] == "")            
             {
                 delete boardFilterOptions[index];
             }
@@ -2693,30 +2980,65 @@ function dialogOptionsSave()
             
     }
     
-   
+    //var oldblankColumnMap = $.extend(true, {}, blankColumnMap);
+    
+    var allowedColumnMapNew = {};
+    
+    var defaultColumnMapNew = {};
+    
     //Finds all of the status column assigments
-    $("#dialogOptions  #defaultColumntable tr").each(function(){ 
-        var status = $(this).find("td").first().text();
+    $("#defaultColumnDiv .box").each(function(){ 
+        //Finds the multiple select specifyiung the allowed values for a certain status
+        var allowedSelect = $(this).find("select[multiple='multiple']");
         
-        var value = $(this).find("select").val();
+        var allowedValues = allowedSelect.val();
         
-        blankColumnMap[status] = value;
-    });
+        //Finds the single select specifying the default columnb value
+        var defSelect = $(this).find("select:not([multiple='multiple'])");
+        
+        var defValue = defSelect.val();
+                
+        var status = allowedSelect.attr("name");
+        
+        allowedColumnMapNew[status] = allowedValues;
+        
+        defaultColumnMapNew[status] = defValue;
+       
+    });    
+    
+    //Makes sure that the default column for each status is contqained within the list of allowed columns(else we will have an infinite recurive loop)
+    for (var status in defaultColumnMapNew)
+    {
+        var valArr = allowedColumnMapNew[status];
+        var defVal = defaultColumnMapNew[status];
+        
+        //Checks to see if the default value is found in the value array
+        if (valArr.indexOf(defVal) == -1)
+        {
+            //If not we add the default value to the list of allowed values
+            allowedColumnMapNew[status].push(defVal);                
+        }
+    }
     
     boardFilterOptions["method"] = "Bug.search";
     
     oldFilter["method"] = "Bug.search";
     
+    var iniPost = {
+        boardFilterOptions: boardFilterOptions,
+        prioMap: prioMap,
+        jobMap: jobMap, 
+        allowedColumnMap: allowedColumnMapNew, 
+        defaultColumnMap: defaultColumnMapNew, 
+        limitWIP: limitWIP           
+    };
+ 
+    iniPost["colDivChar"] = $("#columnCharText").val();      
+    
     $.ajax({
         url: "ajax_write_options.php",
         type: "POST",
-        data: {
-            boardFilterOptions: boardFilterOptions,
-            prioMap: prioMap,
-            jobMap: jobMap, 
-            blankColumnMap: blankColumnMap, 
-            limitWIP: limitWIP
-        },    
+        data: iniPost,    
         dataType: "json",
 
         success: function(data, status){
@@ -2731,9 +3053,14 @@ function dialogOptionsSave()
                 alert("Something is wrong");
             }
             else 
-            {
-                //Compares each associative array
-                if (!deepEquals(boardFilterOptions, oldFilter ))
+            {    
+                //If the column character has changed we need to rebuild the entire page, the following line simply refreshes the page
+                if (iniPost["colDivChar"] != colDivChar || !deepEquals(allowedColumnMapNew, allowedColumnMap) || !deepEquals(defaultColumnMapNew, defaultColumnMap))
+                {
+                    location.reload();    
+                }
+                //Compares each associative array                
+                else if (!deepEquals(boardFilterOptions, oldFilter ))
                 {
                     //If the old filter isn't the same as the new filter, we need to refilter the page 
                     //First we remove all cards
@@ -2752,7 +3079,7 @@ function dialogOptionsSave()
                 }
                 else
                 {
-                    $(".card").each(function(){
+                    $(".card").each(function(){                                                                   
                         var prio = $(this).data("priority").replace(/\s+/g, ''); 
                         if (prioMap[prio]=="none")
                         {
@@ -2777,6 +3104,7 @@ function dialogOptionsSave()
                     $(".column").each(function(){
                         columnWIPCheck($(this).attr("id"));
                     });
+                                       
                 }
           
 
@@ -2812,17 +3140,16 @@ function makeRowPrioOptions(prioName){
     }
 
     //In addition to all of the icons we want to have a "no icon" button
-    var id = prioName+".none";
-    var input = $("<input type='radio' id='"+id+"' name='radio' value='none' />");
-    var label = $("<label for='"+id+"' style='float: left;'>");
-    var div = $("<div class='prioBack'><div class='prioIcon' >No Icon</div></div>");
+    id = prioName+".none";
+    input = $("<input type='radio' id='"+id+"' name='radio' value='none' />");
+    label = $("<label for='"+id+"' style='float: left;'>");
+    div = $("<div class='prioBack'><div class='prioIcon' >No Icon</div></div>");
     label.append(div);
     iconDiv.append(input, label);         
 
     td.find("form").append(iconDiv);                    
     row.append(td);
-
-    $(row).find("input[type=radio][value="+prioMap[prioName]+"]").attr("checked","checked");
+    
     $("#dialogOptions #prioIconTable tbody").append(row);
 
     $("#"+prioName+"radiodiv").buttonset();
@@ -2835,37 +3162,17 @@ function makeRowJobColorOptions(job){
     var id = job+"Color";
     var row = $('<tr><td>'+job+'</td></tr>');
 
-    var color = jobMap[job];
-
-    var td = $("<td><div id='"+id+"' class='colorSelector'><div style='background-color:"+color+"'></div></div></td>");
+    var td = $("<td><div id='"+id+"' class='colorSelector'><div></div></div></td>");
 
     row.append(td);
 
-    //We do this because the ColorPicker plugin requires Hex 
-    color = rgb2hex(color)
-
-    //$(row).find("input[type=radio][value="+prioMap[job]+"]").attr("checked","checked");
-    $("#dialogOptions #jobColorTable tbody").append(row);
-
-    $('#'+id).ColorPicker({
-        color: color,
-        onChange: function (hsb, hex, rgb) {
-            $('#'+id+' div').css('backgroundColor', /*'rgb('+rgb.r+', '+rgb.g+', '+rgb.b+')'*/'#'+ hex);
-        }
-
-    });
-
-
-
+    $("#dialogOptions #jobColorTable tbody").append(row);   
 }   
 
-function makeRowWIPSet(col){
-    //Grabs the WIP limit from the map stored in the ini 
-    var value = limitWIP[col];
-    
+function makeRowWIPSet(col){   
     var row = $("<tr>");
     var td1 = $("<td>").text(col);
-    var input = $("<input type='number' min='0' >").val(value);
+    var input = $("<input type='number' min='0' >");
     var td2 = $("<td>").append(input);
     
     row.append(td1, td2);
@@ -3117,115 +3424,106 @@ function displayHandler(card) {
 //Moves a cardf from one column to another  or adding a new card to a column taking into account the possibility of no column assignment
 function appendCard(cards, col, status) 
 {   
-    if ($.isArray(cards))
+    //This function expects an array so if the input isnt an artray, we make it one
+    if (!$.isArray(cards))
     {
-        var cardIds = [];
-        
-        var startColArr = [];
-        
-        for (var i in cards)
-        {
-            var card = cards[i];
-            var startCol = card.data("cf_whichcolumn");
-            
-            //This line makes the status parameter optional for cards that already exist
-            if (typeof(card.data("status")) != "undefined")
-            {
-                status = card.data("status");     
-            }
-            var newLi = $('<li></li>').append(card);
-
-            //Here we check the location of the card. if the card has no specified column(or oesn't match any of the columns on the board) we place it in a column based on its status
-    
-            var column = $("#"+col);
-            //if the length is 0 we know that column doesn't exist so we rest col to a default
-            if (column.length == 0)  
-            {        
-                col = blankColumnMap[status];
-                column = $("#"+colSortKeyMap[col]);
-            }
-    
-            column.append(newLi);
-            
-            cardIds.push(card.attr("id"));
-            
-            if (typeof(startCol) != "undefined")
-            {
-                startColArr.push(startCol);  
-            }
-            
-        }
-        
-        if (startColArr.length)
-        {
-            //If startCOl is not undefiend we know that the card has already been added to the board and the user is simply moving a card from one to column to another
-            for (var k in startColArr)
-            {
-                $(document).trigger("columnChange",[ col, startColArr[k]]);    
-            }
-            
-            updatePosition(col, cardIds);
-        }                
+        cards = [cards];
     }
-    else
-    {                       
-              
-        startCol = cards.data("cf_whichcolumn");          
+    var cardIds = [];
+        
+    var startColArr = [];
+        
+    for (var i in cards)
+    {                
+        var card = cards[i];
+        var startCol = card.data("cf_whichcolumn");
+        
+        var frontEndCol = reverseKeyLookup(colSortKeyMap, col);
+            
         //This line makes the status parameter optional for cards that already exist
-        if (typeof(cards.data("status")) != "undefined")
+        if (typeof(card.data("status")) != "undefined")
         {
-            status = cards.data("status");     
+            status = card.data("status");     
         }
-        newLi = $('<li></li>').append(cards);
-
-        //Here we check the location of the card. if the card has no specified column(or oesn't match any of the columns on the board) we place it in a column based on its status
-    
-        column = $("#"+col);
-        //if the length is 0 we know that column doesn't exist so we rest col to a default
-        if (column.length == 0)  
+        
+        //Here we check to make sure where we are putting the card is consistent with its status
+        if (allowedColumnMap[status].indexOf(frontEndCol) == -1)
+        {
+            //If the indexOf function returns -1 we know that the end column is not a valid choice according to this status. 
+            if (/*Condition that shows that this is on initial load*/ !card.parent().length)
+            {
+                //We then return the card(and set its data) to the default column
+                var cardId = card.attr("id");
+            
+                var defCol = defaultColumnMap[status];            
+            
+                alert(frontEndCol + " is not a valid Column choice for the "+status+" status.\n Card #" + cardId+ " will be moved to " +defCol);
+            
+                defCol = colSortKeyMap[defCol];            
+                appendCard(card, defCol, status);            
+                updatePosition(defCol, cardId);    
+            }
+            else
+            {
+                //If the user is trying to move a card from one column to another we simply tell them they can't
+                alert(frontEndCol + " is not a valid Column choice for the "+status+" status.");
+            }
+                     
+            continue;        
+        }
+        
+        var newLi = $('<li></li>').append(card);
+            
+        var column = $("#"+col);
+        //Here we check the location of the card. if the card has no specified column(or doesn't match any of the columns on the board) we place it in a column based on its status
+        if (!column.length)  
         {        
-            col = blankColumnMap[status];
+            col = defaultColumnMap[status];
             column = $("#"+colSortKeyMap[col]);
         }
-    
-        column.append(newLi);                    
         
+        column.append(newLi);
+            
+        cardIds.push(card.attr("id"));
+            
         if (typeof(startCol) != "undefined")
         {
+            startColArr.push(startCol);  
+        }
             
-            //If startCOl is not undefiend we know that the card has already been added to the board and the user is simply moving a card from one to column to another
-            $(document).trigger("columnChange", [col, startCol]);
-            updatePosition(col, cards.attr("id"));
-        }                    
     }
+        
+    if (startColArr.length)
+    {
+        //If startCOl is not undefiend we know that the card has already been added to the board and the user is simply moving a card from one to column to another
+        for (var k in startColArr)
+        {
+            $(document).trigger("columnChange",[ col, startColArr[k]]);    
+        }
+            
+        updatePosition(col, cardIds);
+    }                
+    
     //This line removes any li's that don't have a card in them
     $(".column li:not(:has(.card)), .tablists li:not(:has(.card))").remove();       
 }
 
-function makeRowColumnOptions(name)
-{
-    var tr = $("<tr>");
-     
-    var td1 = $("<td>").text(name);
-     
-    var td2 = $("<td>");
-     
-    var select = $("<select id='"+name+"ColumnDefault'>");
+function makeColumnOptions(name)
+{  
+    var div = $("<div class='box'></div>");
     
+    var label = $("<label class='searchLabel'><h4>"+name+"</h4>Allowed</label>");
+      
     //Adds the column options to the select
-    $("#Details select[name=cf_whichcolumn] option").each(function(){
-        if ($(this).val() != "---")
-        {
-            select.append($(this).clone()); 
-        }        
+    var select = $("#Details select[name=cf_whichcolumn]").clone().attr({
+        "multiple": "multiple", 
+        "name": name
     });
+    var defSelect = $("#Details select[name=cf_whichcolumn]").clone();
+    var defLabel = $("<label style='margin-top: 10px;' class='searchLabel'>Defualt</label>");        
     
-    td2.append(select);
-    
-    select.val(blankColumnMap[name])
-    
-    tr.append(td1,td2);        
-    $("#defaultColumntable tbody").append(tr);        
+    div.append(label, select, defLabel, defSelect);        
+    $("#defaultColumnDiv").append(div);         
 }
 
 function columnWIPCheck(columnId)
@@ -3238,21 +3536,30 @@ function columnWIPCheck(columnId)
     
     var wipLimit = limitWIP[columnId];
     
+    //Displays the number of cards in the column
+    column.parent().find(".wipDisplay").text(wipLimit).attr("title", "Total Cards: " + numCards);
+    
     if (wipLimit != 0)
     {
         if (numCards > wipLimit )
         {
             column.parent().css("background-color", "red").attr("title", "This column is exceeding its WIP limit");
+            column.parent().find(".wipDisplay").css("color", "red");
         }
         else
         {
-            column.parent().css("background-color", "").attr("title", "");   
+            column.parent().css("background-color", "").attr("title", "");  
+            column.parent().find(".wipDisplay").css("color", "");
         }
         
     }
     else
     {
         column.parent().css("background-color", "").attr("title", "");   
+        column.parent().find(".wipDisplay").css("color", "");
+        
+        //If the WIP limit is 0 then we dont need to show it
+        column.parent().find(".wipDisplay").text("");
     }       
     
    
@@ -3506,7 +3813,7 @@ function buildBoard(nest, fullName)
                     
         if (nest[index].length != undefined && nest[index].length == 0)
         {                        
-            html +=  "<div class=\"columnCon \"><div class=\"banners\">"+index+"</div><ul id=\""+colSortKeyMap[name]+"\" class=\"column cmVoice {cMenu: \'contextMenuColumn\'}\" > </ul> </div>";   
+            html +=  "<div class=\"columnCon \"><div class=\"banners\"><span>"+index+"</span><span class='wipDisplay'>"+limitWIP[name]+"</span></div><ul id=\""+colSortKeyMap[name]+"\" class=\"column cmVoice {cMenu: \'contextMenuColumn\'}\" > </ul> </div>";   
         }
         else
         {
@@ -3524,6 +3831,11 @@ function buildBoard(nest, fullName)
                 
 }
 
+function returnCardtoDefaultLocation(card)
+{
+    var status = card.data("status");
+}
+
 function reverseKeyLookup(object, value)
 {
     for (var index in object)
@@ -3539,7 +3851,7 @@ function reverseKeyLookup(object, value)
 }
 
 //An object comparison algorithm taken from stackoverflow: http://stackoverflow.com/questions/1068834/object-comparison-in-javascript
-//the algorithm seems to be working correctly  for the boardCardFilterOptions comparison
+//the algorithm seems to be working correctly  for the boardCardFilterOptions comparison. I convewrted it from overriding the equals sign to taking in to parameters and evaluating
 function deepEquals(x, y)
 {
     var p;

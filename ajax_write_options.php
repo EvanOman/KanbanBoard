@@ -1,11 +1,34 @@
 <?php
 
+$allowedColumnMap = array();
+foreach ($_POST["allowedColumnMap"] as $status => $col) {
+    if (is_array($col)) {
+        $arr = array();
+        foreach ($col as $val) {
+            $val = filter_var($val, FILTER_SANITIZE_STRING);
+            array_push($arr, $val);
+        }
+        $allowedColumnMap[$status] = $arr;
+    } else {
+        $col = filter_var($col, FILTER_SANITIZE_STRING);
+        $allowedColumnMap[$status] = $col;
+    }
+}
+
+$defaultColumnMap = array();
+foreach ($_POST["defaultColumnMap"] as $status => $col) {
+    $col = filter_var($col, FILTER_SANITIZE_STRING);
+    $defaultColumnMap[$status] = $col;
+}
+
+
 $prioMap = array();
 foreach ($_POST["prioMap"] as $name => $icon) {
     $name = filter_var($name, FILTER_SANITIZE_STRING);
     $icon = filter_var($icon, FILTER_SANITIZE_STRING);
     $prioMap[$name] = $icon;
 }
+
 
 $jobMap = array();
 foreach ($_POST["jobMap"] as $name => $color) {
@@ -31,22 +54,17 @@ foreach ($_POST["boardFilterOptions"] as $field => $value) {
     }
 }
 
-$blankColumnMap = array();
-foreach ($_POST["blankColumnMap"] as $status => $column) {
-    $status = filter_var($status, FILTER_SANITIZE_STRING);   
-    $column = filter_var($column, FILTER_SANITIZE_STRING);
-    $blankColumnMap[$status] = $column;
-}
-
-
 $limitWIP = array();
 foreach ($_POST["limitWIP"] as $col => $limit) {
-    $col = filter_var($col, FILTER_SANITIZE_STRING);   
+    $col = filter_var($col, FILTER_SANITIZE_STRING);
     $limit = filter_var($limit, FILTER_SANITIZE_NUMBER_INT);
     $limitWIP[$col] = $limit;
 }
 
-$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "blankColumnMap"=> $blankColumnMap, "limitWIP" => $limitWIP );
+$colDivChar = array("colDivChar" => filter_input(INPUT_POST, 'colDivChar', FILTER_SANITIZE_STRING));
+
+
+$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "allowedColumnMap" => $allowedColumnMap, "defaultColumnMap" => $defaultColumnMap, "limitWIP" => $limitWIP, "colDivChar" => $colDivChar);
 
 if (write_ini_file($iniSettings, "kanban.ini", true)) {
     die(json_encode(array("success" => true)));

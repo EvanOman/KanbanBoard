@@ -111,83 +111,65 @@ session_write_close();
                     Set Default Column Values:
                 </h2>
                 <h1>
-                    In case a bug doesn't have a column selected, here you can specify what the default value should be based on the Status of that Bug
+                    In case a bug doesn't have a column selected, here you can specify what the default and allowed values should be based on the Status of that Bug
                 </h1>
-                <div style="height:auto">
-                    <table id="defaultColumntable">
-                        <tbody>
-
-                        </tbody>
-                    </table>
+                <div style="height:auto" id="defaultColumnDiv">
+                   
                 </div>
-            </div>           
+            </div>     
             <div style="float: left;">
                 <h2>
-                    <br>Board Card Filter:
+                    Specify Column Break Character:
+                </h2>
+                <h1>
+                    Here you can specify what character will indicate a nested column break(Use a character that otherwise would never be found in a column title)
+                </h1>
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <label>Special Character:</label>    
+                            </td>
+                            <td>
+                                <input style="width: 25px;" type="text" id="columnCharText"/>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>     
+            <div style="float: left;">
+                <h2>
+                    Board Card Filter:
                 </h2>
                 <h1>Specify which bugs you want to be displayed on the Kanban board</h1>
                 <p>Add Filter by: 
-                    <select  id="filterFieldOption"  class="text ui-widget-content ui-corner-all" >
-                        <option value="optProduct">Product</option>
-                        <option value="optVersion">Version</option>
-                        <option value="optBug_severity">Severity</option>
-                        <option value="optBug_status">Status</option>
-                        <option value="optResolution">Resolution</option>
-                        <option value="optPriority">Priority</option>
-                        <option value="all">All</option>
-
+                    <select  id="filterFieldOption"  class="text ui-widget-content ui-corner-all" >                       
+                        <option value="all">All</option>                                                                
                     </select>
                     <button id="addFilterOption">Add Filter</button>
                     <button id="removeFilterOption">Remove Filter</button>
                 </p>               
-                <form style="height:300px;">
+                <form style="height:auto;">
                     <fieldset style="margin-top: 10px;">                        
-                        <div style="float: left; width:100%">
+                        <div id="optFilterDiv"style="float: left; width:100%">
                             <div  class="box" >
-                                <label for="product"class="searchLabel" name="product">Product</label>
-                                <select  name="product" id="optProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                                <label class="searchLabel">Product</label>
+                                <select  name="product" id="optProduct" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="version"class="searchLabel" name="version">Version</label>
-                                <select  name="version" id="optVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                                <label class="searchLabel" >Version</label>
+                                <select  name="version" id="optVersion" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>
                             <div class="box">
-                                <label for="bug_severity"class="searchLabel" name="severity">Severity</label>
-                                <select  name="bug_severity" id="optBug_severity"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                                <label class="searchLabel" >Component</label>
+                                <select  name="component" id="optComponent" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                             </div>                           
-                            <div class="box">
-                                <label for="bug_status"class="searchLabel" name="status">Status</label>
-                                <select  name="bug_status" id="optBug_status"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box" style="display: none;">
-                                <label for="resolution"class="searchLabel" name="resolution">Resolution</label>
-                                <select  name="resolution" id="optResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box" style="display: none;">
-                                <label for="priority"class="searchLabel" name="priority">Priority</label>
-                                <select  name="priority" id="optPriority"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
                         </div>                        
                     </fieldset>                    
                 </form>
             </div>            
             <div class="modal"><div class="loadingLabel">Options Loading</div></div>
-        </div>  
-        <div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
-            <form>
-                <fieldset
-                    <div style="float: top">
-                        <div style="float: top;">
-                            <label for="login">User Name</label>
-                            <textarea  name="login" id="login"  class="text ui-widget-content ui-corner-all" style="width: 100%;">    </textarea>
-                        </div>
-                        <div style="float: top;">
-                            <label for="password">Password</label>
-                            <textarea  name="password" id="password"  class="text ui-widget-content ui-corner-all" style="width: 100%;">    </textarea>
-                        </div>
-                </fieldset>
-            </form>
-        </div>        
+        </div>          
         <div id="dialogInvalid" class="ui-dialog-content ui-widget-content"  title="Invalid" >
             <p>Must Specify the Card's Title!!!</p>
         </div>
@@ -205,7 +187,7 @@ session_write_close();
                     <fieldset>
                         <div id="detailsTop" style="max-height: 80px;">
                             <label for="summary">Title:</label>
-                            <textarea  name="summary" id="summary" class="text ui-widget-content ui-corner-all" style="width:990px; height: 40px; max-height: 60px;"  ></textarea>
+                            <textarea  name="summary" id="summary" class="text ui-widget-content ui-corner-all" style="width:100%; height: 40px; max-height: 60px;"  ></textarea>
                         </div>
                         <div id="detailsLeft"style="float: left;">
                             <div style="width: 100%; margin: 5px;">
@@ -310,40 +292,32 @@ session_write_close();
         </div>   
         <div id="dialogSearch" class="ui-dialog-content ui-widget-content"  title="Advanced Search" >
             <div id="search">
-                <form style="height:300px;">
-                    <fieldset style="margin-top: 10px;">
-                        <div class="box"style="float:top; max-height: 40px; width:830px;">
-                            <label for="summary" style="float:left; margin-right: 10px;">Summary:</label>
-                            <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all"></textarea>
-                        </div>
-                        <div style="float: left; width:100%">
-                            <div class="box">
-                                <label for="product"class="searchLabel" name="product">Product</label>
-                                <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box">
-                                <label for="version"class="searchLabel" name="version">Version</label>
-                                <select  name="version" id="searchVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box">
-                                <label for="bug_severity"class="searchLabel" name="severity">Severity</label>
-                                <select  name="bug_severity" id="searchBug_severity"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box">
-                                <label for="priority"class="searchLabel" name="priority">Priority</label>
-                                <select  name="priority" id="searchPriority"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box">
-                                <label for="bug_status"class="searchLabel" name="status">Status</label>
-                                <select  name="bug_status" id="searchBug_status"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box">
-                                <label for="resolution"class="searchLabel" name="resolution">Resolution</label>
-                                <select  name="resolution" id="searchResolution"  class=" text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                        </div>                        
-                    </fieldset>                    
-                </form>
+                <div class="box"style="max-height: 40px; width: auto;">
+                    <label for="summary" style="float:left; margin-right: 10px;">Summary:</label>
+                    <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all"></textarea>
+                </div>
+                <p style="float: left">Search by: 
+                    <select  id="searchFieldOption"  class="text ui-widget-content ui-corner-all" >                       
+                        <option value="all">All</option>                                                                
+                    </select>
+                    <button id="addSearchField">Add Field</button>
+                    <button id="removeSearchField">Remove Field</button>
+                </p>                   
+                <div id="searchFieldsDiv">
+                    <div class="box">
+                        <label for="product"class="searchLabel" name="product">Product</label>
+                        <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                    </div>
+                    <div class="box">
+                        <label for="version"class="searchLabel" name="version">Version</label>
+                        <select  name="version" id="searchVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                    </div>
+                    <div class="box">
+                        <label class="searchLabel" >Component</label>
+                        <select  name="component" id="optComponent" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                    </div>
+
+                </div>                     
                 <span>
                     <button id="searchSubmit" >Search</button>
                 </span>                                   
@@ -376,7 +350,7 @@ session_write_close();
         <div class="columnContainer">          
             <div class="toolbar">  
                 <label for="quickSearchTextBox" >Quick Search</label>
-                <input id="quickSearchTextBox" type="text" class="text ui-widget-content ui-corner-all"/>
+                <input id="quickSearchTextBox" type="text" class="ui-widget-content ui-corner-all"/>
                 <label for="quickSearchField" >by:</label>
                 <select id="quickSearchField" class="text ui-widget-content ui-corner-all"></select>               
                 <button id="btnAddCard" >Add Card</button>

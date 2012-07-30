@@ -10,7 +10,7 @@ body,html{
     margin:0;
     padding:0;
     border:0;
-    width: 4500px;
+    width: 2500px;
 }
 .card{ 
     /*Here we set the background color to a default, the user can change the colors to whatever he wants*/
@@ -167,7 +167,6 @@ div#bugs-contain table td, div#bugs-contain table th {
 .iconBar{
     width:140px;
     height: 40px;
-    float: top;
 }
 .ui-icon{
     float:right;
@@ -215,10 +214,9 @@ div#bugs-contain table td, div#bugs-contain table th {
 
 }
 .searchLabel{
-    float:top !important;
     margin-bottom:0;
 }
-#search .box select, #dialogOptions .box select{
+#search .box select, #dialogOptions #optFilterDiv .box select /*[multiple="multiple"]*/{   
     float: left;
     width: 100%;
     height:100%;
@@ -231,8 +229,19 @@ div#bugs-contain table td, div#bugs-contain table th {
     margin-top: 20px;
 
 }
-#dialogSearch {
-    font-size: 15px;
+#defaultColumnDiv .box{
+    height:250px;
+}
+#defaultColumnDiv select{
+    height:auto;
+    width: 100%;
+}
+#defaultColumnDiv select[multiple="multiple"]{
+    height:60%;
+    width: 100%;
+}
+#dialogSearch, #dialogOptions, #dialogAddEditCard{
+    font-size: 13px;
 }
 #Results{
     float: left;
@@ -336,7 +345,7 @@ widget visible when the dialog is open*/
 #detailsRight{
     float: left; 
     margin-left: 10px; 
-    width: 665px; 
+    width: 65%; 
     height: 375px;
 }
 .modal div, .card .modal div{
@@ -401,15 +410,14 @@ widget visible when the dialog is open*/
 
 }
 #attachmentAddTable{
-    width: 475px;
+    width: auto;
     margin-left: 25px;
 }
 #searchSummary{
     float:left !important; 
-    width:auto;
     height: 20px;
     max-height: 60px;
-    width:745px;
+    width:1250px;
 }
 .loadingLabel{
     color:gray;   
@@ -439,12 +447,11 @@ widget visible when the dialog is open*/
     width: auto;
     position: relative;
 }
-#removeFilterOption, #addFilterOption {
+#removeFilterOption, #addFilterOption, #addSearchField, #removeSearchField  {
     display: none;
 }
 #quickSearchTextBox{
-    width: 100%;
-    margin-bottom: 5px;
+    height: 20px;
 }
 .toolbar label{
     font-size: 15px; 
@@ -472,7 +479,7 @@ widget visible when the dialog is open*/
     width: 100%;
     height: 21px;
 }
-.toolbar button, .toolbar select{
+.toolbar button, .toolbar select,  .toolbar input{
     width: 100%;   
 }
 .columnContainer{
@@ -487,4 +494,17 @@ widget visible when the dialog is open*/
     -moz-box-shadow: 0 0 4px 4px #fbec88;
     -webkit-box-shadow: 0 0 4px 4px #fbec88;
     box-shadow: 0 0 4px 4px #fbec88;
+}
+.wipDisplay{
+    float: right;
+    height: 100%;  
+}
+#searchFieldsDiv{
+    float: left;
+    width: 100%;
+    height: auto;       
+}
+.searchLabel h4{
+    text-align: center;
+    margin: 0;
 }
