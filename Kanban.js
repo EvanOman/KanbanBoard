@@ -18,7 +18,7 @@ var defaultColumnMap = {};
 
 var columnNest = {};
 
-var tabColumns = ["Backlog", "Limbo", "Archive"];
+var tabColumns = [];
             
 var colSortKeyMap = {};
 
@@ -55,10 +55,11 @@ function initialize()
                 defaultColumnMap = data.options.defaultColumnMap;
                 limitWIP = data.options.limitWIP;
                 colDivChar = data.options.colDivChar.colDivChar;
+                tabColumns = data.options.tabColumns.tabColumns
                 
                 //We dont want this function to run until the initialize function completes but we also want the document to be ready
                 $(document).ready(function() {
-                    //First things first we want to populoate the board with the correct cards:                    
+                    //First things first we want to populate the board with the correct cards:                    
                     boardCardPopulate(); 
                    
                 });
@@ -167,19 +168,18 @@ $(document).ready(function() {
                 //Instead of merely populating existing fields, I am going to actually build the dialog add/edit
                 //menu based off of the Bugzilla field-type parameter which has the following map:
                 /* 
-             *Number    Form Type
-             *  0        Unknown
-             *  1        Free Text(iput type=text?)
-             *  2        Drop Down(Select)
-             *  3        Multiple-Selection Box(Select multiple = multiple)
-             *  4        Large Text Box(textarea)
-             *  5        Date/Time(datepicker)
-             *  6        Bug Id(input type=number?)
-             *  7        Bug URLs(input)               
-             */
+                 *Number    Form Type
+                 *  0        Unknown
+                 *  1        Free Text(iput type=text?)
+                 *  2        Drop Down(Select)
+                 *  3        Multiple-Selection Box(Select multiple = multiple)
+                 *  4        Large Text Box(textarea)
+                 *  5        Date/Time(datepicker)
+                 *  6        Bug Id(input type=number?)
+                 *  7        Bug URLs(input)               
+                 */
                 for (var j in data.result.fields)
-                {
-                    
+                {                    
                     //Gets the backend name for the field
                     var fieldName = data.result.fields[j].name;                                
                     
@@ -339,9 +339,11 @@ $(document).ready(function() {
                 }
             },
             stop: function(event, ui)
-            {                    
+            {       
+                //If isSorted is true we know that the sorted card has been successfully received. If it equals undefined we know that the receive was never hit(ie the sortable
+                //card was dragged back to its original column). The only way we want to cancel is if isSorted is false
                 var condition = ($(ui.item).data("isSorted") || typeof($(ui.item).data("isSorted")) == "undefined");
-                
+               
                 //If the card we are moving is part of a selected group we need to move the group wherever the card moves to
                 if ($(ui.item).find(".card").hasClass("sorting-selected") && condition)
                 {
@@ -365,9 +367,11 @@ $(document).ready(function() {
                     }                                                                
                     $(".sorting-selected").removeClass("sorting-selected").parent().show();     
                 }
-                
-                $(".sorting-selected:hidden").parent().show();        
+              
+                $(".sorting-selected:hidden").parent().show();   
+                $(ui.item).removeData();
             },
+            
             //Updates the cards position whenever it is moved
             receive: function(event, ui) {     
                 
@@ -380,8 +384,7 @@ $(document).ready(function() {
                 {
                     $(ui.item).data("isSorted", false);
                     alert(colID + " is not a valid Column choice for the "+status+" status");                    
-                    $(ui.sender).sortable('cancel');   
-                    //$(ui.item).data("isSorted");
+                    $(ui.sender).sortable('cancel');                       
                 }
                 else
                 {                   
@@ -605,9 +608,17 @@ $(document).ready(function() {
         
         var valArr = multiple.val();
         
-        valArr.push(defVal);
+        if (valArr != null)
+        {
+            valArr.push(defVal);
         
-        multiple.val(valArr);
+            multiple.val(valArr);    
+        }
+        else
+        {
+            multiple.val(defVal);      
+        }
+        
     }); 
      
     $( ".columnContainer" ).on( "click",".column, .tablists" ,function(e) {
@@ -750,6 +761,13 @@ $(document).ready(function() {
     //Handles the tab buttons dynamically
     $(".toolbar").on("click", ".btnTab", function(){
         var tab =  colSortKeyMap[$(this).text()];
+        
+        //If the column is still loading(ie it is in pre init state)
+        if ($("#"+tab).parent().hasClass("loading"))
+        {
+            tablistCardPopulate(tab);   
+        }               
+        
         handleTabLists("#"+tab);
     });                
 
@@ -1278,7 +1296,7 @@ $(document).ready(function() {
         var key =  $("#quickSearchTextBox").val();       
                 
         //Since this text box is in the toolbar we know we only want to search the .columns
-        var container = $(".column");
+        var container = $(".column, .tablists");
         
         var field = $("#quickSearchField").val();
                 
@@ -1286,7 +1304,7 @@ $(document).ready(function() {
                  
     });
     
-    $("#quickSearchTextBox").attr("title", "Enter a Bug ID or a Bug Summary\nTo seach for a literal string use ' or \"");
+    $("#quickSearchTextBox").attr("title", "Enter a paramter value to search for.\nTo seach for a literal string use ' or \"");
    
     //In case somebody is tricky and changes the field from above with text in the text box
     $("#quickSearchField").change(function(){
@@ -1618,14 +1636,14 @@ function editCard(fieldVals) {
 
             //checks to make sure that the dialog isn't still loading
             if (!$("#Details").hasClass("loading"))
-            {  /*                                                              
+            {                                                                
                 //Sends a comment on save if the user forgets to 
-                if ($("commentReplyText").val() != "" || $("commentReplyText").val() == undefined)
+                if (typeof($("#commentReplyText").val()) != "undefined" && $("#commentReplyText").val() != "")
                 {
                     debugger;
                     sendComment(cardId);    
                 }
-*/
+
                 var col = $("#Details select[name='cf_whichcolumn']").val();
                 
                 var status =  $("#Details select[name='bug_status']").val();
@@ -2017,7 +2035,7 @@ function ajaxEditBug()
                     //Here we save the changeData to the local
                     card.data(cardChangeData[ids]);
                     
-                    if (oldCol != cardChangeData[ids]["cf_whichcolumn"])
+                    if (oldCol != cardChangeData[ids]["cf_whichcolumn"] || reverseKeyLookup(colSortKeyMap, cardChangeData[ids]["cf_whichcolumn"] ) == "---")
                     {
                         appendCard(card, cardChangeData[ids]["cf_whichcolumn"]);  
                     }
@@ -2608,8 +2626,25 @@ function updateLastChanged(cardId)
 }
 
 function boardCardPopulate(){
-
-    //Finds all bugs assigned to me and posts them to the board 
+    
+    //We want to populate the board itself but not the tablists so we remove them from the list of possible fields
+    var colArr = [];
+    for (var col in limitWIP)
+    {
+        //If the column is not a tablist
+        if (tabColumns.indexOf(col) == -1)
+        {
+            //Add it to the array 
+            colArr.push(col);  
+        }  
+    }
+    
+    //Need to add this because I am using the limitWIP mpa which doesnt include this field
+    colArr.push("---");
+    
+    boardFilterOptions["cf_whichcolumn"] = colArr;
+    
+    //Finds all bugs that match the board filter criteria and posts them to the board 
     $.ajax({
         url: "ajax_POST.php",
         type: "POST",
@@ -2660,21 +2695,11 @@ function boardCardPopulate(){
                     //Need to check each column for WIP limit violations
                     $(".column").each(function(){
                         columnWIPCheck($(this).attr("id"));  
-                    });
-                
-                    var cardData = $(".card").first().data();
-                
-                    for (var index in cardData)
-                    {
-                        if (index != "metadata")
-                        {
-                            var option = $("<option>"+index+"</option>");
-                                
-                            $("#quickSearchField").append(option);
-                        }
-                    }
+                    });                
                 
                     $("body").removeClass("loading");
+                    
+                    delete boardFilterOptions["cf_whichcolumn"];
                 }); 
                 
             }
@@ -2725,11 +2750,14 @@ function dialogSearchOpen(condition)
         $("#searchFieldsDiv input").parent().remove();
     }
     
-                    
+    // $("#dialogSearch p").text("Search By");
+    
     //Hides all of the fields
     $("#searchFieldsDiv .box select").parent().hide();
       
-        
+    //Shows the search summary incase its been hidden  
+    $("#searchSummary").parent().show()
+    
     if (condition || typeof(condition) == "undefined")
     {
         $("#dialogSearch").dialog("open");     
@@ -2801,11 +2829,21 @@ function dialogOptionsOpen(condition)
                                         
             //Creater a row in the options dialog for that job name
             makeColumnOptions(name);
-        });
+        });              
         
-        $("#defaultColumnDiv .box").show();
+        //Here we set up the multiple select that specifies the tablist seleccts
+        var select = $("#Details select[name=cf_whichcolumn]").clone().attr({
+            "multiple": "multiple", 
+            "name": "tablists"
+        }).show();
         
+        var box = $("<div class='box'></div>");
         
+        box.append(select);
+        
+        $("#tablistSpecDiv").append(box);
+        
+        select.find("option").first().remove();
     
         //This each statement populates the table of WIP limit assignments
         $(".column").each(function(){
@@ -2844,21 +2882,10 @@ function dialogOptionsOpen(condition)
     }
     
     //Sets the colDivChar to the appropriate value
-    $("#columnCharText").val(colDivChar);
+    $("#columnCharText").val(colDivChar);      
     
-    //Sets the card color
-    /*job = job.replace(/\s+/g, '');
-    var id = job+"Color";
-    var row = $('<tr><td>'+job+'</td></tr>');
-
-    var color = jobMap[job];
-
-    var td = $("<td><div id='"+id+"' class='colorSelector'><div style='background-color:"+color+"'></div></div></td>");
-
-    row.append(td);
-
-    //We do this because the ColorPicker plugin requires Hex 
-    color = rgb2hex(color)*/
+    //Sets the tabColumns field to have the correct values
+    $("select[name=tablists]").val(tabColumns);
 
     $("#dialogOptions #jobColorTable tbody tr").each(function(){
         var job = $(this).find("td").first().text();
@@ -3024,16 +3051,18 @@ function dialogOptionsSave()
     
     oldFilter["method"] = "Bug.search";
     
+    var newTabColumns = $("select[name=tablists]").val()
+    
     var iniPost = {
         boardFilterOptions: boardFilterOptions,
         prioMap: prioMap,
         jobMap: jobMap, 
         allowedColumnMap: allowedColumnMapNew, 
         defaultColumnMap: defaultColumnMapNew, 
-        limitWIP: limitWIP           
-    };
- 
-    iniPost["colDivChar"] = $("#columnCharText").val();      
+        limitWIP: limitWIP,
+        colDivChar: $("#columnCharText").val(),
+        tabColumns: newTabColumns                
+    };           
     
     $.ajax({
         url: "ajax_write_options.php",
@@ -3054,8 +3083,8 @@ function dialogOptionsSave()
             }
             else 
             {    
-                //If the column character has changed we need to rebuild the entire page, the following line simply refreshes the page
-                if (iniPost["colDivChar"] != colDivChar || !deepEquals(allowedColumnMapNew, allowedColumnMap) || !deepEquals(defaultColumnMapNew, defaultColumnMap))
+                //If the column character or the allowed/default maps or the tabcolumns list have changed we need to rebuild the entire page, the following line simply refreshes the page
+                if (iniPost["colDivChar"] != colDivChar || !deepEquals(allowedColumnMapNew, allowedColumnMap) || !deepEquals(defaultColumnMapNew, defaultColumnMap) || !deepEquals(tabColumns, newTabColumns))
                 {
                     location.reload();    
                 }
@@ -3223,6 +3252,16 @@ function sortContextHelper()
     //Passes that columnId to the dialogSortOpen function
     dialogSortOpen(columnId);
 }
+
+function filterContextHelper()
+{                
+    //Finds the column that was right clicked
+    var colId = $($.mbMenu.lastContextMenuEl).attr("id");
+
+    //Passes that columnId to the dialogSortOpen function
+    dialogFilterOpen(colId)
+}
+
 
 //A function that finds the name associated with each each id that is passed in. Very slow, consider revision
 function getNames(productIds){
@@ -3457,7 +3496,7 @@ function appendCard(cards, col, status)
             
                 var defCol = defaultColumnMap[status];            
             
-                alert(frontEndCol + " is not a valid Column choice for the "+status+" status.\n Card #" + cardId+ " will be moved to " +defCol);
+                alert(frontEndCol + " is not a valid Column choice for the "+status+" status.\nCard #" + cardId+ " will be moved to " +defCol);
             
                 defCol = colSortKeyMap[defCol];            
                 appendCard(card, defCol, status);            
@@ -3520,6 +3559,9 @@ function makeColumnOptions(name)
         "name": name
     });
     var defSelect = $("#Details select[name=cf_whichcolumn]").clone();
+    
+    $(" option", defSelect).first().remove();
+    
     var defLabel = $("<label style='margin-top: 10px;' class='searchLabel'>Defualt</label>");        
     
     div.append(label, select, defLabel, defSelect);        
@@ -3710,11 +3752,102 @@ function dialogFilterOpen(colId)
 {
     /*--------------Repurposes the search dialog to act as an advanced filter--------------------*/
     
-    $("#Results, #searchSubmit").hide();
-                                   
+    dialogSearchOpen(false);
+    
+    var colName = reverseKeyLookup(colSortKeyMap, colId);
+    
+    $("#Results").hide();
+    
+    $("#dialogSearch table tr td").first().text("Filter By:");
+    
+    $("#searchSubmit").button("destroy").text("Filter").button();
+
+    $("#searchSubmit").unbind("click").click(function(){
+        dialogFilterSubmit(colId);
+    });
+    
+    if (!$("input[name='dateRange']").length)
+    {                
+        var div = $("<div class='box' style='width: auto;'></div>");
+        
+        var label = $("<p style='text-align: center;'>").text("Deadline Range")
+        
+        var beginLabel = $("<label style='text-align: center;'>Begin Date</label>");
+        var begin = $("<input class=' ui-widget-content ui-corner-all'type='text'/>").datepicker({
+            dateFormat: "yy-mm-dd"
+        });
+        
+        var table = $("<table name='dateRange'><tbody><tr></tr></tbody></table>");
+        
+        var endLabel = $("<label style='text-align: center;'>End Date</label>");
+        var end = $("<input class=' ui-widget-content ui-corner-all' type='text'/>").datepicker({
+            dateFormat: "yy-mm-dd"
+        });
+        
+        var td1 = $("<td>");
+        
+        var td2 = $("<td>");
+          
+        td1.append(beginLabel, begin);     
+        
+        td2.append( endLabel, end); 
+        
+        table.append(td1, td2);
+        
+        div.append(label, table).hide();
+        
+        $("#searchFieldsDiv").append(div);
+        
+        var option = $("<option>").val("table[name='dateRange']").text("Deadline");
+        
+        $("#searchFieldOption").append(option);               
+    }
+   
+
+   
+    
+    $("#searchSummary").parent().hide();
+    
     //Creates the advancedfilter dialog 
     $( "#dialogSearch" ).dialog({
-        title: "Filter "+ colId              
+        title: "Filter "+ colName,
+        close: function(){
+            $("#dialogSearch table tr td").first().text("Search By:");
+            
+            $("#searchSubmit").button("destroy").text("Search").button();
+            
+            //Removes the date range
+            $("table[name='dateRange']").parent().remove();
+            
+            $("#searchFieldOption option:contains('Deadline')").remove();
+            
+            //Resets this event handler to what it was prior to modification
+            $("#searchSubmit").unbind("click").click(function(){
+                
+                //want to make sure that all field value have been popluated before submitting a query
+                if (!$("#dialogSearch").hasClass("loading"))
+                {
+                    //Empties the search cache
+                    advSearchResults = [];
+                    
+                    //Removes all of the page numbers
+                    $("#pageNumDiv").empty();
+                    
+                    //The 10 here is a dummy value, will maybe someday be replaced by a user defined number of search results
+                    var numResults = 10;
+                    
+                    ajaxSearch(numResults,0);
+                }
+            }); 
+    
+            
+            //Need to also reset other things
+            $( "#dialogSearch" ).dialog({
+                title: "Advanced Search",
+                close: function(){                   
+                }
+            });
+        }
     });
      
     $( "#dialogSearch" ).data("column", colId);
@@ -3723,14 +3856,101 @@ function dialogFilterOpen(colId)
    
 }
 
-function dialogFilterSave(colId)
-{
-    /*--------------Executes Filters--------------------*/
-    $()
+function dialogFilterSubmit(colId)
+{                                                                                 
+    var filterArr = {};
+            
+    if ($("#dialogSearch .box:visible").length)
+    {      
+        //Finds all of the selected values in boxes that are visible
+        $("#dialogSearch .box:visible select, #searchSummary").each(function(){ 
+            //Grabs the field's parameter data storing the bugzilla parameter name
+            var name = $(this).attr("name");  
+            
+            //Checks to see if the field name in question is found in the fieldtoparam map and if so switches the fields accordingly
+            if (typeof(bugzillaFieldtoParam[name])!="undefined")
+            {
+                name =  bugzillaFieldtoParam[name];
+            }
+           
+            var value = $(this).val();
+            
+            filterArr[name] = value;
+        });
+    }
+       
+    //Removes all null values and makes array switches if neccessary
+    for (var index in filterArr)
+    {
+        if (filterArr[index] == null)
+        {
+            delete filterArr[index];
+        }
+        else 
+        {
+            //If the value is not an array
+            if ( ! $.isArray(filterArr[index]))
+            {                                    
+                //Turn it into an array
+                filterArr[index] = [filterArr[index]];
+            } 
+        }
+    }                                               
+
+    //Now we want to add the Summary if neccessary
+    if ($("#searchSummary").val() != "" && $("#searchSummary").val() != null)
+    {
+        filterArr["summary"] = $("#searchSummary").val();                         
+    }
     
-   
+    var column = $("#" + colId);
+    
+    $("#dialogSearch").dialog("close");    
+    
+    advancedFilter(filterArr, column);
+    
 }
 
+function advancedFilter(filterObject, col)
+{    
+    
+    var cards = $(" .card", col);
+    
+    cards.show();
+    
+    cards.each(function(){
+        
+        var card = $(this);
+        
+        //Here we loop through all of the filter fields 
+        for (var param in filterObject) 
+        {                 
+            var cardData = card.data(param);
+            var filterArr = filterObject[param];
+            
+            //If the filter is for some reason an empty string we ignore this filter
+            if (filterArr.length == 1 && filterArr[0] == "")
+            {
+                continue;
+            }
+            //Now if we get to a card and find out that it is both visible and its parameter matches the filter's, we move on to the next filter
+            else if (card.is(":visible") && filterArr.indexOf(cardData) != -1)
+            {
+                continue;      
+            }
+            //Else if either of the above are false we know that the card didn't pass the filter and as such we want to hide it
+            else
+            {
+                card.hide();
+                
+                //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it anymore
+                return true;     
+            }
+        }
+    });
+    
+    
+}
 
 function buildBoardHelper()
 {
@@ -3742,23 +3962,24 @@ function buildBoardHelper()
         {
             continue;
         }
-        /*else if(!$.isNumeric(i))
+        else if (typeof(tabColumns) != "undefined")
         {
-            continue;
-        }*/
-        else if (tabColumns.indexOf(index) >= 0 )
-        {
-            var colHtml = '<div class="tablistsCon"><span class="bigBanners">'+index+'</span>\
-                                <ul id="'+ id +'"class="tablists cmVoice {cMenu: \'contextMenuColumn\'}\" ></ul></div>';
+            if (tabColumns.indexOf(index) >= 0 )
+            {
+                var colHtml = '<div class="tablistsCon loading"><span class="bigBanners">'+index+'</span><ul id="'+ id +'"class="tablists cmVoice {cMenu: \'contextMenuColumn\'}\" ></ul>\
+                               <div class="modal"><div class="loadingLabel">'+ index +' Loading</div></div></div>';
                                 
-            $(".columnContainer").prepend(colHtml);
+                $(".columnContainer").prepend(colHtml);
                                 
-            var buttonHtml = '<button class="btnTab">'+index+'</button>';
+                var buttonHtml = '<button class="btnTab">'+index+'</button>';
                                 
-            $("#btnAddCard").before(buttonHtml);
-                                
-                                
-        }
+                $("#btnAddCard").before(buttonHtml);                                                                
+            }
+            else
+            {
+                $.extend(true, columnNest, buildColumnNestObject(index));
+            }
+        }        
         else
         {
             $.extend(true, columnNest, buildColumnNestObject(index));
@@ -3831,9 +4052,61 @@ function buildBoard(nest, fullName)
                 
 }
 
-function returnCardtoDefaultLocation(card)
+function tablistCardPopulate(tabID)
 {
-    var status = card.data("status");
+    var tabName = reverseKeyLookup(colSortKeyMap, tabID);  
+    
+    var tab = $("#"+tabID);
+    
+    //Finds all bugs that are contained in the specified tablist and posts them to the board 
+    $.ajax({
+        url: "ajax_POST.php",
+        type: "POST",       
+        data:  {
+            "method": "Bug.search",
+            "cf_whichcolumn": tabName            
+        },
+        dataType: "json",
+        success: function(data){
+
+            if (data.result.faultString != null)
+            {
+                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+            }
+            else if (!data.result)
+            {
+                alert("Something is wrong");
+            }
+            else
+            {                
+                //Then we can add the cards
+                for (var i in data.result.bugs)
+                {
+                    var bug = data.result.bugs[i];
+                    postCard(bug);                                
+                }
+               
+                $(document).buildContextualMenu(
+                {
+                    menuWidth:200,
+                    overflow:2,
+                    menuSelector: ".menuContainer",
+                    iconPath:"ico/",
+                    hasImages:false,
+                    fadeInTime:200,
+                    fadeOutTime:100,
+                    adjustLeft:0,
+                    adjustTop:0,
+                    opacity:.99,
+                    shadow:true,
+                    closeOnMouseOut:true,
+                    onContextualMenu:function(o,e){}
+                });                    
+                
+                tab.parent().removeClass("loading");                
+            }
+        }
+    });
 }
 
 function reverseKeyLookup(object, value)
@@ -3854,42 +4127,52 @@ function reverseKeyLookup(object, value)
 //the algorithm seems to be working correctly  for the boardCardFilterOptions comparison. I convewrted it from overriding the equals sign to taking in to parameters and evaluating
 function deepEquals(x, y)
 {
-    var p;
-    for(p in y) {
-        if(typeof(x[p])=='undefined') {
-            return false;
-        }
+    if (x == null && y == null)
+    {
+        return true;
     }
-
-    for(p in y) {
-        if (y[p]) {
-            switch(typeof(y[p])) {
-                case 'object':
-                    if (!deepEquals(x[p],y[p])) {
-                        return false;
-                    }
-                    break;
-                case 'function':
-                    if (typeof(x[p])=='undefined' ||
-                        (p != 'equals' && y[p].toString() != x[p].toString()))
-                        return false;
-                    break;
-                default:
-                    if (y[p] != x[p]) {
-                        return false;
-                    }
-            }
-        } else {
-            if (x[p])
+    else if (x == null || y == null)
+    {
+        return false;
+    }
+    else
+    {
+        var p;
+        for(p in y) {
+            if(typeof(x[p])=='undefined') {
                 return false;
+            }
         }
-    }
-
-    for(p in x) {
-        if(typeof(y[p])=='undefined') {
-            return false;
+        for(p in y) {
+            if (y[p]) {
+                switch(typeof(y[p])) {
+                    case 'object':
+                        if (!deepEquals(x[p],y[p])) {
+                            return false;
+                        }
+                        break;
+                    case 'function':
+                        if (typeof(x[p])=='undefined' ||
+                            (p != 'equals' && y[p].toString() != x[p].toString()))
+                            return false;
+                        break;
+                    default:
+                        if (y[p] != x[p]) {
+                            return false;
+                        }
+                }
+            } else {
+                if (x[p])
+                    return false;
+            }
         }
-    }
 
-    return true;
+        for(p in x) {
+            if(typeof(y[p])=='undefined') {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

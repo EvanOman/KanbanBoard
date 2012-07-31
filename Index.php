@@ -108,13 +108,24 @@ session_write_close();
             </div>
             <div style="float: left;">
                 <h2>
+                    Specify Special Columns:
+                </h2>
+                <h1>
+                    Here you can specify what columns will be treated as "tab-lists". These columns will be much larger, have more in-depth filtering options, be hidden on board load, and will have no WIP limit.
+                </h1>
+                <div id="tablistSpecDiv">
+
+                </div>
+            </div>  
+            <div style="float: left;">
+                <h2>
                     Set Default Column Values:
                 </h2>
                 <h1>
-                    In case a bug doesn't have a column selected, here you can specify what the default and allowed values should be based on the Status of that Bug
+                    In case a bug doesn't have a column selected, here you can specify what the default and allowed values should be based on the Status of that bug
                 </h1>
                 <div style="height:auto" id="defaultColumnDiv">
-                   
+
                 </div>
             </div>     
             <div style="float: left;">
@@ -296,13 +307,24 @@ session_write_close();
                     <label for="summary" style="float:left; margin-right: 10px;">Summary:</label>
                     <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all"></textarea>
                 </div>
-                <p style="float: left">Search by: 
-                    <select  id="searchFieldOption"  class="text ui-widget-content ui-corner-all" >                       
-                        <option value="all">All</option>                                                                
-                    </select>
-                    <button id="addSearchField">Add Field</button>
-                    <button id="removeSearchField">Remove Field</button>
-                </p>                   
+                <table>
+                    <tbody>
+                        <tr>
+                            <td>
+                                Search by:
+                            </td>
+                            <td>
+                                <select  id="searchFieldOption"  class="text ui-widget-content ui-corner-all" >                       
+                                    <option value="all">All</option>                                                                
+                                </select>
+                            </td>
+                            <td>
+                                <button id="addSearchField">Add Field</button>
+                                <button id="removeSearchField">Remove Field</button>
+                            </td>                            
+                        </tr>
+                    </tbody>
+                </table>        
                 <div id="searchFieldsDiv">
                     <div class="box">
                         <label for="product"class="searchLabel" name="product">Product</label>
@@ -352,7 +374,22 @@ session_write_close();
                 <label for="quickSearchTextBox" >Quick Search</label>
                 <input id="quickSearchTextBox" type="text" class="ui-widget-content ui-corner-all"/>
                 <label for="quickSearchField" >by:</label>
-                <select id="quickSearchField" class="text ui-widget-content ui-corner-all"></select>               
+                <select id="quickSearchField" class="text ui-widget-content ui-corner-all">
+                    <option value="product">Product</option>
+                    <option value="priority">Priority</option>
+                    <option value="creator">Creator</option>
+                    <option value="keywords">Keywords</option>
+                    <option value="see_also">See Also</option>
+                    <option value="id">Bug ID</option>
+                    <option value="resolution">Resolution</option>
+                    <option value="op_sys">Operating System</option>
+                    <option value="status">Status</option>
+                    <option value="summary">Summary</option>
+                    <option value="severity">Severity</option>
+                    <option value="version">Version</option>
+                    <option value="deadline">Deadline</option>
+                    <option value="component">Component</option>                    
+                </select>               
                 <button id="btnAddCard" >Add Card</button>
                 <button id="btnSearchCard" >Advanced Search</button>
                 <button id="btnOptions">Options</button>
@@ -379,6 +416,7 @@ session_write_close();
             <a action="addCardToCol()">Add Card</a>
             <a rel="separator"> </a>
             <a action="sortContextHelper()">Sort Column</a>
+            <a action="filterContextHelper()">Filter Column</a>
         </div> 
         <iframe id="secretIFrame" src="" style="display:none; visibility:hidden;"></iframe>
         <iframe id="upload_target" name="upload_target" src="blank.php" style=" display:none; visibility:hidden;"></iframe>   

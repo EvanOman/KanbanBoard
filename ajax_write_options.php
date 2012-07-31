@@ -53,6 +53,14 @@ foreach ($_POST["boardFilterOptions"] as $field => $value) {
         $boardFilterOptions[$field] = $value;
     }
 }
+$tabColumns = array();
+$tabArr = array();
+foreach ($_POST["tabColumns"] as $value) {
+    $value = filter_var($value, FILTER_SANITIZE_STRING);
+    array_push($tabArr, $value);
+}
+$tabColumns["tabColumns"] = $tabArr;
+
 
 $limitWIP = array();
 foreach ($_POST["limitWIP"] as $col => $limit) {
@@ -64,7 +72,7 @@ foreach ($_POST["limitWIP"] as $col => $limit) {
 $colDivChar = array("colDivChar" => filter_input(INPUT_POST, 'colDivChar', FILTER_SANITIZE_STRING));
 
 
-$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "allowedColumnMap" => $allowedColumnMap, "defaultColumnMap" => $defaultColumnMap, "limitWIP" => $limitWIP, "colDivChar" => $colDivChar);
+$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "allowedColumnMap" => $allowedColumnMap, "defaultColumnMap" => $defaultColumnMap, "limitWIP" => $limitWIP, "colDivChar" => $colDivChar, "tabColumns" => $tabColumns);
 
 if (write_ini_file($iniSettings, "kanban.ini", true)) {
     die(json_encode(array("success" => true)));
