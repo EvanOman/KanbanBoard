@@ -22,6 +22,10 @@ var tabColumns = [];
             
 var colSortKeyMap = {};
 
+//HEre we have a global array that stores the ids of all the items being sorted
+var sortingArray = [];
+
+var updateTimer = setTimeout(updateBoard, 30000);
 
 //The base element for determing shift selection
 var baseShiftClickItem;
@@ -327,15 +331,19 @@ $(document).ready(function() {
             cursorAt: {
                 top: 15
             },
-            cancel: "li:has(.loading)",
+            cancel: "li:has(.loading),  li.swimlane",
             //The items parameter expects only a selector which prevents the use of Jquery so here I have made a(likely very inefficent) selector which selects every li with a card in it that isn't loading
-            items: "li:has(.card):not(:has(.loading))",
+            items: "li:has(.card):not(:has(.loading)), li.swimlane",
             start: function(event, ui)
             {
                 //If the element is part of a selected group we need to hide the selected elements because we are moving
                 if ($(ui.item).find(".card").hasClass("sorting-selected"))
                 {
-                    $(".column .sorting-selected, .tablists .sorting-selected").parent().hide();
+                    $(".column .sorting-selected, .tablists .sorting-selected").each(function(){                        
+                        var id = $(this).attr("id");
+                        sortingArray.push(id);
+                    }).parent().hide();
+                    
                 }
             },
             stop: function(event, ui)
@@ -370,6 +378,8 @@ $(document).ready(function() {
               
                 $(".sorting-selected:hidden").parent().show();   
                 $(ui.item).removeData();
+                
+                sortingArray = [];
             },
             
             //Updates the cards position whenever it is moved
@@ -2697,7 +2707,7 @@ function boardCardPopulate(){
                         columnWIPCheck($(this).attr("id"));  
                     });                
                 
-                    $("body").removeClass("loading");
+                    $("body").removeClass("loading");                                       
                     
                     delete boardFilterOptions["cf_whichcolumn"];
                 }); 
@@ -3353,9 +3363,8 @@ function displayHandler(card) {
     var job = card.data("severity").replace(/\s+/g, '');
     var prio = card.data("priority").replace(/\s+/g, '');                
     var deadline = card.data("deadline");
-    var summary = card.data("summary")
-    //The date discrepancy was handled by correcting the timezone which is accomplished with this php call
-    var date = new Date(deadline+ " UTC"+ timeOffset);
+    var summary = card.data("summary")            
+    //+ " UTC"+ timeOffset);
                 
     //Changes the background color of the card to match the .ini file
     card.css("background-color", jobMap[job]);
@@ -3402,12 +3411,18 @@ function displayHandler(card) {
         $(cardRef+ " .iconBar .calBack").remove(); 
     } 
     
-    if (deadline != null)
+    //The date discrepancy was handled by correcting the timezone which is accomplished with this php call
+    if (typeof(deadline) != "undefined")
     {
-        var day = date.getDate() ;                
-        var month = date.getMonth(); 
-        var year = date.getFullYear();   
-        var until = daysUntil(year, month, day);
+        var splitArr = deadline.split("-");        
+        var date = new Date(splitArr[0], splitArr[1] - 1, splitArr[2]);     
+        var displayDay = date.getDate();
+        var dateUntil = date.getTime() + ((parseInt(timeOffset, 10) / 100) *60*60*1000); 
+        dateUntil = new Date(dateUntil);          
+        var day = dateUntil.getDate() ;                
+        var month = dateUntil.getMonth(); 
+        var year = dateUntil.getFullYear();   
+        var until = daysUntil(year, month, day) + 1;
     }
     else
     {
@@ -3417,7 +3432,7 @@ function displayHandler(card) {
             
     card.data("dayUntilDue", until);
                 
-    $(cardRef+ " .iconBar .calBack .calIcon").html(day).attr({
+    $(cardRef+ " .iconBar .calBack .calIcon").html(displayDay).attr({
         "title": "Due: "+ deadline + " ("+until+" days from today)"
     });
     if (until <= 7 && until > 0)
@@ -3495,7 +3510,8 @@ function appendCard(cards, col, status)
                 var cardId = card.attr("id");
             
                 var defCol = defaultColumnMap[status];            
-            
+                
+                //TODO Push the message to an array of strings showing all of the moves in one alert             
                 alert(frontEndCol + " is not a valid Column choice for the "+status+" status.\nCard #" + cardId+ " will be moved to " +defCol);
             
                 defCol = colSortKeyMap[defCol];            
@@ -3766,21 +3782,34 @@ function dialogFilterOpen(colId)
         dialogFilterSubmit(colId);
     });
     
-    if (!$("input[name='dateRange']").length)
-    {                
+    if (!$("table[name='deadline']").length)
+    {   
+        //Here I create a table holding all the numeric ranges based off of the following standards:
+        /*
+         * fieldName: Name attribute of the table
+         * beginMarker: Name of the begin input 
+         * endMarker: Name of the end input
+         * 
+         * Also note that only ranges will be stored in a box so when parsing the filters we know that if we find a table, it is going to be a range based off of the above indicators
+         */
+        
         var div = $("<div class='box' style='width: auto;'></div>");
         
         var label = $("<p style='text-align: center;'>").text("Deadline Range")
         
         var beginLabel = $("<label style='text-align: center;'>Begin Date</label>");
-        var begin = $("<input class=' ui-widget-content ui-corner-all'type='text'/>").datepicker({
+        var begin = $("<input name='begin' class=' ui-widget-content ui-corner-all'type='text'/>").datepicker({
             dateFormat: "yy-mm-dd"
         });
         
-        var table = $("<table name='dateRange'><tbody><tr></tr></tbody></table>");
+        var table = $("<table name='deadline'></table>");
+        
+        var tbody = $("<tbody></tbody>");
+        
+        var tr = $("<tr></tr>");
         
         var endLabel = $("<label style='text-align: center;'>End Date</label>");
-        var end = $("<input class=' ui-widget-content ui-corner-all' type='text'/>").datepicker({
+        var end = $("<input name='end'class=' ui-widget-content ui-corner-all' type='text'/>").datepicker({
             dateFormat: "yy-mm-dd"
         });
         
@@ -3792,20 +3821,19 @@ function dialogFilterOpen(colId)
         
         td2.append( endLabel, end); 
         
-        table.append(td1, td2);
+        table.append(tbody.append(tr.append(td1, td2)));
+        
+       
         
         div.append(label, table).hide();
         
         $("#searchFieldsDiv").append(div);
         
-        var option = $("<option>").val("table[name='dateRange']").text("Deadline");
+        var option = $("<option>").val("table[name='deadline']").text("Deadline");
         
         $("#searchFieldOption").append(option);               
     }
-   
-
-   
-    
+          
     $("#searchSummary").parent().hide();
     
     //Creates the advancedfilter dialog 
@@ -3863,19 +3891,41 @@ function dialogFilterSubmit(colId)
     if ($("#dialogSearch .box:visible").length)
     {      
         //Finds all of the selected values in boxes that are visible
-        $("#dialogSearch .box:visible select, #searchSummary").each(function(){ 
+        $("#dialogSearch .box:visible select, #dialogSearch .box:visible table ").each(function(){ 
+            
             //Grabs the field's parameter data storing the bugzilla parameter name
             var name = $(this).attr("name");  
             
-            //Checks to see if the field name in question is found in the fieldtoparam map and if so switches the fields accordingly
-            if (typeof(bugzillaFieldtoParam[name])!="undefined")
+            if ($(this).is("table"))
             {
-                name =  bugzillaFieldtoParam[name];
+                var rangeObject = {};
+                
+                //HEre we loop through the td's of the given table and create an object logically storing the beggining and end values
+                $(" td input", $(this)).each(function(){
+                    var input = $(this);
+                    
+                    var marker = input.attr("name");
+                    
+                    var val = input.val();
+                   
+                    rangeObject[marker] = val;                    
+                });     
+
+                filterArr[name] = rangeObject;
+            }
+            else
+            {                            
+                //Checks to see if the field name in question is found in the fieldtoparam map and if so switches the fields accordingly
+                if (typeof(bugzillaFieldtoParam[name])!="undefined")
+                {
+                    name =  bugzillaFieldtoParam[name];
+                }
+           
+                var value = $(this).val();
+            
+                filterArr[name] = value;      
             }
            
-            var value = $(this).val();
-            
-            filterArr[name] = value;
         });
     }
        
@@ -3898,7 +3948,7 @@ function dialogFilterSubmit(colId)
     }                                               
 
     //Now we want to add the Summary if neccessary
-    if ($("#searchSummary").val() != "" && $("#searchSummary").val() != null)
+    if ($("#searchSummary").val() != "" && $("#searchSummary").val() != null && $("#searchSummary").is(":visible"))
     {
         filterArr["summary"] = $("#searchSummary").val();                         
     }
@@ -3912,8 +3962,7 @@ function dialogFilterSubmit(colId)
 }
 
 function advancedFilter(filterObject, col)
-{    
-    
+{        
     var cards = $(" .card", col);
     
     cards.show();
@@ -3933,6 +3982,10 @@ function advancedFilter(filterObject, col)
             {
                 continue;
             }
+            /*else if (true)
+            {
+                    
+            }*/
             //Now if we get to a card and find out that it is both visible and its parameter matches the filter's, we move on to the next filter
             else if (card.is(":visible") && filterArr.indexOf(cardData) != -1)
             {
@@ -3943,7 +3996,7 @@ function advancedFilter(filterObject, col)
             {
                 card.hide();
                 
-                //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it anymore
+                //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
                 return true;     
             }
         }
@@ -4083,7 +4136,16 @@ function tablistCardPopulate(tabID)
                 for (var i in data.result.bugs)
                 {
                     var bug = data.result.bugs[i];
-                    postCard(bug);                                
+                    
+                    var card = $("#" + bug.id);
+                    
+                    //Checks to make sure that the card being posted doesn't already exist for some reason
+                    if (!card.length)
+                    {
+                        postCard(bug);    
+                    }
+                    
+                                                   
                 }
                
                 $(document).buildContextualMenu(
@@ -4107,6 +4169,131 @@ function tablistCardPopulate(tabID)
             }
         }
     });
+}
+
+function updateBoard()
+{
+    clearTimeout(updateTimer);
+    
+    var now = new Date().getTime() - 40000;
+    now = new Date(now);
+    
+    var year = now.getFullYear();
+    
+    var day =  padtoTwo(now.getDate());  
+    
+    var month =  padtoTwo(now.getMonth() + 1);
+   
+    
+    function padtoTwo(value)
+    {
+        if (value < 10)
+        {
+            return "0"+ value;
+        } 
+        else
+        {
+            return value;
+        }
+    }
+    
+    var time = padtoTwo(now.getHours()) + ":" + padtoTwo(now.getMinutes()) + ":" + padtoTwo(now.getSeconds());
+                   
+    var isoTime = year + "-" + month + "-" + day + "T" + time + ".000Z";
+    
+    
+    //Finds all bugs that are contained in the specified tablist and posts them to the board 
+    $.ajax({
+        url: "ajax_POST.php",
+        type: "POST",       
+        data:  {
+            "method": "Bug.search",
+            "last_change_time": isoTime            
+        },
+        dataType: "json",
+        success: function(data){
+
+            if (data.result.faultString != null)
+            {
+                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+            }
+            else if (!data.result)
+            {
+                alert("Something is wrong");
+            }
+            else
+            {                
+                var bugs = data.result.bugs;
+                 
+                for (var i in bugs)
+                {
+                    var bugId = bugs[i].id;
+                    
+                    var card = $("#"+bugId);
+                    
+                    var col = null;
+                    var position = null;
+                    var futureColumn = colSortKeyMap[bugs[i].cf_whichcolumn];
+                    
+                    if (card.length)
+                    {
+                        col = card.data("cf_whichcolumn");
+                        
+                        position = card.parent().index();
+                        
+                        if (sortingArray.indexOf(bugId) != -1)
+                        {
+                            $(".tablists, .column").sortable('cancel');
+                        }
+                        
+                        card.parent().remove();      
+                    }
+                    
+                    postCard(bugs[i]);  
+                    
+                    if (col != null && col == futureColumn)
+                    {
+                        if (position == 0)
+                        {
+                            $("#"+col).prepend($("#"+bugId).parent());
+                        }
+                        else
+                        {
+                            $("#"+col+" li:eq("+(position - 1)+")").after($("#"+bugId).parent());                                                           
+                        }
+                         
+                    }
+                    
+                    
+                }
+                
+                $(document).buildContextualMenu(
+                {
+                    menuWidth:200,
+                    overflow:2,
+                    menuSelector: ".menuContainer",
+                    iconPath:"ico/",
+                    hasImages:false,
+                    fadeInTime:200,
+                    fadeOutTime:100,
+                    adjustLeft:0,
+                    adjustTop:0,
+                    opacity:.99,
+                    shadow:true,
+                    closeOnMouseOut:true,
+                    onContextualMenu:function(o,e){}
+                });
+                
+                //Need to check each column for WIP limit violations
+                $(".column").each(function(){
+                    columnWIPCheck($(this).attr("id"));  
+                });                
+                
+                
+                updateTimer = setTimeout(updateBoard, 30000);                    
+            }
+        }
+    }); 
 }
 
 function reverseKeyLookup(object, value)

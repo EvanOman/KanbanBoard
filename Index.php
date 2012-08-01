@@ -7,15 +7,16 @@ if (!isset($_SESSION["login"]) || !isset($_SESSION["password"])) {
 
 session_write_close();
 ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
     <head>
         <title>Eckhardt Optics Kanban Board</title>
         <link rel="icon" type="image/png" href="images/eckopIcon.png" />
         <link type="text/css" href="themes/black-tie/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
-        <link type="text/css" href="demos.css" rel="stylesheet" />
+        <!link type="text/css" href="demos.css" rel="stylesheet" />
         <link type="text/css" href="menu_black.css" rel="stylesheet" />
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge">
         <script type="text/javascript" src="jquery-1.7.2.js"></script>
         <script type="text/javascript" src="jquery.ui.core.js"></script>
         <script type="text/javascript" src="jquery.ui.widget.js"></script>

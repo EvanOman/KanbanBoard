@@ -53,14 +53,6 @@ foreach ($_POST["boardFilterOptions"] as $field => $value) {
         $boardFilterOptions[$field] = $value;
     }
 }
-$tabColumns = array();
-$tabArr = array();
-foreach ($_POST["tabColumns"] as $value) {
-    $value = filter_var($value, FILTER_SANITIZE_STRING);
-    array_push($tabArr, $value);
-}
-$tabColumns["tabColumns"] = $tabArr;
-
 
 $limitWIP = array();
 foreach ($_POST["limitWIP"] as $col => $limit) {
@@ -68,6 +60,20 @@ foreach ($_POST["limitWIP"] as $col => $limit) {
     $limit = filter_var($limit, FILTER_SANITIZE_NUMBER_INT);
     $limitWIP[$col] = $limit;
 }
+
+$tabColumns = array();
+$tabArr = array();
+foreach ($_POST["tabColumns"] as $value) {
+    $value = filter_var($value, FILTER_SANITIZE_STRING);
+    
+    //Here we set the WIPlimit for any tablist column to be 0 to avoid WIP viloations on tablists
+    $limitWIP[$value] = "0";        
+    
+    array_push($tabArr, $value);
+}
+$tabColumns["tabColumns"] = $tabArr;
+
+
 
 $colDivChar = array("colDivChar" => filter_input(INPUT_POST, 'colDivChar', FILTER_SANITIZE_STRING));
 
