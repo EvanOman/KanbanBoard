@@ -28,7 +28,53 @@ session_write_close();
         </style>
         <!link type="text/css" href="index.css" rel="stylesheet" />
     <script type="text/javascript">
-        $(document).ready(function(){                      
+        $(document).ready(function(){ 
+            
+            //Sets up the invalids entry dialog menu
+            /*$( "#dialogLogin" ).dialog({
+                autoOpen: false,
+                show: "blind",
+                hide: "explode",                            
+                modal: true,
+                buttons: {
+                    Login:  function(){
+                        var login = $("#login").val().replace(/\s+/g, '');
+                        var password = $("#password").val().replace(/\s+/g, '');
+                        $.ajax({
+                            async: false,
+                            url: "ajax_POST.php",
+                            type: "POST",
+                            dataType: "json",
+                            data: {                                     
+                                "method": "User.login",
+                                "login":  login,
+                                "password":  password
+                            },
+                            
+                            success: function(data, status){
+                                if (data.result.faultString != null)
+                                {
+                                    alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                                }
+                                else if (!data.result)
+                                {
+                                    alert("Something is wrong");
+                                }
+                                else 
+                                {
+                                    alert("Login successful")
+                                }                                                                                          
+                            },
+                            error: function(jqXHR, textStatus, errorThrown){
+                                alert("There was an error:" + textStatus);
+                            }
+                        })
+                    },
+                    Close: function() {
+                        $( this ).dialog( "close" );
+                    }
+                }
+            });*/
             
             $("#loginForm").submit(function(e){               
                 

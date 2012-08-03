@@ -38,22 +38,6 @@ foreach ($_POST["jobMap"] as $name => $color) {
     $jobMap[$name] = $color;
 }
 
-$boardFilterOptions = array();
-foreach ($_POST["boardFilterOptions"] as $field => $value) {
-    $field = filter_var($field, FILTER_SANITIZE_STRING);
-    if (is_array($value)) {
-        $arr = array();
-        foreach ($value as $val) {
-            $val = filter_var($val, FILTER_SANITIZE_STRING);
-            array_push($arr, $val);
-        }
-        $boardFilterOptions[$field] = $arr;
-    } else {
-        $value = filter_var($value, FILTER_SANITIZE_STRING);
-        $boardFilterOptions[$field] = $value;
-    }
-}
-
 $limitWIP = array();
 foreach ($_POST["limitWIP"] as $col => $limit) {
     $col = filter_var($col, FILTER_SANITIZE_STRING);
@@ -78,7 +62,7 @@ $tabColumns["tabColumns"] = $tabArr;
 $colDivChar = array("colDivChar" => filter_input(INPUT_POST, 'colDivChar', FILTER_SANITIZE_STRING));
 
 
-$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "boardFilterOptions" => $boardFilterOptions, "allowedColumnMap" => $allowedColumnMap, "defaultColumnMap" => $defaultColumnMap, "limitWIP" => $limitWIP, "colDivChar" => $colDivChar, "tabColumns" => $tabColumns);
+$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "allowedColumnMap" => $allowedColumnMap, "defaultColumnMap" => $defaultColumnMap, "limitWIP" => $limitWIP, "colDivChar" => $colDivChar, "tabColumns" => $tabColumns);
 
 if (write_ini_file($iniSettings, "kanban.ini", true)) {
     die(json_encode(array("success" => true)));

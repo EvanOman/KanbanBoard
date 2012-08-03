@@ -12,11 +12,10 @@ session_write_close();
     <head>
         <title>Eckhardt Optics Kanban Board</title>
         <link rel="icon" type="image/png" href="images/eckopIcon.png" />
-        <link type="text/css" href="themes/black-tie/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
-        <!link type="text/css" href="demos.css" rel="stylesheet" />
+        <link  id="jqueryCss" type="text/css" href="themes/black-tie/jquery-ui.css" rel="stylesheet" />        
         <link type="text/css" href="menu_black.css" rel="stylesheet" />
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+        <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
         <script type="text/javascript" src="jquery-1.7.2.js"></script>
         <script type="text/javascript" src="jquery.ui.core.js"></script>
         <script type="text/javascript" src="jquery.ui.widget.js"></script>
@@ -45,31 +44,80 @@ session_write_close();
         </script>
     </head>
     <body>
+        <div id="dialogFilter">
+            <h2>
+                Tab-column Card Filter:
+            </h2>
+            <h1>Specify which bugs you want to be displayed on the tab-columns(those which are not visible on load)</h1>
+            <p>Add Filter by: 
+                <select  id="filterFieldOption"  class="text ui-widget-content ui-corner-all" >                       
+                    <option value="all">All</option>                                                                
+                </select>
+                <button id="addFilterOption">Add Filter</button>
+                <button id="removeFilterOption">Remove Filter</button>
+            </p>               
+            <form style="height:auto;">
+                <fieldset style="margin-top: 10px;">                        
+                    <div id="optFilterDiv">
+                        <div  class="box" >
+                            <label class="searchLabel">Product</label>
+                            <select  name="product" id="optProduct" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                        </div>
+                        <div class="box">
+                            <label class="searchLabel" >Version</label>
+                            <select  name="version" id="optVersion" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                        </div>
+                        <div class="box">
+                            <label class="searchLabel" >Component</label>
+                            <select  name="component" id="optComponent" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                        </div>                           
+                    </div>                        
+                </fieldset>                    
+            </form> 
+        </div> 
         <div id="dialogSort" class="ui-dialog-content ui-widget-content">
             <h1>Sort Criteria</h1>
-            <div style="width: auto; float: left;">
-                <select id="sortCriteriaSelect">
-                    <option value="id">Bug ID</option>
-                    <option value="summary">Summary</option>
-                    <option value="prioSortKey">Priority</option>
-                    <option value="last_change_time">Last Time Edited</option>
-                    <option value="dayUntilDue">Deadline</option>                                     
-                </select>
-            </div>
-            <div style="float: left; margin: 10px; margin-left: 5px;">
-                <form>
-                    <div id="sortRadioDiv">   
-                        <span>
-                            <label for="ascRadio">Ascending</label>
-                            <input id="ascRadio" value="asc" type="radio" name="radio"/> 
-                        </span>     
-                        <span>
-                            <label for="descRadio">Descending</label> 
-                            <input id="descRadio" value="desc" type="radio" name="radio"/>  
-                        </span>                 
-                    </div>
-                </form>
-            </div>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div style="width: auto; float: left;">
+                                <select id="sortCriteriaSelect">
+                                    <option value="id">Bug ID</option>
+                                    <option value="summary">Summary</option>
+                                    <option value="prioSortKey">Priority</option>
+                                    <option value="last_change_time">Last Time Edited</option>
+                                    <option value="dayUntilDue">Deadline</option>                                     
+                                </select>
+                            </div>   
+                        </td>
+                        <td>                            
+                            <form>
+                                <div id="sortRadioDiv">
+                                    <table>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <span>
+                                                        <label for="ascRadio">Ascending</label>
+                                                        <input id="ascRadio" value="asc" type="radio" name="radio"/> 
+                                                    </span>      
+                                                </td>
+                                                <td>
+                                                    <span>
+                                                        <label for="descRadio">Descending</label> 
+                                                        <input id="descRadio" value="desc" type="radio" name="radio"/>  
+                                                    </span>       
+                                                </td>
+                                            </tr>  
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </form>                            
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>  
         <div id="dialogOptions" class="ui-dialog-content ui-widget-content"  title="Options" >
             <div>
@@ -148,40 +196,9 @@ session_write_close();
                         </tr>
                     </tbody>
                 </table>
-            </div>     
-            <div style="float: left;">
-                <h2>
-                    Board Card Filter:
-                </h2>
-                <h1>Specify which bugs you want to be displayed on the Kanban board</h1>
-                <p>Add Filter by: 
-                    <select  id="filterFieldOption"  class="text ui-widget-content ui-corner-all" >                       
-                        <option value="all">All</option>                                                                
-                    </select>
-                    <button id="addFilterOption">Add Filter</button>
-                    <button id="removeFilterOption">Remove Filter</button>
-                </p>               
-                <form style="height:auto;">
-                    <fieldset style="margin-top: 10px;">                        
-                        <div id="optFilterDiv"style="float: left; width:100%">
-                            <div  class="box" >
-                                <label class="searchLabel">Product</label>
-                                <select  name="product" id="optProduct" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box">
-                                <label class="searchLabel" >Version</label>
-                                <select  name="version" id="optVersion" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>
-                            <div class="box">
-                                <label class="searchLabel" >Component</label>
-                                <select  name="component" id="optComponent" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                            </div>                           
-                        </div>                        
-                    </fieldset>                    
-                </form>
-            </div>            
+            </div> 
             <div class="modal"><div class="loadingLabel">Options Loading</div></div>
-        </div>          
+        </div>                                             
         <div id="dialogInvalid" class="ui-dialog-content ui-widget-content"  title="Invalid" >
             <p>Must Specify the Card's Title!!!</p>
         </div>
@@ -303,7 +320,7 @@ session_write_close();
             </div>
         </div>   
         <div id="dialogSearch" class="ui-dialog-content ui-widget-content"  title="Advanced Search" >
-            <div id="search">
+            
                 <div class="box"style="max-height: 40px; width: auto;">
                     <label for="summary" style="float:left; margin-right: 10px;">Summary:</label>
                     <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all"></textarea>
@@ -367,11 +384,11 @@ session_write_close();
                     </div>
 
                 </div>                
-            </div>
+            
             <div class="modal"><div class="loadingLabel">Loading Fields</div></div>
         </div>
         <div class="columnContainer">          
-            <div class="toolbar">  
+            <div class="toolbar ui-widget-header">  
                 <label for="quickSearchTextBox" >Quick Search</label>
                 <input id="quickSearchTextBox" type="text" class="ui-widget-content ui-corner-all"/>
                 <label for="quickSearchField" >by:</label>
@@ -393,7 +410,8 @@ session_write_close();
                 </select>               
                 <button id="btnAddCard" >Add Card</button>
                 <button id="btnSearchCard" >Advanced Search</button>
-                <button id="btnOptions">Options</button>
+                <button id="btnOptions">Admin Options</button>
+                <button id="btnFilter">Filter Tab Columns</button>
                 <button id="btnLogout">Log out</button>
             </div>           
         </div>
@@ -416,8 +434,15 @@ session_write_close();
             <a rel="separator"> </a>
             <a action="addCardToCol()">Add Card</a>
             <a rel="separator"> </a>
+            <a action="sortContextHelper()">Sort Column</a>           
+        </div> 
+        <div class="mbmenu" id="contextMenuTab">            
+            <a class="{menu:'moveAllCards'}">Move All Cards to</a>
+            <a rel="separator"> </a>
+            <a action="addCardToCol()">Add Card</a>
+            <a rel="separator"> </a>
             <a action="sortContextHelper()">Sort Column</a>
-            <a action="filterContextHelper()">Filter Column</a>
+            <a action="dialogFilterOpen()">Filter Column</a>
         </div> 
         <iframe id="secretIFrame" src="" style="display:none; visibility:hidden;"></iframe>
         <iframe id="upload_target" name="upload_target" src="blank.php" style=" display:none; visibility:hidden;"></iframe>   
