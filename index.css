@@ -113,7 +113,7 @@ body .ui-widget-header{
     border-left: black 2px solid;
     border-top: black 2px solid;
     border-bottom: black 2px solid;
-    background-color: activecaption; 
+    /*background-color: activecaption; */
 
 }
 
@@ -409,7 +409,6 @@ widget visible when the dialog is open*/
 }
 #attachmentTable{
     width: 100%;
-
 }
 #attachmentAddTable{
     width: auto;
@@ -520,4 +519,7 @@ widget visible when the dialog is open*/
     height: 100%;
     position: absolute;
     right: 0;
+}
+#adminInputs input{
+    width: 50px;
 }

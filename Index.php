@@ -41,6 +41,7 @@ session_write_close();
         <script type="text/javascript">  
             var timeOffset = "<?php echo date("O"); ?>"; 
             var userEmail =  "<?php echo $_SESSION["login"]; ?>";
+            var userID =  "<?php echo $_SESSION["userID"]; ?>";
         </script>
     </head>
     <body>
@@ -74,6 +75,9 @@ session_write_close();
                     </div>                        
                 </fieldset>                    
             </form> 
+        </div> 
+        <div id="dialogDataChanged" class="ui-dialog-content ui-widget-content">  
+            This Bug has been edited from another Kanban board or from Bugzilla while this Edit Dialog has been opened. Do you want to view the updated card data or continue with your changes(and most likely overwrite the changes submitted by the other user)?
         </div> 
         <div id="dialogSort" class="ui-dialog-content ui-widget-content">
             <h1>Sort Criteria</h1>
@@ -197,6 +201,72 @@ session_write_close();
                     </tbody>
                 </table>
             </div> 
+            <div style="float: left;">
+                <h2>
+                    Specify Administrator Accounts:
+                </h2>
+                <h1>
+                    Here you can specify who you want to have Administrator privileges by listing the user IDs(*Note: Improperly setting this value could lock you out of these options)
+                </h1>
+                <table id="adminInputs">
+                    <tbody>
+                        <tr>
+                            <td>
+                                Adminstrator IDs:   
+                            </td>                            
+                            <td>
+                                <button id="addAdmin">Add ID</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>    
+            <div style="float: left;">
+                <h2>
+                    Choose a Theme:
+                </h2>
+                <h1>
+                    Here you can specify who you want to have Administrator privileges by listing the user IDs(*Note: Improperly setting this value could lock you out of these options)
+                </h1>
+                <table >
+                    <tbody>
+                        <tr>
+                            <td>
+                                Themes:   
+                            </td>                            
+                            <td>
+                                <select id="themeSelect">
+                                    <option value="base">Base</option>
+                                    <option value="black-tie">Black Tie</option>
+                                    <option value="blitzer">Blitzer</option>
+                                    <option value="cupertino">Cupertino</option>
+                                    <option value="dark-hive">Dark Hive</option>
+                                    <option value="dot-luv">Dot Luv</option>
+                                    <option value="eggplant">Eggplant</option>
+                                    <option value="excite-bike">Excite Bike</option>
+                                    <option value="flick">Flick</option>
+                                    <option value="hot-sneaks">Hot Sneaks</option>
+                                    <option value="humanity">Humanity</option>
+                                    <option value="le-frog">Le Frog</option>
+                                    <option value="mint-choc">Mint Choc</option>
+                                    <option value="overcast">Overcast</option>
+                                    <option value="pepper-grinder">Pepper Grinder</option>
+                                    <option value="redmond">Redmond</option>
+                                    <option value="smoothness">Smoothness</option>
+                                    <option value="south-street">South Street</option>
+                                    <option value="start">Start</option>
+                                    <option value="sunny">Sunny</option>
+                                    <option value="swanky-purse">Swanky Purse</option>
+                                    <option value="trontastic">Trontastic</option>
+                                    <option value="ui-darkness">UI Darkness</option>
+                                    <option value="ui-lightness">UI Lightness</option>
+                                    <option value="vader">Vader</option>
+                                </select>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>    
             <div class="modal"><div class="loadingLabel">Options Loading</div></div>
         </div>                                             
         <div id="dialogInvalid" class="ui-dialog-content ui-widget-content"  title="Invalid" >
@@ -312,79 +382,80 @@ session_write_close();
                                     </tr>
                                 </tbody>                     
                             </table>
-                            <div class="modal"><div class="loadingLabel">Uploading Attachment</div></div> 
+
                         </div>                        
-                    </form>                    
+                    </form>  
+                    <div class="modal"><div class="loadingLabel">Uploading Attachment</div></div> 
                     <div style="clear: both;"></div>                  
                 </div>
             </div>
         </div>   
         <div id="dialogSearch" class="ui-dialog-content ui-widget-content"  title="Advanced Search" >
-            
-                <div class="box"style="max-height: 40px; width: auto;">
-                    <label for="summary" style="float:left; margin-right: 10px;">Summary:</label>
-                    <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all"></textarea>
+
+            <div class="box"style="max-height: 40px; width: auto;">
+                <label for="summary" style="float:left; margin-right: 10px;">Summary:</label>
+                <textarea  name="summary" id="searchSummary" class="text ui-widget-content ui-corner-all"></textarea>
+            </div>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>
+                            Search by:
+                        </td>
+                        <td>
+                            <select  id="searchFieldOption"  class="text ui-widget-content ui-corner-all" >                       
+                                <option value="all">All</option>                                                                
+                            </select>
+                        </td>
+                        <td>
+                            <button id="addSearchField">Add Field</button>
+                            <button id="removeSearchField">Remove Field</button>
+                        </td>                            
+                    </tr>
+                </tbody>
+            </table>        
+            <div id="searchFieldsDiv">
+                <div class="box">
+                    <label for="product"class="searchLabel" name="product">Product</label>
+                    <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
                 </div>
-                <table>
-                    <tbody>
-                        <tr>
-                            <td>
-                                Search by:
-                            </td>
-                            <td>
-                                <select  id="searchFieldOption"  class="text ui-widget-content ui-corner-all" >                       
-                                    <option value="all">All</option>                                                                
-                                </select>
-                            </td>
-                            <td>
-                                <button id="addSearchField">Add Field</button>
-                                <button id="removeSearchField">Remove Field</button>
-                            </td>                            
-                        </tr>
-                    </tbody>
-                </table>        
-                <div id="searchFieldsDiv">
-                    <div class="box">
-                        <label for="product"class="searchLabel" name="product">Product</label>
-                        <select  name="product" id="searchProduct"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                    </div>
-                    <div class="box">
-                        <label for="version"class="searchLabel" name="version">Version</label>
-                        <select  name="version" id="searchVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                    </div>
-                    <div class="box">
-                        <label class="searchLabel" >Component</label>
-                        <select  name="component" id="optComponent" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
-                    </div>
+                <div class="box">
+                    <label for="version"class="searchLabel" name="version">Version</label>
+                    <select  name="version" id="searchVersion"  class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                </div>
+                <div class="box">
+                    <label class="searchLabel" >Component</label>
+                    <select  name="component" id="optComponent" class="text ui-widget-content ui-corner-all" multiple="multiple"></select>
+                </div>
 
-                </div>                     
-                <span>
-                    <button id="searchSubmit" >Search</button>
-                </span>                                   
-                <div id="Results" class="ui-widget">                 
-                    <div id="bugs-contain" class="ui-widget" >
-                        <h1>Bugs:</h1><div id="pageNumDiv"></div>
-                        <table id="bugs" class="ui-widget ui-widget-content" cellspacing="0" cellpadding="4" width="100%">
-                            <thead>
-                                <tr class="ui-widget-header ">
-                                    <th colspan="1">ID</th> 
-                                    <th colspan="1">Product</th> 
-                                    <th colspan="1">Version</th> 
-                                    <th colspan="1">Assignee</th> 
-                                    <th colspan="1">Status</th>  
-                                    <th colspan="1">Resolution</th> 
-                                    <th colspan="1">Summary</th> 
-                                </tr>
-                            </thead>
-                            <tbody>
-                            </tbody>
-                        </table>  
-                        <div class="modal"><div class="loadingLabel">Loading Results</div></div> 
-                        <p></p>
-                    </div>
+            </div>                     
+            <span>
+                <button id="searchSubmit" >Search</button>
+            </span>                                   
+            <div id="Results" class="ui-widget">                 
+                <div id="bugs-contain" class="ui-widget" >
+                    <h1>Bugs:</h1><div id="pageNumDiv"></div>
+                    <table id="bugs" class="ui-widget ui-widget-content" cellspacing="0" cellpadding="4" width="100%">
+                        <thead>
+                            <tr class="ui-widget-header ">
+                                <th colspan="1">ID</th> 
+                                <th colspan="1">Product</th> 
+                                <th colspan="1">Version</th> 
+                                <th colspan="1">Assignee</th> 
+                                <th colspan="1">Status</th>  
+                                <th colspan="1">Resolution</th> 
+                                <th colspan="1">Summary</th> 
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>  
+                    <div class="modal"><div class="loadingLabel">Loading Results</div></div> 
+                    <p></p>
+                </div>
 
-                </div>                
-            
+            </div>                
+
             <div class="modal"><div class="loadingLabel">Loading Fields</div></div>
         </div>
         <div class="columnContainer">          
@@ -393,6 +464,7 @@ session_write_close();
                 <input id="quickSearchTextBox" type="text" class="ui-widget-content ui-corner-all"/>
                 <label for="quickSearchField" >by:</label>
                 <select id="quickSearchField" class="text ui-widget-content ui-corner-all">
+                    <option value="summary">Summary</option>
                     <option value="product">Product</option>
                     <option value="priority">Priority</option>
                     <option value="creator">Creator</option>
@@ -402,7 +474,6 @@ session_write_close();
                     <option value="resolution">Resolution</option>
                     <option value="op_sys">Operating System</option>
                     <option value="status">Status</option>
-                    <option value="summary">Summary</option>
                     <option value="severity">Severity</option>
                     <option value="version">Version</option>
                     <option value="deadline">Deadline</option>

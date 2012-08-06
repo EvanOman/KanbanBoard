@@ -49,20 +49,29 @@ $tabColumns = array();
 $tabArr = array();
 foreach ($_POST["tabColumns"] as $value) {
     $value = filter_var($value, FILTER_SANITIZE_STRING);
-    
+
     //Here we set the WIPlimit for any tablist column to be 0 to avoid WIP viloations on tablists
-    $limitWIP[$value] = "0";        
-    
+    $limitWIP[$value] = "0";
+
     array_push($tabArr, $value);
 }
 $tabColumns["tabColumns"] = $tabArr;
 
+$adminIds = array();
+$adminArr = array();
+foreach ($_POST["adminIds"] as $value) {
+    $value = filter_var($value, FILTER_SANITIZE_NUMBER_INT);
 
+    array_push($adminArr, $value);
+}
+$adminIds["adminIds"] = $adminArr;
 
 $colDivChar = array("colDivChar" => filter_input(INPUT_POST, 'colDivChar', FILTER_SANITIZE_STRING));
 
+$theme = array("theme" => filter_input(INPUT_POST, 'theme', FILTER_SANITIZE_STRING));
 
-$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "allowedColumnMap" => $allowedColumnMap, "defaultColumnMap" => $defaultColumnMap, "limitWIP" => $limitWIP, "colDivChar" => $colDivChar, "tabColumns" => $tabColumns);
+
+$iniSettings = array("prioIcons" => $prioMap, "jobColors" => $jobMap, "allowedColumnMap" => $allowedColumnMap, "defaultColumnMap" => $defaultColumnMap, "limitWIP" => $limitWIP, "colDivChar" => $colDivChar, "tabColumns" => $tabColumns, "adminIds" => $adminIds, "theme" => $theme);
 
 if (write_ini_file($iniSettings, "kanban.ini", true)) {
     die(json_encode(array("success" => true)));

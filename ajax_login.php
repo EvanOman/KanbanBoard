@@ -37,6 +37,9 @@ if ($return["faultString"] == null && $return["id"] != null) {
 
     //Set the password(from above)
     $_SESSION["password"] = $password;
+    
+    //Set the userID to be used for admin purposes
+    $_SESSION["userID"] = $return["id"];
 
     $return = array("result" => $return);
 

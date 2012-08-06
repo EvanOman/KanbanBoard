@@ -17,150 +17,128 @@ session_write_close();
     <head>
         <title>Log in</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">        
-        <link type="text/css" href="themes/black-tie/jquery-ui-1.8.21.custom.css" rel="stylesheet" />
-        <script type="text/javascript" src="jquery-1.7.2.js"></script>  
+        <link  type="text/css" href="themes/black-tie/jquery-ui.css" rel="stylesheet" />    
+        <script type="text/javascript" src="jquery-1.7.2.js"></script>
+        <script type="text/javascript" src="jquery.ui.core.js"></script>
+        <script type="text/javascript" src="jquery.ui.widget.js"></script>        
+        <script type="text/javascript" src="jquery.ui.dialog.js"></script>   
+        <script type="text/javascript" src="jquery.ui.mouse.js"></script>
+        <script type="text/javascript" src="jquery.ui.draggable.js"></script>
+        <script type="text/javascript" src="jquery.ui.resizable.js"></script>
+        <script type="text/javascript" src="jquery.ui.position.js"></script>
+        <script type="text/javascript" src="jquery.ui.button.js"></script>
         <link type="text/css" href="index.css" rel="stylesheet" />
         <style type="text/css">
-            #loginForm{
+            #dialogLogin{
                 width: auto;
             }
+            body{
+                width: 100%;
+                height: 100%;
+            }
 
-        </style>
-        <!link type="text/css" href="index.css" rel="stylesheet" />
-    <script type="text/javascript">
-        $(document).ready(function(){ 
+        </style>        
+        <script type="text/javascript">
+            var userID;
+            $(document).ready(function(){ 
             
-            //Sets up the invalids entry dialog menu
-            /*$( "#dialogLogin" ).dialog({
-                autoOpen: false,
-                show: "blind",
-                hide: "explode",                            
-                modal: true,
-                buttons: {
-                    Login:  function(){
-                        var login = $("#login").val().replace(/\s+/g, '');
-                        var password = $("#password").val().replace(/\s+/g, '');
-                        $.ajax({
-                            async: false,
-                            url: "ajax_POST.php",
-                            type: "POST",
-                            dataType: "json",
-                            data: {                                     
-                                "method": "User.login",
-                                "login":  login,
-                                "password":  password
-                            },
-                            
-                            success: function(data, status){
-                                if (data.result.faultString != null)
-                                {
-                                    alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-                                }
-                                else if (!data.result)
-                                {
-                                    alert("Something is wrong");
-                                }
-                                else 
-                                {
-                                    alert("Login successful")
-                                }                                                                                          
-                            },
-                            error: function(jqXHR, textStatus, errorThrown){
-                                alert("There was an error:" + textStatus);
-                            }
-                        })
-                    },
-                    Close: function() {
-                        $( this ).dialog( "close" );
-                    }
-                }
-            });*/
+                //Creates the options dialog
+                $( "#dialogLogin" ).dialog({
+                    autoOpen: true,
+                    resizable: false,
+                    height: "auto",
+                    width: 300,
+                    position:  ['center','top'] ,
+                    show: {
+                        effect: 'blind'
+                    },                   
+                    modal: true,
+                    closeOnEscape: false,
+                    open: function(event, ui) { $(".ui-dialog-titlebar-close").hide(); }
+                });
+                
+                $("#btnSubmit").button();
             
-            $("#loginForm").submit(function(e){               
+                $("#loginForm").submit(function(e){ 
+                    
+                    $( "#dialogLogin" ).dialog("close");
                 
-                $("body").addClass("loading");
+                    $("body").addClass("loading");
                 
-                e.preventDefault();
+                    e.preventDefault();
                 
-                //An attempt to counter mousedown issue(see bug #128)
-                //$("#btnSubmit").click();
+                    //An attempt to counter mousedown issue(see bug #128)
+                    //$("#btnSubmit").click();
                                                 
-                var login = $("#login").val();
-                var password = $("#password").val();        
+                    var login = $("#login").val();
+                    var password = $("#password").val();        
                 
-                $.ajax({
-                    url: "ajax_login.php",
-                    type: "POST",
-                    dataType: "json",
-                    data: {                                                             
-                        "login": login,
-                        "password":  password
-                    },
+                    $.ajax({
+                        url: "ajax_login.php",
+                        type: "POST",
+                        dataType: "json",
+                        data: {                                                             
+                            "login": login,
+                            "password":  password
+                        },
                             
-                    success: function(data, status){
-                        if (data.result.faultString != null)
-                        {
-                            alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                        success: function(data, status){
+                            if (data.result.faultString != null)
+                            {
+                                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
                             
-                            $("body").removeClass("loading");
-                        }
-                        else if (!data.result)
-                        {
-                            alert("Something is wrong");
-                            $("body").removeClass("loading");
-                        }
-                        else 
-                        {
-                            var userId = data.result.id;                                                      
+                                $("body").removeClass("loading");
+                                
+                                $( "#dialogLogin" ).dialog("open");
+                            }
+                            else if (!data.result)
+                            {
+                                alert("Something is wrong");
+                                $("body").removeClass("loading");
+                                
+                                $( "#dialogLogin" ).dialog("open");
+                            }
+                            else 
+                            {
+                                userID = data.result.id;                                                                 
                             
-                            alert("Login successful\nWelcome User "+ userId);
+                                alert("Login successful\nWelcome User "+ userID);
                                                         
-                            document.location.href = "Index.php";
-                        }                                                          
-                    },
-                    error: function(jqXHR, textStatus, errorThrown){
-                        alert("There was an error:" + textStatus);
-                    }
-                })
-            }); 
+                                document.location.href = "Index.php";
+                            }                                                          
+                        },
+                        error: function(jqXHR, textStatus, errorThrown){
+                            alert("There was an error:" + textStatus);
+                        }
+                    })
+            });
         });
-        
-    </script>
-</head>
-<body>
-    <!--div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
-        <form>
-            <fieldset
-                <div style="float: top">
-                    <div style="float: top;">
-                        <label for="login">User Name</label>
-                        <textarea  name="login" id="login"  class="text ui-widget-content ui-corner-all" style="width: 100%;">    </textarea>
+            
+        </script>
+    </head>
+    <body>     
+        <div id="dialogLogin" class="ui-dialog-content ui-widget-content"  title="Login" >
+            <form id="loginForm">
+                <fieldset>
+                    <div>
+                        <div >
+                            <label for="login">User Name</label>
+                            <input type="text"  name="login" id="login"  class="text ui-widget-content ui-corner-all" style="width: auto;"/>    
+                        </div>
+                        <div >
+                            <label for="password">Password</label>
+                            <input type="password" name="password" id="password"  class="text ui-widget-content ui-corner-all" style="width: auto;"/>   
+                        </div>
+                        <!--div >
+                            <label for="remember">Remember Login</label>
+                            <input  name="remember" id="remember"  class="text ui-widget-content ui-corner-all" style="width: auto;" type="checkbox"/>
+                        </div-->
+                        <input type="submit" id="btnSubmit"value="Login" style="float: right;"/>
                     </div>
-                    <div style="float: top;">
-                        <label for="password">Password</label>
-                        <textarea  name="password" id="password"  class="text ui-widget-content ui-corner-all" style="width: 100%;">    </textarea>
-                    </div>
-            </fieldset>
-        </form>
-    </div-->        
-    <form id="loginForm">
-        <fieldset>
-            <div style="float: top">
-                <div style="float: top;">
-                    <label for="login">User Name</label>
-                    <input type="text"  name="login" id="login"  class="text ui-widget-content ui-corner-all" style="width: auto;"/>    
-                </div>
-                <div style="float: top;">
-                    <label for="password">Password</label>
-                    <input type="password" name="password" id="password"  class="text ui-widget-content ui-corner-all" style="width: auto;"/>   
-                </div>
-                <div style="float: top;">
-                    <label for="remember">Remember Login</label>
-                    <input  name="remember" id="remember"  class="text ui-widget-content ui-corner-all" style="width: auto;" type="checkbox"/>
-                </div>
-                <input type="submit" id="btnSubmit"value="Login"/>
-        </fieldset>
-    </form>  
-    <div class="modal"><div class="loadingLabel">Logging In</div></div>
-</body>
+                </fieldset>
+            </form>  
+        </div>    
+        <div class="modal"><div class="loadingLabel">Logging In</div></div>
+
+    </body>
 </html>

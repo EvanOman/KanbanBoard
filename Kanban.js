@@ -48,10 +48,17 @@ var bugzillaFieldtoParam = {
     "rep_platform": "platform"  
 };
 
+//Stores the current filter being applied to the tab columns
 var tabColumnFilter = {};
 
-$("#jqueryCss").attr("href", "themes/hot-sneaks/jquery-ui.css");     
+//Stores the updated card data for a card whose edit dialog is open
+var updateData = {};
 
+//Keeps a record of the loading messages telling the user about status related changes:
+var messageArr =[];
+
+var adminIds = [];     
+$("#jqueryCss").attr("href", "themes/hot-sneaks/jquery-ui.css");
 function initialize()
 {            
     $.ajax({
@@ -74,12 +81,21 @@ function initialize()
                 defaultColumnMap = data.options.defaultColumnMap;
                 limitWIP = data.options.limitWIP;
                 colDivChar = data.options.colDivChar.colDivChar;
-                tabColumns = data.options.tabColumns.tabColumns
+                tabColumns = data.options.tabColumns.tabColumns;
+                adminIds = data.options.adminIds.adminIds;
                 
                 //We dont want this function to run until the initialize function completes but we also want the document to be ready
                 $(document).ready(function() {
                     //First things first we want to populate the board with the correct cards:                    
-                    boardCardPopulate();                                                                                             
+                    boardCardPopulate();             
+                    
+                    //And configure the board according to the user type
+                    if (adminIds.indexOf(userID) == -1)
+                    {
+                        $("#btnOptions").remove();
+                        $("#dialogOptions").empty();
+                        $("#dialogOptions").dialog("destroy");
+                    }
                 });
             }
 
@@ -451,7 +467,7 @@ $(document).ready(function() {
     });
     
     //Adds button styling to all the buttons
-    $(/*"#btnAddCard,#btnSearchCard,#btnOptions, .btnTab, #btnAttachmentSubmit, #searchSubmit, #addFilterOption, #removeFilterOption, #btnLogout"*/ "button").button(); 
+    $("button").button(); 
     
     //Sets up the invalids entry dialog menu
     $( "#dialogInvalid" ).dialog({
@@ -465,8 +481,37 @@ $(document).ready(function() {
             }
         }
     });
+        
                 
+    //Sets up the changed data dialog menu
+    $( "#dialogDataChanged" ).dialog({
+        autoOpen: false,
+        title: "External Change Detected",
+        show: "blind",
+        hide: "explode",                    
+        modal: true,
+        height: "auto",
+        width: 500,
+        resizable: false,
+        closeOnEscape: false,
+        open: function(event, ui) {
+            $(".ui-dialog-titlebar-close").hide();
+        },
+        buttons: {
+            KeepMyChanges: function(){
+                $(this).dialog("close");
+            },
+            ViewExternalChanges: function(){
+                var cardId = $("#dialogAddEditCard").data("cardId")
                 
+                // $("#dialogAddEditCard").dialog("close");
+                
+                editCard($("#"+cardId).data());
+                
+                $(this).dialog("close");
+            }
+        }
+    });
     //Sets up the invalids entry dialog menu
     $( "#dialogNoResults" ).dialog({
         autoOpen: false,
@@ -515,6 +560,10 @@ $(document).ready(function() {
                                               
             },
             Close: function() {
+                $("#adminInputs input").each(function(){
+                    $(this).parent().remove();    
+                });
+                
                 $( this ).dialog( "close" );
             }
         }
@@ -533,7 +582,15 @@ $(document).ready(function() {
             }
         },
         hide: "explode",
-        modal: true                  
+        modal: true, 
+        close: function(){
+            //Here we completely reset the search dialog
+            $( "#bugs tbody tr, #next" ).remove();           
+            $("#prev, #next" ).remove();
+            $("#pageNumDiv, #Results p").empty();
+            $("#searchSummary").val("");
+            $("#dialogSearch .box").hide();
+        }
     });
     
     
@@ -605,6 +662,17 @@ $(document).ready(function() {
     
     
     /*-------------Event Handlers-----------------*/    
+    
+    $("#themeSelect").change(function(){
+        
+        var theme = $(this).val();
+        
+        $("#jqueryCss").attr("href", "themes/"+theme+"/jquery-ui.css");
+    });
+    
+    $("#dialogOptions").on("click", "#addAdmin", function(){
+        $(this).parent().before("<td><input type='number' min='1' /></td>")
+    });
     
     $(".columnContainer").on("click", ".btnRemoveFilter", function(){
         //Resets the filter object to empty;
@@ -761,24 +829,32 @@ $(document).ready(function() {
     });
        
     $("#dialogAddEditCard").on("click", "#btnCommentSubmit", function(e){
-        //Gets the id of the card to which the comment is being appended
-        var cardId = $("#dialogAddEditCard").data("cardId");
+        
+        if ($("#commentReplyText").val() != "" )
+        {
+            //Gets the id of the card to which the comment is being appended
+            var cardId = $("#dialogAddEditCard").data("cardId");
                 
-        sendComment(cardId);
+            sendComment(cardId);
+        }
+      
     });
     
     //Adds shift-enter submission for the comments section
     $("#dialogAddEditCard").on("keydown", "#commentReplyText",function(event){
         if(event.shiftKey && event.which == 13)
         {
-            //Gets the id of the card to which the comment is being appended
-            var cardId = $("#dialogAddEditCard").data("cardId");
-            
-            //A card Id eqaul to zero tells us that the Add Card Dialog is open and we don't want to try to add a comment to a card that doesn't exist yet
-            if (cardId != 0)
+            if ($("#commentReplyText").val() != "" )
             {
-                sendComment(cardId); 
-            }         
+                //Gets the id of the card to which the comment is being appended
+                var cardId = $("#dialogAddEditCard").data("cardId");
+            
+                //A card Id eqaul to zero tells us that the Add Card Dialog is open and we don't want to try to add a comment to a card that doesn't exist yet
+                if (cardId != 0)
+                {
+                    sendComment(cardId); 
+                }         
+            }
         }
     });      
    
@@ -840,7 +916,7 @@ $(document).ready(function() {
         }
         else
         {
-            $("#addAttTableDiv").addClass("loading");
+            $("#Attachments").addClass("loading");
             return true;
         }
     });
@@ -957,11 +1033,11 @@ $(document).ready(function() {
         var status = $(this).val();
                     
         //Only adds a new select field if the status is resolved and the Resolution field doesn't already exist
-        if (status == "RESOLVED")
+        if (status == "RESOLVED" || status == "CLOSED")
         {
             $("#Details select[name=resolution]").parent().show();            
         }
-        else if (status != "RESOLVED")
+        else if (status != "RESOLVED" && status != "CLOSED")
         {
             //If the status doesn't equal resolved we remove the resolution box because we can't have a NEW bug with a resolution
             $("#Details select[name=resolution]").parent().hide();
@@ -1472,19 +1548,27 @@ function postAttachments(card)
     $("#attachmentTable tbody").empty();                           
 
     var attachments = card.data("attachments");
-    for ( var i in attachments)
+    
+    if (attachments.length)
     {
-        var att = attachments[i];                                
-        var date = new Date(att.creation_time);
-        var time = date.toLocaleTimeString();
-        time = time.substring(0, time.length -3);
-        date = date.toLocaleDateString();
+        for ( var i in attachments)
+        {
+            var att = attachments[i];                                
+            var date = new Date(stringtoTimeStamp(att.creation_time));
+            var time = date.getHours()+":"+padtoTwo(date.getMinutes());
+            date = date.getFullYear() + "-" + padtoTwo((date.getMonth() + 1)) +"-" + padtoTwo(date.getDate());               
+            var patch = (att.is_patch) ? ", patch" : "";
 
-        var patch = (att.is_patch) ? ", patch" : "";
-
-        var tr = '<tr><td><div><a href="#" value="'+att.id+'">'+att.summary+'</a> ('+att.file_name+patch+')</div><div>'+date+' '+time+', '+att.creator +'</div></td></tr>';
-        $("#attachmentTable tbody").append(tr);                                                               
+            var tr = '<tr><td><div><a href="#" value="'+att.id+'">'+att.summary+'</a> ('+att.file_name+patch+')</div><div>'+date+' '+time+', '+att.creator +'</div></td></tr>';
+            $("#attachmentTable tbody").append(tr);                                                               
+        }      
     }
+    else
+    {                                               
+        var trNone = '<tr><td><div>No Attachments to Display</div></td></tr>';
+        $("#attachmentTable tbody").append(trNone);              
+    }
+   
 }                     
 
 //Retrieves all of the available components and versions for a given product. Now revised to pull down all the products and components once and then reuse the info
@@ -1604,8 +1688,7 @@ function dialogFields(fieldVals)
             $("#Details select[name=resolution]").val(fieldValues["resolution"]);
             
             if (fieldValues["resolution"] == "DUPLICATE")
-            {
-                //TODO Change to generate an input field that will allow the sumbission of a duplicate ID
+            {                
                 var html = $("<div>");
                 html.append("<label>Duplicate of</label>"); 
                 html.append("<input  class=' ui-widget-content ui-corner-all' type='text' name='dupe_of'/>");
@@ -1914,7 +1997,7 @@ function  ajaxCreateCard(){
                 var id = data.result.id;
                 alert("Bug succesfully added.\nID:"+id);                
                 
-                postData["last_change_time"] = new Date();
+                postData["last_change_time"] = new Date().toISOString();
                 
                 postData["resolution"] = "";
                 
@@ -2322,7 +2405,7 @@ function ajaxSearch(limit, pageNum) {
                 }
                 else
                 {
-                    var tr = "<tr><td><a href='#'>"+bug[i].id+"</a></td>";
+                    tr = "<tr><td><a href='#'>"+bug[i].id+"</a></td>";
                 }
                 
                 tr += "<td>"+bug[i].product+"</td>" + 
@@ -2434,7 +2517,7 @@ function getComments(ids) {
 
 function postComments(card){
 
-    //First and foremost we need to make sure that the dialog we are appending comments tyo is still the dialog we want:
+    //First and foremost we need to make sure that the dialog we are appending comments tyo is still the dialog we want and it is still open:
     if ($("#dialogAddEditCard").data("cardId") == card.data("id"))
     {
         //First we want to remove any previous comments:
@@ -2650,7 +2733,7 @@ function ajaxUploadCallBack(data){
 
             getAttachments(cardId);
 
-            $('#Comments, #addAttTableDiv').removeClass("loading");                        
+            $('#Comments, #Attachments').removeClass("loading");                        
         }
     } 
 
@@ -2671,12 +2754,6 @@ function sortColumn(colId, sortkey, order)
         data:sortkey, 
         order:order
     });
-}
-
-function updateLastChanged(cardId)
-{
-    var now = new Date();
-    $("#"+cardId).data("last_change_time", now);
 }
 
 function boardCardPopulate(){
@@ -2751,7 +2828,21 @@ function boardCardPopulate(){
                     $(".column").each(function(){
                         columnWIPCheck($(this).attr("id"));  
                     });                
-                
+                    
+                    if (messageArr.length)
+                    {
+                        var message = "The following changes have been made:\n";
+                        for (var j in messageArr)
+                        {
+                            message +=    messageArr[j] +"\n\n";
+                        }
+        
+                        alert(message);
+                        
+                        messageArr = [];
+                    }
+    
+                    
                     $("body").removeClass("loading");                                       
                                         
                 }); 
@@ -2923,7 +3014,22 @@ function dialogOptionsOpen(condition)
         var input = $(this).find("input[type='number']");
         var value = limitWIP[col];
         input.val(value);
-    })
+    });
+    
+    if (!$("#adminInputs input").length)
+    {
+        for (var i in adminIds)
+        {
+            var id = parseInt(adminIds[i]);
+        
+            var td = $("<td>");
+        
+            var input = $("<input type='number' min='1'/>").val(id);
+        
+            $("#addAdmin").parent().before(td.append(input));
+        }  
+    }
+   
     
     //Triggers the filter select(after the duialog is open because otherwise the select's are always hidden)
     //Then trigger the change to refresh the button
@@ -2932,154 +3038,168 @@ function dialogOptionsOpen(condition)
 
 function dialogOptionsSave()
 {
-    //Stores each selection made in the options menu
-    $("#dialogOptions #prioIconTable tbody tr").each(function(){
-        var name = $(this).find("td").first().text();
-        if ($(this).find("input[type=radio]:checked").length == 0)
-        {
-            var iconClass = "none"; 
-        }
-        else
-        {
-            iconClass = $(this).find("input[type=radio]:checked").val(); 
-        }
-
-        prioMap[name] = iconClass;
-    });
-    
-    //Stores each color selection and saves it
-    $("#dialogOptions #jobColorTable tbody tr").each(function(){
-        var name = $(this).find("td").first().text();
-
-        //This finds the color of the color preview. Returns an RGB string, hopefully this will work
-        var color = $(this).find("td").last().find("div").find("div").css("background-color");                                 
-
-        jobMap[name] = color;
-    });
-    
-    //Stores each WIP limit selection
-    $("#dialogOptions #WIPSetTable tbody tr").each(function(){
-        var col = $(this).find("td").first().text();
-
-        //This finds the color of the color preview. Returns an RGB string, hopefully this will work
-        var WIPlimit = $(this).find("td").last().find("input").val();                                 
-
-        limitWIP[col] = WIPlimit;
-    });          
-    
-    var allowedColumnMapNew = {};
-    
-    var defaultColumnMapNew = {};
-    
-    //Finds all of the status column assigments
-    $("#defaultColumnDiv .box").each(function(){ 
-        //Finds the multiple select specifyiung the allowed values for a certain status
-        var allowedSelect = $(this).find("select[multiple='multiple']");
-        
-        var allowedValues = allowedSelect.val();
-        
-        //Finds the single select specifying the default columnb value
-        var defSelect = $(this).find("select:not([multiple='multiple'])");
-        
-        var defValue = defSelect.val();
-                
-        var status = allowedSelect.attr("name");
-        
-        allowedColumnMapNew[status] = allowedValues;
-        
-        defaultColumnMapNew[status] = defValue;
-       
-    });    
-    
-    //Makes sure that the default column for each status is contqained within the list of allowed columns(else we will have an infinite recurive loop)
-    for (var status in defaultColumnMapNew)
+    if ($("#dialogOptions").dialog("isOpen"))
     {
-        var valArr = allowedColumnMapNew[status];
-        var defVal = defaultColumnMapNew[status];
+        //Stores each selection made in the options menu
+        $("#dialogOptions #prioIconTable tbody tr").each(function(){
+            var name = $(this).find("td").first().text();
+            if ($(this).find("input[type=radio]:checked").length == 0)
+            {
+                var iconClass = "none"; 
+            }
+            else
+            {
+                iconClass = $(this).find("input[type=radio]:checked").val(); 
+            }
+
+            prioMap[name] = iconClass;
+        });
+    
+        //Stores each color selection and saves it
+        $("#dialogOptions #jobColorTable tbody tr").each(function(){
+            var name = $(this).find("td").first().text();
+
+            //This finds the color of the color preview. Returns an RGB string, hopefully this will work
+            var color = $(this).find("td").last().find("div").find("div").css("background-color");                                 
+
+            jobMap[name] = color;
+        });
+    
+        //Stores each WIP limit selection
+        $("#dialogOptions #WIPSetTable tbody tr").each(function(){
+            var col = $(this).find("td").first().text();
+
+            //This finds the color of the color preview. Returns an RGB string, hopefully this will work
+            var WIPlimit = $(this).find("td").last().find("input").val();                                 
+
+            limitWIP[col] = WIPlimit;
+        });          
+    
+        var allowedColumnMapNew = {};
+    
+        var defaultColumnMapNew = {};
+    
+        //Finds all of the status column assigments
+        $("#defaultColumnDiv .box").each(function(){ 
+            //Finds the multiple select specifyiung the allowed values for a certain status
+            var allowedSelect = $(this).find("select[multiple='multiple']");
         
-        //Checks to see if the default value is found in the value array
-        if (valArr.indexOf(defVal) == -1)
+            var allowedValues = allowedSelect.val();
+        
+            //Finds the single select specifying the default columnb value
+            var defSelect = $(this).find("select:not([multiple='multiple'])");
+        
+            var defValue = defSelect.val();
+                
+            var status = allowedSelect.attr("name");
+        
+            allowedColumnMapNew[status] = allowedValues;
+        
+            defaultColumnMapNew[status] = defValue;
+       
+        });    
+    
+        //Makes sure that the default column for each status is contqained within the list of allowed columns(else we will have an infinite recurive loop)
+        for (var status in defaultColumnMapNew)
         {
-            //If not we add the default value to the list of allowed values
-            allowedColumnMapNew[status].push(defVal);                
-        }
-    }        
-    
-    var newTabColumns = $("select[name=tablists]").val()
-    
-    var iniPost = {        
-        prioMap: prioMap,
-        jobMap: jobMap, 
-        allowedColumnMap: allowedColumnMapNew, 
-        defaultColumnMap: defaultColumnMapNew, 
-        limitWIP: limitWIP,
-        colDivChar: $("#columnCharText").val(),
-        tabColumns: newTabColumns                
-    };           
-    
-    $.ajax({
-        url: "ajax_write_options.php",
-        type: "POST",
-        data: iniPost,    
-        dataType: "json",
-
-        success: function(data, status){
-
-
-            if (data.error)
+            var valArr = allowedColumnMapNew[status];
+            var defVal = defaultColumnMapNew[status];
+        
+            //Checks to see if the default value is found in the value array
+            if (valArr.indexOf(defVal) == -1)
             {
-                alert(data.error);
+                //If not we add the default value to the list of allowed values
+                allowedColumnMapNew[status].push(defVal);                
             }
-            else if (!data.success)
+        }  
+    
+        var adminArr = [];
+        $("#adminInputs input").each(function(){
+            var value = $(this).val();
+            if (value != "")
             {
-                alert("Something is wrong");
+                adminArr.push(value);     
             }
-            else 
-            {    
-                //If the column character or the allowed/default maps or the tabcolumns list have changed we need to rebuild the entire page, the following line simply refreshes the page
-                if (iniPost["colDivChar"] != colDivChar || !deepEquals(allowedColumnMapNew, allowedColumnMap) || !deepEquals(defaultColumnMapNew, defaultColumnMap) || !deepEquals(tabColumns, newTabColumns))
+            
+        });
+    
+        var newTabColumns = $("select[name=tablists]").val()
+    
+        var iniPost = {        
+            prioMap: prioMap,
+            jobMap: jobMap, 
+            allowedColumnMap: allowedColumnMapNew, 
+            defaultColumnMap: defaultColumnMapNew, 
+            limitWIP: limitWIP,
+            colDivChar: $("#columnCharText").val(),
+            tabColumns: newTabColumns, 
+            adminIds: adminArr
+        };           
+    
+        $.ajax({
+            url: "ajax_write_options.php",
+            type: "POST",
+            data: iniPost,    
+            dataType: "json",
+
+            success: function(data, status){
+
+
+                if (data.error)
                 {
-                    location.reload();    
-                }             
-                else
-                {
-                    $(".card").each(function(){                                                                   
-                        var prio = $(this).data("priority").replace(/\s+/g, ''); 
-                        if (prioMap[prio]=="none")
-                        {
-                            $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "none");
-                        }
-                        else
-                        {
-                            var icon = prioMap[prio];
-                            var url = "images/icons/"+icon+".png";
-                            $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
-                        }
-
-                        var job = $(this).data("severity").replace(/\s+/g, ''); 
-                        var color = jobMap[job];
-
-                        $(this).css("background-color", color);
-
-                        $("#dialogOptions").dialog("close");  
-                    });
-                    
-                    //Checks to make sure that the column are correcly colored based off the new WIP limits
-                    $(".column").each(function(){
-                        columnWIPCheck($(this).attr("id"));
-                    });
-                                       
+                    alert(data.error);
                 }
+                else if (!data.success)
+                {
+                    alert("Something is wrong");
+                }
+                else 
+                {    
+                    //If the column character or the allowed/default maps or the tabcolumns list have changed we need to rebuild the entire page, the following line simply refreshes the page
+                    if (iniPost["colDivChar"] != colDivChar || !deepEquals(allowedColumnMapNew, allowedColumnMap) || !deepEquals(defaultColumnMapNew, defaultColumnMap) || !deepEquals(tabColumns, newTabColumns) || !deepEquals(adminIds, adminArr))
+                    {
+                        location.reload();    
+                    }             
+                    else
+                    {
+                        $(".card").each(function(){                                                                   
+                            var prio = $(this).data("priority").replace(/\s+/g, ''); 
+                            if (prioMap[prio]=="none")
+                            {
+                                $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "none");
+                            }
+                            else
+                            {
+                                var icon = prioMap[prio];
+                                var url = "images/icons/"+icon+".png";
+                                $(".iconBar .prioBack .prioIcon", $(this)).css("background-image", "url("+url+")");
+                            }
+
+                            var job = $(this).data("severity").replace(/\s+/g, ''); 
+                            var color = jobMap[job];
+
+                            $(this).css("background-color", color);
+
+                            $("#dialogOptions").dialog("close");  
+                        });
+                    
+                        //Checks to make sure that the column are correcly colored based off the new WIP limits
+                        $(".column").each(function(){
+                            columnWIPCheck($(this).attr("id"));
+                        });
+                                       
+                    }
           
 
 
-            }
+                }
 
-        },
-        error: function(jqXHR, textStatus, errorThrown){
-            alert("(Fields)There was an error:" + textStatus);
-        }
-    }); 
+            },
+            error: function(jqXHR, textStatus, errorThrown){
+                alert("(Fields)There was an error:" + textStatus);
+            }
+        }); 
+    }
 }
 
 function makeRowPrioOptions(prioName){
@@ -3393,6 +3513,7 @@ function displayHandler(card) {
 //Moves a cardf from one column to another  or adding a new card to a column taking into account the possibility of no column assignment
 function appendCard(cards, col, status) 
 {   
+ 
     //This function expects an array so if the input isnt an artray, we make it one
     if (!$.isArray(cards))
     {
@@ -3401,6 +3522,22 @@ function appendCard(cards, col, status)
     var cardIds = [];
         
     var startColArr = [];
+    
+         
+    var column = $("#"+col);
+    
+    //Here we check the location of the card. if the card has no specified column(or doesn't match any of the columns on the board) we place it in a column based on its status
+    if (!column.length)  
+    {       
+        //Here we store where the column is stored with a different variable because if the column is "---" we want the card data to say "---" but we want it to be placed in the default column
+        var actualCol = colSortKeyMap[defaultColumnMap[status]];
+        column = $("#"+actualCol);
+    }
+    else 
+    {
+        //If the card's column  isn't "---", the actualColumn and the stored column are the same
+        actualCol = col;
+    }
         
     for (var i in cards)
     {                
@@ -3425,9 +3562,8 @@ function appendCard(cards, col, status)
                 var cardId = card.attr("id");
             
                 var defCol = defaultColumnMap[status];            
-                
-                //TODO Push the message to an array of strings showing all of the moves in one alert             
-                alert(frontEndCol + " is not a valid Column choice for the "+status+" status.\nCard #" + cardId+ " will be moved to " +defCol);
+                    
+                messageArr.push(frontEndCol + " is not a valid Column choice for the "+status+" status.\nCard #" + cardId+ " will be moved to " +defCol);
             
                 defCol = colSortKeyMap[defCol];            
                 appendCard(card, defCol, status);            
@@ -3443,20 +3579,7 @@ function appendCard(cards, col, status)
         }
         
         var newLi = $('<li></li>').append(card);
-            
-        var column = $("#"+col);
-        //Here we check the location of the card. if the card has no specified column(or doesn't match any of the columns on the board) we place it in a column based on its status
-        if (!column.length)  
-        {       
-            //Here we store where the column is stored with a different variable because if the column is "---" we want the card data to say "---" but we want it to be placed in the default column
-            var actualCol = colSortKeyMap[defaultColumnMap[status]];
-            column = $("#"+actualCol);
-        }
-        else 
-        {
-            //If the card's column  isn't "---", the actualColumn and the stored column are the same
-            actualCol = col;
-        }
+             
         column.append(newLi);
                
         cardIds.push(card.attr("id"));
@@ -3494,8 +3617,7 @@ function appendCard(cards, col, status)
     if (column.hasClass("tablists"))
     {
         advancedFilter(tabColumnFilter, ".tablists");
-    }
-            
+    }               
     
     //This line removes any li's that don't have a card in them
     $(".column li:not(:has(.card)), .tablists li:not(:has(.card))").remove();       
@@ -4316,6 +4438,20 @@ function tablistCardPopulate(tabID)
                     onContextualMenu:function(o,e){}
                 });                    
                 
+                  
+                if (messageArr.length)
+                {
+                    var message = "The following changes have been made:\n";
+                    for (var j in messageArr)
+                    {
+                        message +=    messageArr[j] +"\n\n";
+                    }
+        
+                    alert(message);
+                        
+                    messageArr = [];
+                }
+                
                 tab.parent().removeClass("loading");   
                 
                 //Applys any filters
@@ -4347,7 +4483,7 @@ function updateBoard()
     
     console.log(time);
     
-    //Finds all bugs that are contained in the specified tablist and posts them to the board 
+    //Finds all bugs that have been changed in the last 30 seconds 
     $.ajax({
         url: "ajax_POST.php",
         type: "POST",       
@@ -4369,20 +4505,63 @@ function updateBoard()
             else
             {                
                 var bugs = data.result.bugs;
-                if (bugs.length)
+                
+                var bugsCleaned = [];
+                
+                for (var k in bugs)
                 {
-                    for (var i in bugs)
+                    var id = bugs[k].id;
+                    
+                    var realCard = $("#"+id);
+                    
+                    //Checks to see if the card in question has already been updated on this end. This prevents the refreshing of cards that were changed from this board  
+                    //First we need to if the card in question exists                                                         
+                    if (realCard.length)
                     {
-                        var bugId = bugs[i].id;
+                        var realCardTime = $("#"+id).data("last_change_time");//Already a number
+                        var bugzillaTime = stringtoTimeStamp(bugs[k].last_change_time);//Converted to time stamp
+                        if (realCardTime != bugzillaTime)
+                        {
+                            bugsCleaned.push(bugs[k]);
+                        }
+                    }
+                    else
+                    {
+                        //If the card in questuion doesn't exist on our board it must be new and therefore in need of addition
+                        bugsCleaned.push(bugs[k]);                            
+                    }
+                        
                     
-                        var card = $("#"+bugId);
+                }
+                
+                //If there are entries in the clean bug array
+                if (bugsCleaned.length)
+                {
+                    for (var i in bugsCleaned)
+                    {
+                        var bugId = bugsCleaned[i].id;
                     
+                        var card = $("#"+bugId);                                                
+                        
                         var col = null;
                         var position = null;
-                        var futureColumn = colSortKeyMap[bugs[i].cf_whichcolumn];
-                    
+                        var futureColumn = colSortKeyMap[bugsCleaned[i].cf_whichcolumn];
+                        
+                                                                             
                         if (card.length)
                         {
+                            //Checks to see if the card being updated is also the card being edited
+                            if ($("#dialogAddEditCard").data("cardId") == bugId && $("#dialogAddEditCard").dialog("isOpen"))
+                            {
+                                //Stores the updated info
+                                updateData[bugId] = bugsCleaned[i];
+                                
+                                //Opens a dialog asking the user what they want to do in response to the external change
+                                $("#dialogDataChanged").dialog("open");
+                                
+                            }
+                            
+                                
                             col = card.data("cf_whichcolumn");
                         
                             position = card.parent().index();
@@ -4395,7 +4574,7 @@ function updateBoard()
                             card.parent().remove();      
                         }
                     
-                        postCard(bugs[i]);  
+                        postCard(bugsCleaned[i]);  
                     
                         if (col != null && col == futureColumn)
                         {
@@ -4407,7 +4586,8 @@ function updateBoard()
                             {
                                 $("#"+col+" li:eq("+(position - 1)+")").after($("#"+bugId).parent());                                                           
                             }                         
-                        }                                        
+                        }  
+                        
                     }                             
                 
                     $(document).buildContextualMenu(
@@ -4434,6 +4614,20 @@ function updateBoard()
                     
                     //Here we reapply the tablist filter to make sure that the new cards fit with the existing filter
                     advancedFilter(tabColumnFilter, ".tablists");
+                    
+                      
+                    if (messageArr.length)
+                    {
+                        var message = "The following changes have been made:\n";
+                        for (var j in messageArr)
+                        {
+                            message +=    messageArr[j] +"\n\n";
+                        }
+        
+                        alert(message);
+                        
+                        messageArr = [];
+                    }
                     
                     //We also need to make sure that added cards fit the quick search criteria
                     $("#quickSearchTextBox").trigger("keyup");
@@ -4473,7 +4667,13 @@ function reverseKeyLookup(object, value)
 
 function stringtoTimeStamp(iso)
 {
-    //We are expecting Bugzilla's iso809 string which takes the form: "YYYY-MM-DDThh:mm:ss.mil" For example: "2012-06-26T16:18:00.000000"
+    //We are expecting Bugzilla's iso809 string which takes the form: "YYYY-MM-DDThh:mm:ss.mil" For example: "2012-06-26T16:18:00.000000" or in some cases: "YYYY-MM-DDThh:mm:ss.milZ"
+    //First we need to get rid of that Z(if it exists)
+    if (iso.substr(iso.length - 1) == "Z")
+    {
+        //If the last character is Z we take the first characters
+        iso = iso.substr(0, iso.length - 1)
+    }
     
     //First we split at the T
     var dateArr = iso.split("T");
