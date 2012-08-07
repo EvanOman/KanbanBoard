@@ -17,31 +17,41 @@ var jobMap = {};
 var prioSortKey = {};
 var limitWIP ={};
 
+//USed to store form data in case the user submits a bad value to the server
 var cardChangeData = [];
 
+//These variables represent our loading ajax calls. At first we are waiting for them(hence the defferred)
 var getCompsVersXHR = $.Deferred();
 var getNamesXHR = $.Deferred();
 var getAccProXHR = $.Deferred();
 var getFormFieldsXHR = $.Deferred();
+
+//An object that stores the compoonent and version relationship to the product
 var componentData = null;
 
+//Stores the .ini setting where a card can be and where it goes if something is wrong
 var allowedColumnMap = {};
 var defaultColumnMap = {};
 
+//Stores the neswted column object that we use to build the board
 var columnNest = {};
 
+//Used to store which columns belong hidden on load
 var tabColumns = [];
-            
+           
+//Stores the relationship between Bugzilla's names for columns and our column IDs           
 var colSortKeyMap = {};
 
 //HEre we have a global array that stores the ids of all the items being sorted
 var sortingArray = [];
 
+//Starts the update timer that keeps the board up to date
 var updateTimer = setTimeout(updateBoard, 30000);
 
 //The base element for determing shift selection
 var baseShiftClickItem;
 
+//Some bugzilla field names are different than the bug parameter names. This object stores these relationships
 var bugzillaFieldtoParam = {
     "bug_status": "status", 
     "bug_severity": "severity",
@@ -57,8 +67,16 @@ var updateData = {};
 //Keeps a record of the loading messages telling the user about status related changes:
 var messageArr =[];
 
-var adminIds = [];     
+//Stores the ids that have administrative privelages
+var adminIds = []; 
+
+//For debugging, checks how many context menues are being made 
+var calls = 0;
+
+//Sets the default theme to hot-sneaks
 $("#jqueryCss").attr("href", "themes/hot-sneaks/jquery-ui.css");
+
+//Pulls down the .ini settings and sets variables accordingly 
 function initialize()
 {            
     $.ajax({
@@ -105,6 +123,8 @@ function initialize()
         }
     });
 }
+
+//Here we call initialize so it is the first function to fire
 initialize();  
 
 
@@ -495,7 +515,7 @@ $(document).ready(function() {
         resizable: false,
         closeOnEscape: false,
         open: function(event, ui) {
-            $(".ui-dialog-titlebar-close").hide();
+            $(" .ui-dialog-titlebar-close", $(this).parent()).hide();
         },
         buttons: {
             KeepMyChanges: function(){
@@ -2094,6 +2114,11 @@ function ajaxEditBug()
         delete postData["resolution"];
     }
     
+    //If the deadline is an empty string and the bug has no deadline entry then we need not send it to bugzilla
+    if (postData["deadline"] == "" && typeof(card.data("deadline")) == "undefined")
+    {
+        delete postData["deadline"]   
+    }
     //Handles duplicate case according to Bugzilla API: "If you want to mark a bug as a duplicate, the safest thing to do is to set this value and not set the status or resolution fields. 
     //They will automatically be set by Bugzilla to the appropriate values for duplicate bugs."
     if (postData["resolution"] == "DUPLICATE")
@@ -2423,7 +2448,7 @@ function ajaxSearch(limit, pageNum) {
                 if ($(this).hasClass("unavailableID"))
                 {
                     $( "#bugs-contain p").text("*Bugs in red are not available for revision because you have not opened the tab column in which they are contained")
-                    return true;
+                    return false;
                 }
                 else
                 {
@@ -4588,8 +4613,9 @@ function updateBoard()
                             }                         
                         }  
                         
-                    }                             
-                
+                    }           
+                    calls += 1;
+                    console.log(calls);
                     $(document).buildContextualMenu(
                     {
                         menuWidth:200,
@@ -4754,3 +4780,212 @@ function deepEquals(x, y)
         return true;
     }
 }
+
+function compare()
+{  
+    //Adds the method after the above for loop because we dont want the method to be in an array
+    searchArr = {};
+        
+    searchArr["method"] = "Bug.search";
+
+    searchArr["id"] = 199;
+
+    $.ajax({
+        url: "ajax_POST.php",
+        type: "POST",
+        dataType: "json",
+            
+        data: searchArr,
+
+        success: function(data, status){
+
+
+            if (data.result.faultString != null)
+            {
+                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+            }
+            else if (!data.result)
+            {
+                alert("Something is wrong");
+            }
+            else 
+            {
+
+                var localCopy = $.extend(true, {}, $("#199").data());
+                   
+                var serverCopy = $.extend(true, {}, data.result.bugs[0])
+                        
+                       
+                        
+            }
+
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert("There was an error:" + textStatus);
+        }
+    }); 
+                
+}
+function changes(id)
+{  
+    //Adds the method after the above for loop because we dont want the method to be in an array
+    searchArr = {};
+        
+    searchArr["method"] = "Bug.history";
+
+    searchArr["ids"] = id;
+
+    $.ajax({
+        url: "ajax_POST.php",
+        type: "POST",
+        dataType: "json",
+            
+        data: searchArr,
+
+        success: function(data, status){
+
+
+            if (data.result.faultString != null)
+            {
+                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+            }
+            else if (!data.result)
+            {
+                alert("Something is wrong");
+            }
+            else 
+            {
+            
+                console.log(data);
+            
+            /*  //Make some changes:
+                data.result.bugs[0].id = "copy";
+                
+                //Post a copy of the updated card: 
+                postCard(data.result.bugs[0]);
+                
+                $("#copy").parent().hide();                                 
+
+                var localCopy = $.extend(true, {}, $("#199").data());
+                   
+                var serverCopy = $.extend(true, {}, data.result.bugs[0]);
+                
+                delete localCopy["id"];
+                        
+                delete serverCopy["id"];    */   
+                        
+            }
+
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert("There was an error:" + textStatus);
+        }
+    }); 
+                
+}
+
+
+
+/*An example of the bug.history method
+ *{
+  "version": "1.1",
+  "id": "Bug.history",
+  "result": {
+    "bugs": [
+      {
+        "history": [
+          {
+            "when": "2012-08-03T17:31:35.000000",
+            "changes": [
+              {
+                "removed": "Limbo",
+                "added": "Development?Doing",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          {
+            "when": "2012-08-03T19:24:15.000000",
+            "changes": [
+              {
+                "removed": "Development?Doing",
+                "added": "Ready",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          {
+            "when": "2012-08-03T19:25:05.000000",
+            "changes": [
+              {
+                "removed": "Ready",
+                "added": "Limbo",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          {
+            "when": "2012-08-03T21:35:08.000000",
+            "changes": [
+              {
+                "removed": "Limbo",
+                "added": "Ready",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          {
+            "when": "2012-08-06T16:56:28.000000",
+            "changes": [
+              {
+                "removed": "Ready",
+                "added": "Build?Done",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          {
+            "when": "2012-08-06T17:00:46.000000",
+            "changes": [
+              {
+                "removed": "Build?Done",
+                "added": "Test",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          {
+            "when": "2012-08-06T17:01:28.000000",
+            "changes": [
+              {
+                "removed": "Test",
+                "added": "Build?Doing",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          {
+            "when": "2012-08-06T17:01:56.000000",
+            "changes": [
+              {
+                "removed": "Build?Doing",
+                "added": "Development?Done",
+                "field_name": "cf_whichcolumn"
+              }
+            ],
+            "who": "evan.oman@blc.edu"
+          },
+          
+                            
+        ],        
+      }
+    ]
+  }
+}*/
