@@ -2,8 +2,8 @@
 session_start();
 
 session_write_close();
-/*error_reporting(E_ALL);
-  ini_set('display_errors', true); */
+error_reporting(E_ALL);
+  ini_set('display_errors', true); 
 
 /*$mill = substr(microtime(true),strlen(microtime(true)) - 4 ,4);
 $time['Start Post'] =  date("s").'.'.$mill;*/
@@ -37,6 +37,7 @@ foreach ($paramArr as $k => $v) {
     //Now we add the parameters and specify their type, note that this setup requires the exact bugzilla field name
     $bugzilla->addMember($k, $v, $type);
 }
+
 
 //Then submit
 echo $bugzilla->submit();

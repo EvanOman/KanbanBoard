@@ -1,5 +1,13 @@
 <?php
 
+session_start();
+
+$options = parse_ini_file("kanban.ini", true);
+if (!in_array($_SESSION["userID"], $options["adminIds"]["adminIds"]) && !empty($options["adminIds"]["adminIds"])) {
+ die(json_encode(array("success" => false, "error" => "You do not have administrator privileges")));
+}
+
+session_write_close();
 $allowedColumnMap = array();
 foreach ($_POST["allowedColumnMap"] as $status => $col) {
     if (is_array($col)) {

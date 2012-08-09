@@ -42,6 +42,7 @@ session_write_close();
             var timeOffset = "<?php echo date("O"); ?>"; 
             var userEmail =  "<?php echo $_SESSION["login"]; ?>";
             var userID =  "<?php echo $_SESSION["userID"]; ?>";
+            var boardProduct =  "<?php echo $_SESSION["product"]; ?>";
         </script>
     </head>
     <body>
@@ -78,6 +79,9 @@ session_write_close();
         </div> 
         <div id="dialogDataChanged" class="ui-dialog-content ui-widget-content">  
             This Bug has been edited from another Kanban board or from Bugzilla while this Edit Dialog has been opened. Do you want to view the updated card data or continue with your changes(and most likely overwrite the changes submitted by the other user)?
+        </div> 
+        <div id="dialogChangeProduct" class="ui-dialog-content ui-widget-content">  
+            
         </div> 
         <div id="dialogSort" class="ui-dialog-content ui-widget-content">
             <h1>Sort Criteria</h1>
@@ -460,6 +464,12 @@ session_write_close();
         </div>
         <div class="columnContainer">          
             <div class="toolbar ui-widget-header">  
+                <div id="productChangeDiv" style="position: relative;">
+                    <label for="product">Current Product:</label>
+                    <select  name="boardProduct" id="product"  class="text ui-widget-content ui-corner-all" ></select>
+                    <div class="modal"></div>
+                </div>
+
                 <label for="quickSearchTextBox" >Quick Search</label>
                 <input id="quickSearchTextBox" type="text" class="ui-widget-content ui-corner-all"/>
                 <label for="quickSearchField" >by:</label>
@@ -481,8 +491,8 @@ session_write_close();
                 </select>               
                 <button id="btnAddCard" >Add Card</button>
                 <button id="btnSearchCard" >Advanced Search</button>
+                <button id="btnFilter" style="display: none;">Filter Tab Columns</button>
                 <button id="btnOptions">Admin Options</button>
-                <button id="btnFilter">Filter Tab Columns</button>
                 <button id="btnLogout">Log out</button>
             </div>           
         </div>

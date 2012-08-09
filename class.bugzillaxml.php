@@ -64,10 +64,12 @@ class BugzillaXML {
     }
 
     function toJson($xml) {
-
+        
+        //echo $xml;
+        
         $doc = new DOMDocument();
         $doc->loadXML($xml);
-
+                        
         $paramElements = $doc->getElementsByTagName('param');
         if ($paramElements->item(0) == NULL) {
             $faultElements = $doc->getElementsByTagName('fault');
@@ -117,6 +119,9 @@ class BugzillaXML {
 
             $json .= $this->printResponseEnd();
         }
+        
+        //echo $json;
+        
         return $json;
     }
 
@@ -139,17 +144,7 @@ class BugzillaXML {
         //Identifies the call by its method name
         $name = new SimpleXMLElement($post);
         $this->requestID = (string) $name->methodName;
-
-        //TODO Need to figure out how to send cookies so we don't have to send login info each time
-        /* if ($this->requestID != "User.login") {
-          $value = $_COOKIE["Bugzilla_logincookie"];
-          setcookie($login, $value);
-          }
-
-          print_r($_COOKIE);
-
-          curl_setopt ($ch, CURLOPT_COOKIEJAR, $login); */
-
+    
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
 
         curl_setopt($ch, CURLOPT_POST, true);
@@ -172,7 +167,10 @@ class BugzillaXML {
 
         // Download the given URL, and return output
         $output = curl_exec($ch);
-
+        
+        
+        //For 1500 bugs: 3784845
+        //For 1000 bugs: 2686061
         //echo $output;
         // Close the cURL resource, and free system resources
         curl_close($ch);

@@ -14,42 +14,59 @@ $password = $_POST["password"];
 
 $login = $_POST["login"];
 
-//Finds the method parameter 
+$product = $_POST["product"];
+
+//Sets the method parameter 
 $method = "User.login";
 
+//If we have been sent a suer name and password we know that we want to send it to bugzilla
+if ($password != null && $login != null) {
 //Here we instantiate a new BugzillaXML object with the passed in method
-$bugzilla = new BugzillaXML($method);
+    $bugzilla = new BugzillaXML($method);
 
 //Now the members are added 
-$bugzilla->addMember("login", $login, "none");
+    $bugzilla->addMember("login", $login, "none");
 
-$bugzilla->addMember("password", $password, "none");
+    $bugzilla->addMember("password", $password, "none");
 
 
 //Then submit
-$return = $bugzilla->submit(true);
+    $return = $bugzilla->submit(true);
 
 //Check if session login successful
-if ($return["faultString"] == null && $return["id"] != null) {
+    if ($return["faultString"] == null && $return["id"] != null) {
 
-    //Set the user name(from above)
-    $_SESSION["login"] = $login;
+        //Set the user name(from above)
+        $_SESSION["login"] = $login;
 
-    //Set the password(from above)
-    $_SESSION["password"] = $password;
-    
-    //Set the userID to be used for admin purposes
-    $_SESSION["userID"] = $return["id"];
+        //Set the password(from above)
+        $_SESSION["password"] = $password;
 
-    $return = array("result" => $return);
+        //Set the userID to be used for admin purposes
+        $_SESSION["userID"] = $return["id"];
 
-    echo json_encode($return);
+        //Set the product to be used for board loading purposes
+        $_SESSION["product"] = $product;
 
-    echo $_SESSION["username"];
-} else {
+        $return = array("result" => $return);
 
-    //Puts the PHP response in a format that the AJAX call can easily parse
-    $return = array("result" => $return);
+        echo json_encode($return);
+
+        echo $_SESSION["username"];
+    } else {
+
+        //Puts the PHP response in a format that the AJAX call can easily parse
+        $return = array("result" => $return);
+
+        echo json_encode($return);
+    }
+}
+//Otherwise we just want to reset the product
+else {
+    //Set the product to be used for board loading purposes
+    $_SESSION["product"] = $product;
+
+    $return = array("result" => array("success" => true));
 
     echo json_encode($return);
 }

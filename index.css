@@ -165,16 +165,15 @@ div#bugs-contain table td, div#bugs-contain table th {
 
 .iconBar{
     width:140px;
-    height: 40px;
+    position: absolute;
+    bottom: -5px;
 }
 .ui-icon{
     float:right;
 }
 .cardText {
-    width:140px;
-    height: 60px;
-    overflow: hidden;
-    padding: 5px;    
+    height: 75px;
+    overflow: hidden;        
 }
 .prioBack, .calBack, .sizeBack{
     height: 30px;
@@ -480,6 +479,10 @@ widget visible when the dialog is open*/
     width: 100%;  
     margin-top: 5px;
 }
+
+.toolbar select,  .toolbar input, .toolbar select, .toolbar label{
+    font-size: 17px;
+}
 .columnContainer{
     width: auto;
     border-bottom: 2px solid black;
@@ -523,4 +526,10 @@ widget visible when the dialog is open*/
 }
 #adminInputs input{
     width: 50px;
+}
+div.loading{
+    overflow: hidden !important;
+}
+#dialogChangeProduct p {
+    
 }

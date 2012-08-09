@@ -36,6 +36,10 @@ session_write_close();
                 width: 100%;
                 height: 100%;
             }
+            #loginForm input[type='text'], #loginForm input[type='password']
+            {
+                width: 100%;
+            }
 
         </style>        
         <script type="text/javascript">
@@ -47,7 +51,7 @@ session_write_close();
                     autoOpen: true,
                     resizable: false,
                     height: "auto",
-                    width: 300,
+                    width: 400,
                     position:  ['center','top'] ,
                     show: {
                         effect: 'blind'
@@ -56,6 +60,10 @@ session_write_close();
                     closeOnEscape: false,
                     open: function(event, ui) { $(".ui-dialog-titlebar-close").hide(); }
                 });
+                
+                //Sets the product tool tip
+                $("#product").attr("title", "Enter the name of the product you want to work on exactly as it appears in Bugzilla.\n(If you leave this blank or you mistype you can reset it once the board has been loaded)")
+                
                 
                 $("#btnSubmit").button();
             
@@ -71,15 +79,18 @@ session_write_close();
                     //$("#btnSubmit").click();
                                                 
                     var login = $("#login").val();
-                    var password = $("#password").val();        
-                
+                    var password = $("#password").val();    
+                    var product = $("#product").val();    
+                    
+                    
                     $.ajax({
                         url: "ajax_login.php",
                         type: "POST",
                         dataType: "json",
                         data: {                                                             
                             "login": login,
-                            "password":  password
+                            "password":  password,
+                            "product": product
                         },
                             
                         success: function(data, status){
@@ -111,8 +122,9 @@ session_write_close();
                             alert("There was an error:" + textStatus);
                         }
                     })
+                });
+                
             });
-        });
             
         </script>
     </head>
@@ -123,16 +135,16 @@ session_write_close();
                     <div>
                         <div >
                             <label for="login">User Name</label>
-                            <input type="text"  name="login" id="login"  class="text ui-widget-content ui-corner-all" style="width: auto;"/>    
+                            <input type="text"  name="login" id="login"  class="text ui-widget-content ui-corner-all"/>    
                         </div>
                         <div >
                             <label for="password">Password</label>
-                            <input type="password" name="password" id="password"  class="text ui-widget-content ui-corner-all" style="width: auto;"/>   
+                            <input type="password" name="password" id="password"  class="text ui-widget-content ui-corner-all" />   
                         </div>
-                        <!--div >
-                            <label for="remember">Remember Login</label>
-                            <input  name="remember" id="remember"  class="text ui-widget-content ui-corner-all" style="width: auto;" type="checkbox"/>
-                        </div-->
+                        <div>
+                            <label for="product">Product Name</label>
+                            <input  name="product" id="product"  class="text ui-widget-content ui-corner-all"  type="text"/>
+                        </div>
                         <input type="submit" id="btnSubmit"value="Login" style="float: right;"/>
                     </div>
                 </fieldset>
