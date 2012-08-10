@@ -149,7 +149,7 @@ class BugzillaXML {
 
         curl_setopt($ch, CURLOPT_POST, true);
 
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $post);               
 
         //echo $post;
         // Include header in result? (1 = yes, 0 = no)

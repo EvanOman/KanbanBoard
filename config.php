@@ -1,5 +1,5 @@
 <?php
-$source = 0;
+$source = 1 ;
  
 if ($source == 0) {
     define("BUGZILLA_URL", "http://software-pc/Bugzilla4.2/xmlrpc.cgi");    

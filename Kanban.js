@@ -1,15 +1,13 @@
 /* 
     Document   : Kanban.js
-    Created on : May 23, 2012, 9:59:20 AM
-    Author     : Evan Oman
+    Created on : May 23, 2012
+    Authors     : Evan Oman, John Eckhardt
     Description:
         This file handles all of the functionality requitred to: 
-            1. Provide the user with a usable and interactive Kanban interface
+            1. Provide the user with a usable and interactive Kanban interface for the Bugzilla Bug tracking system
             2. Communicate with the PHP files that query the Bugzilla Server
             3. Communicate with the PHP files that store .ini settings
  */
-
-
 
 //First we want global variables to store the priority icons and the jobMap colors
 var prioMap = {};
@@ -72,14 +70,18 @@ var messageArr =[];
 //Stores the ids that have administrative privelages
 var adminIds = []; 
 
-//For debugging, checks how many context menues are being made 
-var calls = 0;
-
 //Provides a default Card color if the .ini doesnt work
 var defaultCardColor = "rgb(255,255,255)";
 
+//Here we set the global search limit(to prevent massive server and client side lag)
+var cardPopulateLimit = 500;
+
+//Stores the current offset for each tabcolumn(to prevent overload)
+var tabSearchOffset = {};
+
 //Sets the default theme to hot-sneaks
-$("#jqueryCss").attr("href", "themes/hot-sneaks/jquery-ui.css");
+//$("#jqueryCss").attr("href", "themes/hot-sneaks/jquery-ui.css");
+var theme;
 
 //Pulls down the .ini settings and sets variables accordingly 
 function initialize()
@@ -105,6 +107,9 @@ function initialize()
                     allowedColumnMap = data.options.allowedColumnMap;
                     defaultColumnMap = data.options.defaultColumnMap;
                     limitWIP = data.options.limitWIP;
+                    theme = data.options.theme.theme;
+                    
+                    $("#jqueryCss").attr("href", "themes/"+theme+"/jquery-ui.css");
                     
                     if (!$.isEmptyObject(data.options.colDivChar))
                     {
@@ -158,7 +163,9 @@ $(document).ready(function() {
      
     
     //Adds the current product to the options
-    $("select[name='boardProduct'], select[name='product']").append("<option>"+boardProduct+"</option>").val(boardProduct);
+    $("select[name='boardProduct'], #product, #searchProduct, #optProduct").append("<option>"+boardProduct+"</option>");
+    
+    $("select[name='boardProduct'], #product").val(boardProduct);
     
     /*-------------AJAX Calls---------------------*/
     
@@ -185,13 +192,9 @@ $(document).ready(function() {
             else 
             { 
                 //Stores the comoponent and version data for future use
-                componentData =  data.result.fields;  
+                componentData =  data.result.fields;                                                           
                 
-                
-                //Automatically populates the components and version fields based off of the first(default) product
-                var firstProduct = $("#Details select[name=product] option").first().html();                               
-                
-                getCompsVers([firstProduct], "Details");
+                getCompsVers([boardProduct], "Details");
                 getCompsVers(null, "dialogSearch");
                 getCompsVers(null, "dialogOptions");
             }                                                                                                                                                                                                          
@@ -746,6 +749,34 @@ $(document).ready(function() {
     
     /*-------------Event Handlers-----------------*/    
     
+    $("body").ajaxSuccess(function(e, request, options){
+        if (options.dataType == 'json') {
+            var data = eval('(' + request.responseText + ')');
+            
+                       
+            if (data.result != null)
+            {            
+                if (data.result.faultCode != null)
+                {
+                    if (data.result.faultCode == 300 || data.result.faultCode == 301 || data.result.faultCode == 410)
+                    {
+                        document.location.href = "loginpage.php";      
+                    }
+                }
+            }
+        }
+    })
+    
+    $("body").on("click", ".bigBanners .tabNextBugs", function(){
+        var tab = $(this).parent().siblings(".tablists");
+       
+        var id = tab.attr("id");
+       
+        tab.parent().addClass("loading");
+       
+        tablistCardPopulate(id, cardPopulateLimit, tabSearchOffset[id]);
+    });
+    
     $(".toolbar").on("click", "#btnChangeProduct", function(){       
         $("#dialogChangeProduct").append("<p>Do you want to switch products from <b>"+boardProduct+ "</b> to <b>"+$(".toolbar select[name='boardProduct']").val()+"</b>?(This will reload the page)</p>");
         $("#dialogChangeProduct").dialog("open");
@@ -969,9 +1000,10 @@ $(document).ready(function() {
         //If the column is still loading(ie it is in pre init state)
         if ($("#"+tab).parent().hasClass("loading"))
         {
-            //tablistCardPopulate(tab); 
+            tabSearchOffset[tab] = 0;
+            tablistCardPopulate(tab, cardPopulateLimit, 0); 
            
-            $("#"+tab).parent().removeClass("loading");
+        //$("#"+tab).parent().removeClass("loading");
         }               
         
         handleTabLists("#"+tab);                
@@ -979,10 +1011,7 @@ $(document).ready(function() {
 
     //Handles the add card button
     $("#btnAddCard").click(function(){                    
-        addCard();
-                    
-        //Sets a default value for the coloumn field(this way the context menu's addCard still works)
-        $("#Details [name=cf_whichcolumn]").val("Limbo");
+        addCard();                            
     }); 
         
     $("#btnSearchCard").click(function(){
@@ -1097,7 +1126,7 @@ $(document).ready(function() {
         {
             //Cycles through each card in the specified column and moves them into the ending column
             var colArr = [];
-            $("#"+startCol+" .card").each(function(){ 
+            $("#"+startCol+" .card:visible").each(function(){ 
                 
                 var card = $(this);
                 
@@ -1139,11 +1168,11 @@ $(document).ready(function() {
         var status = $(this).val();
                     
         //Only adds a new select field if the status is resolved and the Resolution field doesn't already exist
-        if (status == "RESOLVED" || status == "CLOSED")
+        if (status == "RESOLVED" || status == "CLOSED" || status == "VERIFIED")
         {
             $("#Details select[name=resolution]").parent().show();            
         }
-        else if (status != "RESOLVED" && status != "CLOSED")
+        else if (status != "RESOLVED" && status != "CLOSED" && status != "VERIFIED")
         {
             //If the status doesn't equal resolved we remove the resolution box because we can't have a NEW bug with a resolution
             $("#Details select[name=resolution]").parent().hide();
@@ -1174,8 +1203,7 @@ $(document).ready(function() {
     });
                                    
     //Populates the components field based off of the selected product
-    $("#product").change(function () {
-                
+    $("#Details").on("change", "#product" , function () {                               
         var name = [$(this).val()];
                     
         getCompsVers(name, "Details");
@@ -1689,7 +1717,7 @@ function getCompsVers(name, dialogID){
     {
         //This case handles when the product names have not been appended and the caller wants the new values to be appended for the first time, also want to refresh any open dialog
         //This function works by queueing the calls made and perfroming them only when the name ajax calls comeplete
-        $.when(getCompsVersXHR,getNamesXHR).done(function(){
+        $.when(getCompsVersXHR).done(function(){
 
             if ($("#dialogAddEditCard").dialog("isOpen"))
             {
@@ -1799,13 +1827,13 @@ function dialogFields(fieldVals)
                 html.append("<label>Duplicate of</label>"); 
                 html.append("<input  class=' ui-widget-content ui-corner-all' type='text' name='dupe_of'/>");
                 $("#detailsLeft").append(html);
-                $("#Details select[name=dupe_of]").val(fieldValues["dupe_of"]);
+                $("#Details input[name=dupe_of]").val(fieldValues["dupe_of"]);
                 
             }
             else
             {
-                $("#Details select[name=dupe_of]").parent().hide();
-                $("#Details select[name=dupe_of]").val("");   
+                $("#Details input[name=dupe_of]").parent().remove();
+                $("#Details input[name=dupe_of]").val("");   
             }
         }
         else
@@ -1819,21 +1847,27 @@ function dialogFields(fieldVals)
     }
     else {
         //If fieldValues is null then we know that we are in the add card dialog and consequently we want to ensure that all fields are empty(including the comments)
-        $("#Details input, #Details textarea, #Details select:not([name=cf_whichcolumn])").val("");    
+        $("#Details input, #Details textarea, #Details select:not([name=cf_whichcolumn])").each(function(){
+            var firstOpt = $(" .option", $(this)).first().text();
+            
+            $(this).val(firstOpt);
+        });    
 
         //We want the default value for Status for a new card to be "OPEN", not unconfirmed
-        $("#Details select[name=bug_status]").val("OPEN");
+        //$("#Details select[name=bug_status]").val("OPEN");
 
         //Sets the default priority to medium
-        $("#Details select[name=priority]").val("Medium");
+        //$("#Details select[name=priority]").val("Medium");
 
         //A new card should never have a resolution 
         $("#Details select[name=resolution]").parent().hide();        
 
         var first = $("#Details select[name=bug_severity] option").first().val();                
         dialogDisplay(first);
-
-        getCompsVers([$("#Details select[name=product]").val()], "Details");
+        
+        $("#product").val(boardProduct);
+        
+        getCompsVers([boardProduct], "Details");
 
         getCompsVers([$("#Details select[name=product]").val()], "dialogOptions");
 
@@ -1947,7 +1981,9 @@ function addCard() {
     var comm = $('<div class="commDiv">').append(text);                      
     $("label[for=Comments],#Comments").hide();
     $("#detailsRight").prepend(label,comm); 
-
+    
+    $("#product").val(boardProduct);
+    
     //Now that we have the correct ID, we populate the fields:
     dialogFields(null);
 
@@ -2147,6 +2183,13 @@ function  ajaxCreateCard(){
 
 //Posts a card to the page containing all of the propper information. Used to post new cards and also to populate the board with existing cards
 function postCard(data){
+    
+    //Right now this function works great on a small number of bugs but when I measured it it took about .026 seconds per card to execute on chrome. While this time period may seem insignificant,
+    //when using with a large database such as the Lambda Research Bugzilla, I am handling at most 500 bugs at a time. As a consequence the post of all the card takes about 
+    //.026 * 500 = 13 seconds to execute, all of that time is on a frozen screen(IE sometimes freezes)    
+    //TODO May want to revise how this function works. Append card can handle an array of card so if I could find a way to lump together all of the bugs with the same column and or status,
+    //push them to an array, and then send each array to the append card function I believe that I would be able to cut a few seconds off of the load time
+    
     var newCard = $('<div id="'+data["id"]+'" class="card "><div class="cardText">(#'+data["id"]+') '+data["summary"]+'</div><div class="iconBar"></div><div class="modal"><div>Saving Card</div></div></div>').addClass("cmVoice {cMenu:\'contextMenuCard\'}, normal");
     //newCard;         
     //Puts the time in the correct format
@@ -2434,6 +2477,8 @@ function ajaxSearch(limit, pageNum) {
         searchArr["offset"] = offset;
 
         searchArr["limit"] = limit;
+    
+        searchArr["product"] = boardProduct;
 
         $.ajax({
             url: "ajax_POST.php",
@@ -2880,7 +2925,7 @@ function boardCardPopulate(){
     //Need to add a limit for now to handle the massive amount of bugs
     searchObj["product"] = boardProduct;       
    
-    searchObj["limit"] = 500;
+    searchObj["limit"] = cardPopulateLimit;
   
     //Need to check if the limitWIP object has been set(the columns are added no matter what changes you make to the options)
     if (!$.isEmptyObject(limitWIP))
@@ -2921,7 +2966,7 @@ function boardCardPopulate(){
                     method: "Bug.search",
                     product: boardProduct,
                     cf_whichcolumn: "---",
-                    limit: 500,
+                    limit: cardPopulateLimit,
                     status: statusArr 
                 }
                 
@@ -2992,7 +3037,16 @@ function addCardArray(bugArr)
         for (var i in bugArr)
         {
             var bug = bugArr[i];
-            postCard(bug);                                
+            
+            //Need to make sure that this card isnt already on the board
+            var realCard = $("#" + bug.id);
+            
+            //If it doesn't already exist, add it
+            if (!realCard.length)
+            {
+                postCard(bug);
+            }
+        
         }
                
         $(document).buildContextualMenu(
@@ -3239,6 +3293,8 @@ function dialogOptionsOpen(condition)
         $("#dialogOptions").dialog("open");     
     }
     
+    $("#themeSelect").val(theme);
+    
     //Triggers the filter select(after the duialog is open because otherwise the select's are always hidden)
     //Then trigger the change to refresh the button
     $("#filterFieldOption").change();
@@ -3340,7 +3396,8 @@ function dialogOptionsSave()
         limitWIP: limitWIP,
         colDivChar: $("#columnCharText").val(),
         tabColumns: newTabColumns, 
-        adminIds: adminArr
+        adminIds: adminArr,
+        theme: $("#themeSelect").val()
     };           
     
     $.ajax({
@@ -3369,6 +3426,9 @@ function dialogOptionsSave()
                 }             
                 else
                 {
+                    //Changes the theme
+                    theme = $("#themeSelect").val();
+                    
                     $(".card").each(function(){                                                                   
                         var prio = $(this).data("priority").replace(/\s+/g, ''); 
                         if (prioMap[prio]=="none")
@@ -3600,7 +3660,7 @@ function ajaxLogout()
         error: function(jqXHR, textStatus, errorThrown){
             alert("There was an error:" + textStatus);
         }
-    })            
+    });            
 }
 
     
@@ -3808,11 +3868,9 @@ function appendCard(cards, col, status)
             }
                      
             continue;        
-        }
-        
-        var newLi = $('<li></li>').append(card);
+        }                
              
-        column.append(newLi);
+        column.append($('<li></li>').append(card));
                
         cardIds.push(card.attr("id"));
             
@@ -3856,22 +3914,22 @@ function appendCard(cards, col, status)
 }
 
 /**
- * makeFilterRangeInputs
- * 
- * @param {String} fieldName the Bugzilla parameter namer of the field
- * @param {String} displayName What you want to be tyhe title of this range input
- * @param {String} type The type of the this range(number or date for now)
- */
+* makeFilterRangeInputs
+* 
+* @param {String} fieldName the Bugzilla parameter namer of the field
+* @param {String} displayName What you want to be tyhe title of this range input
+* @param {String} type The type of the this range(number or date for now)
+*/
 function makeFilterRangeInputs(fieldName, displayName, type)
 {
     //Here I create a table holding all the numeric ranges based off of the following standards:
     /*
-     * fieldName: Name attribute of the table
-     * beginMarker: Name of the begin input 
-     * endMarker: Name of the end input
-     * 
-     * Also note that only ranges will be stored in a box so when parsing the filters we know that if we find a table, it is going to be a range based off of the above indicators
-     */    
+ * fieldName: Name attribute of the table
+ * beginMarker: Name of the begin input 
+ * endMarker: Name of the end input
+ * 
+ * Also note that only ranges will be stored in a box so when parsing the filters we know that if we find a table, it is going to be a range based off of the above indicators
+ */    
     var div = $("<div class='box'></div>").text(displayName);
     
     var beginLabel = $("<label style='text-align: center;'>From:</label>");
@@ -3977,16 +4035,16 @@ function columnWIPCheck(columnId)
         {
             
             //These lines get the error state class of the current jquery ui class
-            var $p = $("<p></p>").addClass("ui-state-error").hide().appendTo("body");
+            /*var $p = $("<p></p>").addClass("ui-state-error").hide().appendTo("body");
             var badWIPBack = $p.css("background");
-            $p.remove();
+            $p.remove();*/
             
-            column.parent().css("background", badWIPBack).attr("title", "This column is exceeding its WIP limit");
+            column.parent().css("background-color", "red").attr("title", "This column is exceeding its WIP limit");
             column.parent().find(".wipDisplay").css("color", "red");
         }
         else
         {
-            column.parent().css("background", "").attr("title", "");  
+            column.parent().css("background-color", "").attr("title", "");  
             column.parent().find(".wipDisplay").css("color", "");
         }
         
@@ -4623,20 +4681,82 @@ function buildBoard(nest, fullName)
                 
 }
 
-function tablistCardPopulate(tabID)
+function tablistCardPopulate(tabID, limit, offset)
 {
     var tabName = reverseKeyLookup(colSortKeyMap, tabID);  
     
     var tab = $("#"+tabID);
     
+    var defTabArr = [];
+    var tabArr = []; 
+    
+    var tabSearchData = {
+        "method": "Bug.search",
+        "cf_whichcolumn": tabName,
+        "product": boardProduct,
+        "limit": limit,
+        "offset": offset
+    }
+    
+    //Here we gather all of the bugs that have no column but should be loaded in the selected tablist due to their default
+    if (!$.isEmptyObject(defaultColumnMap))
+    {      
+        //What I am doing here is creating an arrray that hold all of the statuses whose default column is on the main board and then pewrfroming a Bugzilla search for all card with a "---" column
+        //and a default column found on the main board
+        var statusArr =[];
+                
+        for (var status in defaultColumnMap)
+        {                  
+            var column = defaultColumnMap[status];
+                
+            if (column == tabName)
+            {
+                statusArr.push(status);
+            }
+        }
+            
+        if (statusArr.length)
+        {
+            var blankSearchData = {
+                method: "Bug.search",
+                product: boardProduct,
+                cf_whichcolumn: "---",
+                limit: limit,
+                status: statusArr,
+                "offset": offset
+            }
+                
+            var defaultSearch = $.ajax({
+                url: "ajax_POST.php",
+                type: "POST",                    
+                data: blankSearchData,
+                dataType: "json",
+                success: function(data){
+
+                    if (data.result.faultString != null)
+                    {
+                        alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
+                    }
+                    else if (!data.result)
+                    {
+                        alert("Something is wrong");
+                    }
+                    else
+                    {   
+                        defTabArr = data.result.bugs;                                               
+                    }
+                }
+            });       
+                
+        }
+    }
+    
+    
     //Finds all bugs that are contained in the specified tablist and posts them to the board 
-    $.ajax({
+    var tabSearch =  $.ajax({
         url: "ajax_POST.php",
         type: "POST",       
-        data:  {
-            "method": "Bug.search",
-            "cf_whichcolumn": tabName            
-        },
+        data:  tabSearchData,
         dataType: "json",
         success: function(data){
 
@@ -4649,64 +4769,83 @@ function tablistCardPopulate(tabID)
                 alert("Something is wrong");
             }
             else
-            {                
-                //Then we add the cards
-                for (var i in data.result.bugs)
-                {
-                    var bug = data.result.bugs[i];
-                    
-                    var card = $("#" + bug.id);
-                    
-                    //Checks to make sure that the card being posted doesn't already exist for some reason
-                    if (!card.length)
-                    {
-                        postCard(bug);    
-                    }
-                    
-                                                   
-                }
-               
-                $(document).buildContextualMenu(
-                {
-                    menuWidth:200,
-                    overflow:2,
-                    menuSelector: ".menuContainer",
-                    iconPath:"ico/",
-                    hasImages:false,
-                    fadeInTime:200,
-                    fadeOutTime:100,
-                    adjustLeft:0,
-                    adjustTop:0,
-                    opacity:.99,
-                    shadow:true,
-                    closeOnMouseOut:true,
-                    onContextualMenu:function(o,e){}
-                });                    
-                
-                  
-                if (messageArr.length)
-                {
-                    var message = "The following changes have been made:\n";
-                    for (var j in messageArr)
-                    {
-                        message +=    messageArr[j] +"\n\n";
-                    }
-        
-                    alert(message);
+            {                     
+                tabArr = data.result.bugs;                                                                       
+            }
+        }
+              
+    });
+    
+    //Need to wait for both calls to be done but also need to be sure that we hit the default search
+    $.when(tabSearch).done(function(){
+       
+        //If default search is undefined we know that we didnt hit the default search so we are at the end of the call
+        if (typeof(defaultSearch) == "undefined")
+        {    
+            if (tabArr.length == limit || defTabArr.length == limit)
+            {
+                var btn = $("<button class='tabNextBugs'>Load Next " + limit + " Bugs</button>").button();
+                            
+                tab.parent().find(".bigBanners").append(btn);
+                            
+                tabSearchOffset[tabID] += limit;     
+            }
+            else
+            {
+                //Then we remove any "next 500 bugs" buttons
+                tab.parent().find(".tabNextBugs").remove();
+            }
                         
-                    messageArr = [];
-                }
+            addCardArray(tabArr.concat(defTabArr));                      
+            
+            //Applys any filters
+            advancedFilter(tabColumnFilter, ".tablists");
+            
+            tab.parent().removeClass("loading");   
+            
+            //Triggers the key up event on the quick seatrch effictly searching the newly opened tablist as soon as it is opened
+            $("#quickSearchTextBox").keyup();  
+        }
+        //Otherwise we need to wait until the the other search is done as well
+        else
+        {
+            $.when(defaultSearch).done(function(){  
                 
-                tab.parent().removeClass("loading");   
+                addCardArray(tabArr.concat(defTabArr));                              
                 
                 //Applys any filters
                 advancedFilter(tabColumnFilter, ".tablists");
                 
-                //Triggers the key up event on the quick seatrch effictly searching the newly opened tablist as soon as it is opened
-                $("#quickSearchTextBox").keyup();
-            }
+                tab.parent().removeClass("loading"); 
+                
+                //Triggers the key up event on the quick seatrch effictly searching the newly opened tablist as soon as it is opened  tab.parent().removeClass("loading");   
+                $("#quickSearchTextBox").keyup();  
+                
+                if (tabArr.length == limit || defTabArr.length == limit)
+                {
+                    var btn = $("<button class='tabNextBugs'>Load Next" + limit + " Bugs</button>").button();
+                            
+                    tab.parent().find(".bigBanners").append(btn);
+                            
+                    tabSearchOffset[tabID] += limit;     
+                }
+                else
+                {
+                    //Then we remove any "next 500 bugs" buttons
+                    tab.parent().find(".tabNextBugs").remove();
+                }
+            });  
         }
+        
+        
+        
+        
+       
+       
+       
     });
+    
+   
 }
 
 function updateBoard()
@@ -4734,6 +4873,7 @@ function updateBoard()
         type: "POST",       
         data:  {
             "method": "Bug.search",
+            "product": boardProduct,
             "last_change_time": isoTime            
         },
         dataType: "json",
@@ -4764,56 +4904,66 @@ function updateBoard()
                     
                         //Either way we want to make sure the comments are reloaded because they wont fire a reload in the below check
                         realCard.removeData("comments") ; 
-                    
-                        if ($("#dialogAddEditCard").data("cardId") == id && $("#dialogAddEditCard").dialog("isOpen"))
+                        
+                        //If the card is being edited and the user hasnt typed anything(learned that one the hard way)                    
+                        if ($("#dialogAddEditCard").data("cardId") == id && $("#dialogAddEditCard").dialog("isOpen") && $("#commentReplyText").val() == "")
                         {
+                            //Get the comments
                             getComments(id);      
                         }
-                    
-                        for (var param in bugs[k])
+                        
+                        if (realCard.length)
                         {
-                        
-                        
-                            if (typeof(realCard.data(param)) == "undefined")
+                            for (var param in bugs[k])
                             {
+                        
+                        
+                                if (typeof(realCard.data(param)) == "undefined")
+                                {
                                
-                                console.log(realCard);
+                                    console.log(realCard);
                                 
-                                console.error("This card doesn't have a "+ param +" field");
+                                    console.error("This card doesn't have a "+ param +" field");
                              
-                            }                        
-                            else if (param == "last_change_time" || param == "update_token" || (bugs[k][param].length == 0 && realCard.data(param).length == 0))
-                            {
-                                continue;
-                            }
-                        
-                            if (param == "cf_whichcolumn")
-                            {
-                                var col = bugs[k][param];
-                            
-                                if (col == "---")
+                                }                        
+                                else if (param == "last_change_time" || param == "update_token" || (bugs[k][param].length == 0 && realCard.data(param).length == 0))
                                 {
-                                    var status = bugs[k].status;
+                                    continue;
+                                }
+                        
+                                if (param == "cf_whichcolumn")
+                                {
+                                    var col = bugs[k][param];
+                            
+                                    if (col == "---")
+                                    {
+                                        var status = bugs[k].status;
                                   
-                                    col = defaultColumnMap[status];                                                                     
-                                }
+                                        col = defaultColumnMap[status];                                                                     
+                                    }
                             
-                                col = colSortKeyMap[col];
+                                    col = colSortKeyMap[col];
                             
-                                if (col != realCard.data("cf_whichcolumn"))
-                                {
-                                    bugsChanged.push(bugs[k]); 
+                                    if (col != realCard.data("cf_whichcolumn"))
+                                    {
+                                        bugsChanged.push(bugs[k]); 
                                                                
-                                    break;      
+                                        break;      
+                                    }
+                                }                        
+                                else if (bugs[k][param] != realCard.data(param))
+                                {
+                                    bugsChanged.push(bugs[k]);                            
+                                    break;
                                 }
-                            }                        
-                            else if (bugs[k][param] != realCard.data(param))
-                            {
-                                bugsChanged.push(bugs[k]);                            
-                                break;
-                            }
                         
-                        }                     
+                            }     
+                        }   
+                        //If the card doesn't have length it must be new and needs to be appended
+                        else
+                        {
+                            bugsChanged.push(bugs[k]); 
+                        }
                     }
                 
                 }
@@ -4875,8 +5025,7 @@ function updateBoard()
                         }  
                         
                     }           
-                    calls += 1;
-                    console.log(calls);
+                    
                     $(document).buildContextualMenu(
                     {
                         menuWidth:200,
@@ -5042,51 +5191,6 @@ function deepEquals(x, y)
     }
 }
 
-function compare()
-{  
-    //Adds the method after the above for loop because we dont want the method to be in an array
-    searchArr = {};
-        
-    searchArr["method"] = "Bug.search";
-
-    searchArr["id"] = 199;
-
-    $.ajax({
-        url: "ajax_POST.php",
-        type: "POST",
-        dataType: "json",
-            
-        data: searchArr,
-
-        success: function(data, status){
-
-
-            if (data.result.faultString != null)
-            {
-                alert(data.result.faultString+'\nError Code: '+data.result.faultCode);
-            }
-            else if (!data.result)
-            {
-                alert("Something is wrong");
-            }
-            else 
-            {
-
-                var localCopy = $.extend(true, {}, $("#199").data());
-                   
-                var serverCopy = $.extend(true, {}, data.result.bugs[0])
-                        
-                       
-                        
-            }
-
-        },
-        error: function(jqXHR, textStatus, errorThrown){
-            alert("There was an error:" + textStatus);
-        }
-    }); 
-                
-}
 function changeBoardProduct(product)
 {     
     $.ajax({

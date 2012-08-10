@@ -524,6 +524,13 @@ widget visible when the dialog is open*/
     position: absolute;
     right: 0;
 }
+.tabNextBugs{
+    float:left; 
+    font-size: 12px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+}
 #adminInputs input{
     width: 50px;
 }
@@ -531,5 +538,5 @@ div.loading{
     overflow: hidden !important;
 }
 #dialogChangeProduct p {
-    
+
 }
