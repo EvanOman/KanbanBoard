@@ -74,7 +74,7 @@ var adminIds = [];
 var defaultCardColor = "rgb(255,255,255)";
 
 //Here we set the global search limit(to prevent massive server and client side lag)
-var cardPopulateLimit = 500;
+var cardPopulateLimit = 5000;
 
 //Stores the current offset for each tabcolumn(to prevent overload)
 var tabSearchOffset = {};
@@ -1506,7 +1506,12 @@ $(document).ready(function() {
         e.stopPropagation();
         var ids = $(this).closest("div").attr("id");
         var quote = "(In response to "+ids+"): '"+$("#"+ids+" p").text()+"'\n";
-
+                
+        if ($("#commentReplyText").val().length && !window.confirm("Do you want to replace any reply you may have already typed?")) {
+            return;
+        }
+        
+        $('#Comments').scrollTop(0);
         $("#commentReplyText").val(quote);
     }); 
     
@@ -1537,7 +1542,8 @@ $(document).ready(function() {
         }
         else
         {
-            $("#dialogInvalid p").text("This bug is not available because you have not opened its column. Open the tab-columns and search again to edit this bug.");
+            var col = $(this).parent().siblings().eq(6).text();
+            $("#dialogInvalid p").text("This bug is not available because you have not opened its column. Open the tab '"+col+"' and search again to edit this bug.");
             $("#dialogInvalid").dialog("open");
         }
         
@@ -2181,15 +2187,8 @@ function  ajaxCreateCard(){
 
 }
 
-//Posts a card to the page containing all of the propper information. Used to post new cards and also to populate the board with existing cards
+//Posts a card to the page containing all of the proper information. Used to post new cards and also to populate the board with existing cards
 function postCard(data){
-    
-    //Right now this function works great on a small number of bugs but when I measured it it took about .026 seconds per card to execute on chrome. While this time period may seem insignificant,
-    //when using with a large database such as the Lambda Research Bugzilla, I am handling at most 500 bugs at a time. As a consequence the post of all the card takes about 
-    //.026 * 500 = 13 seconds to execute, all of that time is on a frozen screen(IE sometimes freezes)    
-    //TODO May want to revise how this function works. Append card can handle an array of card so if I could find a way to lump together all of the bugs with the same column and or status,
-    //push them to an array, and then send each array to the append card function I believe that I would be able to cut a few seconds off of the load time
-    
     var newCard = $('<div id="'+data["id"]+'" class="card "><div class="cardText">(#'+data["id"]+') '+data["summary"]+'</div><div class="iconBar"></div><div class="modal"><div>Saving Card</div></div></div>').addClass("cmVoice {cMenu:\'contextMenuCard\'}, normal");
     //newCard;         
     //Puts the time in the correct format
@@ -2202,7 +2201,7 @@ function postCard(data){
     appendCard(newCard, data["cf_whichcolumn"], data["status"]);
     
     $.extend(newCard.data(), data);
-
+    
     
     displayHandler(newCard);
 }
@@ -2560,12 +2559,19 @@ function ajaxSearch(limit, pageNum) {
                     tr = "<tr><td><a href='#'>"+bug[i].id+"</a></td>";
                 }
                 
+                var col = bug[i].cf_whichcolumn;
+                if (col == "---") {
+                    col = defaultColumnMap[bug[i].status];
+                }
+                col = col.replace(colDivChar, "&rarr;");
+                
                 tr += "<td>"+bug[i].product+"</td>" + 
                 "<td>"+bug[i].version+"</td>" +
                 "<td>"+bug[i].assigned_to+"</td>" +
                 "<td>"+bug[i].status+"</td>" +
                 "<td>"+bug[i].resolution+"</td>" +
                 "<td>"+bug[i].summary+"</td>" +
+                "<td>"+col+"</td>" +
                 "</tr>";
                 
                 $( "#bugs tbody" ).append(tr);                                           
@@ -2667,6 +2673,11 @@ function getComments(ids) {
 
 }
 
+function nl2br (str, is_xhtml) {   
+    var breakTag = (is_xhtml || typeof is_xhtml === 'undefined') ? '<br />' : '<br>';    
+    return (str + '').replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1'+ breakTag +'$2');
+}
+
 function postComments(card){
 
     //First and foremost we need to make sure that the dialog we are appending comments tyo is still the dialog we want and it is still open:
@@ -2699,6 +2710,7 @@ function postComments(card){
                 commId = "Comment"+i;         
             }                    
             var commText = comArr[i].text;
+            commText = nl2br(commText);
             var commAuthor = comArr[i].author;
             var date = new Date(stringtoTimeStamp(comArr[i].time));
             var time = date.getHours()+":"+padtoTwo(date.getMinutes());
@@ -2720,7 +2732,7 @@ function postComments(card){
             tr.append(td1,td2, td3, td4);  
             
             var headerinfo = $('<h3 class="header">').append(table.append(tr));
-            var p = $('<p>').text(commText);
+            var p = $('<p>').html(commText);
             var commDiv = $('<div class="commDiv" id="'+commId+'">').append(headerinfo, p);                      
             $("#Comments #accordion").append(commDiv);
         }       
@@ -2946,7 +2958,7 @@ function boardCardPopulate(){
         //Here we gather all of the bugs that have no column but should be loaded in the main page due to their default
         if (!$.isEmptyObject(defaultColumnMap))
         {      
-            //What I am doing here is creating an arrray that hold all of the statuses whose default column is on the main board and then pewrfroming a Bugzilla search for all card with a "---" column
+            //What I am doing here is creating an array that hold all of the statuses whose default column is on the main board and then perfroming a Bugzilla search for all card with a "---" column
             //and a default column found on the main board
             var statusArr =[];
                 
@@ -3646,8 +3658,6 @@ function ajaxLogout()
         success: function(data){
             if (data.success)
             {
-                alert("User successfully logged out");
-
                 document.location.href = "loginpage.php";      
             }
             else 
@@ -3778,7 +3788,7 @@ function displayHandler(card) {
 //Moves a cardf from one column to another  or adding a new card to a column taking into account the possibility of no column assignment
 function appendCard(cards, col, status) 
 {   
- 
+    
     //This function expects an array so if the input isnt an artray, we make it one
     if (!$.isArray(cards))
     {
@@ -3792,7 +3802,7 @@ function appendCard(cards, col, status)
     var column = $("#"+col);  
         
     for (var i in cards)
-    {                
+    {
         var card = cards[i];
         var startCol = card.data("cf_whichcolumn");
         
@@ -3828,8 +3838,8 @@ function appendCard(cards, col, status)
             });
             
             allowedColumnMap[status] = colArr;
-        }        
-      
+        }       
+        
         //Here we check the location of the card. if the card has no specified column(or doesn't match any of the columns on the board) we place it in a column based on its status
         if (!column.length)  
         {       
@@ -3868,9 +3878,21 @@ function appendCard(cards, col, status)
             }
                      
             continue;        
-        }                
-             
-        column.append($('<li></li>').append(card));
+        }
+        
+        //make sure that we move this card's LI if it has one, and create one if it doesn't
+        if (!card.parent().length) {
+            column.append($('<li></li>').append(card));    
+        } else {
+            column.append(card.parent());    
+        }
+        
+               
+        //If the resulting column is a tablist we need to run the filter again
+        if (column.hasClass("tablists"))
+        {
+            advancedFilterSingle(card, tabColumnFilter);
+        }
                
         cardIds.push(card.attr("id"));
             
@@ -3901,16 +3923,12 @@ function appendCard(cards, col, status)
         }
             
         updatePosition(col, cardIds);
-    }                
+    }
     
-    //If the resulting column is a tablist we need to run the filter again
-    if (column.hasClass("tablists"))
-    {
-        advancedFilter(tabColumnFilter, ".tablists");
-    }               
     
     //This line removes any li's that don't have a card in them
-    $(".column li:not(:has(.card)), .tablists li:not(:has(.card))").remove();       
+    //JE - it also takes way too long.  We should make sure there aren't any LI's without cards in them whenever we mess with them.
+    //$(".column li:not(:has(.card)), .tablists li:not(:has(.card))").remove();       
 }
 
 /**
@@ -4405,151 +4423,146 @@ function dialogFilterSubmit()
     
 }
 
+function advancedFilterSingle(card, filterObject) {
+    card.show();
+    
+    //Here we loop through all of the filter fields 
+    for (var param in filterObject) 
+    {                 
+        var cardData = card.data(param);
+        var filterArr = filterObject[param];
+
+        //If the filter is for some reason an empty string we ignore this filter
+        if (filterArr.length == 1 && filterArr[0] == "")
+        {
+            continue;
+        }
+        //If the parameter name is a range we need to handle the filtering differently
+        else if (param == "range")
+        {
+            //We know that range filters take the form of an object mapping the actual parameter name to an array containing our range values
+            for (var i in filterArr)
+            {
+                for (var index in filterArr[i])
+                {
+                    var valArr = filterArr[i][index];
+
+                    var field = index;
+
+                    var type = valArr[2];
+
+                    cardData = card.data(field);
+
+                    //Here we check to make sure this card has the specified field. If it doesn't, we remove it
+                    if (typeof(cardData) == "null" || typeof(cardData) == "undefined")
+                    {
+                        card.hide();
+
+                        //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
+                        return true;       
+                    }
+
+                    //Right now we are only filtering on two types: numbers and dates(whose input type is text)
+                    if (type == "number")
+                    {
+                        //This line checks to make sure that we don't have "" and if we do it switches val1(the from value) to 0 and val2(the to number) to infinity
+                        var val1 = (valArr[0] == "") ? 0 : parseInt(valArr[0]) ;
+                        var val2 = (valArr[1] == "") ? Infinity : parseInt(valArr[1]);
+                    } 
+                    else
+                    {
+
+                        //This line checks to make sure that we don't have "" and if we do it switches val1(the from value) to 0 and val2(the to number) to infinity
+                        //For the dates i have decided it would be easiest to compare the UTC time stamp(milliseconds from midnight 1/1/1970) rather than the date object
+                        val1 = (valArr[0] == "") ? 0 : stringtoTimeStamp(valArr[0]);
+                        val2 = (valArr[1] == "") ? Infinity : stringtoTimeStamp(valArr[1]);  
+
+                        //Thre last_chaned_time property is a date object so we need to handle this case as well.
+                        if (typeof(cardData) =="string")
+                        {
+                            //If it is a string we convert it into a number directly
+                            cardData = stringtoTimeStamp(cardData);
+                        }
+
+
+                    } 
+                    //val1 is lower bouund and val2 is upper bound
+                    if (val1 < val2)
+                    {
+                        if (cardData < val1 || cardData > val2)
+                        {                                                                        
+                            card.hide();
+
+                            //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
+                            return true;         
+                        }
+
+                        continue;
+                    }     
+                    else if (val1 > val2)
+                    {
+                        //val1 is upper bouund and val2 is lower bound
+                        if (cardData > val1 || cardData < val2)
+                        {
+                            card.hide();
+
+                            //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
+                            return true;         
+                        }
+
+                        continue;                                        
+                    }
+                    else if (val1 == val2)
+                    {
+                        //if the two cards are the same we only match if the carddata is equal to both values
+                        if (cardData != val1)
+                        {
+                            card.hide();
+
+                            //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
+                            return true;         
+                        }
+
+                        continue;      
+                    }
+                }     
+            }                                                      
+        }
+        //Now if we get to a card and find out that it is both visible and its parameter matches the filter's, we move on to the next filter
+        else if (filterArr.indexOf(cardData) != -1)
+        {
+            continue;      
+        }
+        //Else if either of the above are false we know that the card didn't pass the filter and as such we want to hide it
+        else
+        {
+            card.hide();
+
+            //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
+            return true;     
+        }
+    }
+}
+
 function advancedFilter(filterObject, col)
-{        
+{
     var cards = $(" .card", col);
     
-    cards.show();
-        
-    var filteredCount = 0;
-    
-    //If the filter is null we know that we arent filtering anything and therefore we just stop after shjowing all of the cards
+    //If the filter is null we know that we arent filtering anything and therefore we just stop after showing all of the cards
     if (filterObject != null)
     {
         cards.each(function(){
-        
-            var card = $(this);
-        
-            //Here we loop through all of the filter fields 
-            for (var param in filterObject) 
-            {                 
-                var cardData = card.data(param);
-                var filterArr = filterObject[param];
-                
-                //If the filter is for some reason an empty string we ignore this filter
-                if (filterArr.length == 1 && filterArr[0] == "")
-                {
-                    continue;
-                }
-                //If the parameter name is a range we need to handle the filtering differently
-                else if (param == "range")
-                {
-                    //We know that range filters take the form of an object mapping the actual parameter name to an array containing our range values
-                    for (var i in filterArr)
-                    {
-                        for (var index in filterArr[i])
-                        {
-                            var valArr = filterArr[i][index];
-                        
-                            var field = index;
-                        
-                            var type = valArr[2];
-                        
-                            cardData = card.data(field);
-                        
-                            //Here we check to make sure this card has the specified field. If it doesn't, we remove it
-                            if (typeof(cardData) == "null" || typeof(cardData) == "undefined")
-                            {
-                                card.hide();
-                
-                                //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
-                                return true;       
-                            }
-                        
-                            //Right now we are only filtering on two types: numbers and dates(whose input type is text)
-                            if (type == "number")
-                            {
-                                //This line checks to make sure that we don't have "" and if we do it switches val1(the from value) to 0 and val2(the to number) to infinity
-                                var val1 = (valArr[0] == "") ? 0 : parseInt(valArr[0]) ;
-                                var val2 = (valArr[1] == "") ? Infinity : parseInt(valArr[1]);
-                            } 
-                            else
-                            {
-                            
-                                //This line checks to make sure that we don't have "" and if we do it switches val1(the from value) to 0 and val2(the to number) to infinity
-                                //For the dates i have decided it would be easiest to compare the UTC time stamp(milliseconds from midnight 1/1/1970) rather than the date object
-                                val1 = (valArr[0] == "") ? 0 : stringtoTimeStamp(valArr[0]);
-                                val2 = (valArr[1] == "") ? Infinity : stringtoTimeStamp(valArr[1]);  
-                            
-                                //Thre last_chaned_time property is a date object so we need to handle this case as well.
-                                if (typeof(cardData) =="string")
-                                {
-                                    //If it is a string we convert it into a number directly
-                                    cardData = stringtoTimeStamp(cardData);
-                                }
-                                                          
-                           
-                            } 
-                            //val1 is lower bouund and val2 is upper bound
-                            if (val1 < val2)
-                            {
-                                if (cardData < val1 || cardData > val2)
-                                {                                                                        
-                                    card.hide();
-                                    
-                                    //Adds one to the count of removed items
-                                    filteredCount +=1;
-                
-                                    //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
-                                    return true;         
-                                }
-                                
-                                continue;
-                            }     
-                            else if (val1 > val2)
-                            {
-                                //val1 is upper bouund and val2 is lower bound
-                                if (cardData > val1 || cardData < val2)
-                                {
-                                    card.hide();
-                
-                                    //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
-                                    return true;         
-                                }
-                                
-                                continue;                                        
-                            }
-                            else if (val1 == val2)
-                            {
-                                //if the two cards are the same we only match if the carddata is equal to both values
-                                if (cardData != val1)
-                                {
-                                    card.hide();
-                
-                                    //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
-                                    return true;         
-                                }
-                                
-                                continue;      
-                            }
-                        }     
-                    }                                                      
-                }
-                //Now if we get to a card and find out that it is both visible and its parameter matches the filter's, we move on to the next filter
-                else if (filterArr.indexOf(cardData) != -1)
-                {
-                    continue;      
-                }
-                //Else if either of the above are false we know that the card didn't pass the filter and as such we want to hide it
-                else
-                {
-                    card.hide();
-                
-                    //Returning true breaks us out of this iteration of the .each. Once a card fails a single filter we dont need to check it again
-                    return true;     
-                }
-            }
-        });                   
+            advancedFilterSingle($(this), filterObject);
+        });     
     } 
    
     //If either of these things are true we know that no filter has been applied and therefore we can remove the notification and button in the tablists 
     if (filterObject == null || $.isEmptyObject(filterObject))
     {
         $(".bigBanners").removeClass("ui-state-highlight");
-        
-        $(".bigBanners button").remove();
-            
+        $(".bigBanners .btnRemoveFilter").remove();
         $(".tablistsCon").attr("title", "");
+        cards.show();
     }
     //If not the above, we know that at least one card has been removed and consequently a filter was applied. Therefore we add a notification and removal button to the tablists
     else

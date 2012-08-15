@@ -111,11 +111,7 @@ session_write_close();
                             }
                             else 
                             {
-                                userID = data.result.id;                                                                 
-                            
-                                alert("Login successful\nWelcome User "+ userID);
-                                                        
-                                document.location.href = "Index.php";
+                                document.location.href = "index.php";
                             }                                                          
                         },
                         error: function(jqXHR, textStatus, errorThrown){

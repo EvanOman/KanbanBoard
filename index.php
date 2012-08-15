@@ -449,6 +449,7 @@ session_write_close();
                                 <th colspan="1">Status</th>  
                                 <th colspan="1">Resolution</th> 
                                 <th colspan="1">Summary</th> 
+                                <th colspan="1">Column</th> 
                             </tr>
                         </thead>
                         <tbody>
