@@ -1098,24 +1098,6 @@ $(document).ready(function() {
     });
                 
          
-    /*$("#contextMenuCard").on("click","#mb_sortKeyOptions table" ,function(){
-        var colId = $($.mbMenu.lastContextMenuEl).attr("id");
-        
-        var value = reverseKeyLookup(colSortKeyMap, colId);
-        
-        alert(value);
-        
-        var sortKey = $(this).find("a").attr("value");                                         
-                    
-        var order = "desc";
-                    
-        closeContextMenu();
-                    
-        sortColumn(value, sortKey, order);
-                    
-                    
-    });*/
-                                                        
     //Handles the moveallCards submenu(not the best selector but thats all that would work)
     $("body").on("click","#mb_moveAllCards table" , function(){
         //Finds and saves the column that was right clicked
@@ -1591,7 +1573,7 @@ $(document).ready(function() {
         adjustTop:0,
         opacity:.99,
         shadow:true,
-        onContextualMenu:function(o,e){}
+        minZindex: 100
 
     });
                 
@@ -2172,7 +2154,7 @@ function  ajaxCreateCard(){
                     opacity:.99,
                     shadow:true,
                     closeOnMouseOut:true,
-                    onContextualMenu:function(o,e){}
+                    minZindex: 100
                 });
                 
                 //Checks to make sure we arent exceeding anything
@@ -3075,7 +3057,7 @@ function addCardArray(bugArr)
             opacity:.99,
             shadow:true,
             closeOnMouseOut:true,
-            onContextualMenu:function(o,e){}
+            minZindex: 100
         });
         //Need to check each column for WIP limit violations
         $(".column").each(function(){
@@ -5053,7 +5035,7 @@ function updateBoard()
                         opacity:.99,
                         shadow:true,
                         closeOnMouseOut:true,
-                        onContextualMenu:function(o,e){}
+                        minZindex: 100
                     });
                 
                     //Need to check each column for WIP limit violations
