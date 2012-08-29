@@ -540,3 +540,28 @@ div.loading{
 #dialogChangeProduct p {
 
 }
+
+#flashyNotice {
+    display: none;
+    position: absolute;
+    
+    background-image: url("images/leftarrow_big.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+#flashyNotice > div {
+    
+    margin-left: 20px;
+    background-color: #ffff99;
+    border: 1px  solid #cccc00;
+    border-left-color: #ffff99;
+    -moz-box-shadow: 3px 3px 3px #444;
+    -webkit-box-shadow: 3px 3px 3px #444;
+    box-shadow: 3px 3px 3px #444;
+    -moz-border-radius: 5px; /* Firefox */
+    -webkit-border-radius: 5px; /* Safari, Chrome */
+    border-radius: 5px; /* CSS3 */   
+    padding: 20px;
+    font-size: 2em;
+}

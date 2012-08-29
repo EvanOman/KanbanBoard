@@ -93,7 +93,7 @@ session_write_close();
                                 <select id="sortCriteriaSelect">
                                     <option value="id">Bug ID</option>
                                     <option value="summary">Summary</option>
-                                    <option value="prioSortKey">Priority</option>
+                                    <option value="priority">Priority</option>
                                     <option value="last_change_time">Last Time Edited</option>
                                     <option value="dayUntilDue">Deadline</option>                                     
                                 </select>
@@ -529,6 +529,7 @@ session_write_close();
         <iframe id="secretIFrame" src="" style="display:none; visibility:hidden;"></iframe>
         <iframe id="upload_target" name="upload_target" src="blank.php" style=" display:none; visibility:hidden;"></iframe>   
         <div class="modal"><div>Board Loading</div></div>
+        <div id="flashyNotice"><div>Click to change your product</div></div>
     </body>
 </html>
 

@@ -777,9 +777,16 @@ $(document).ready(function() {
         tablistCardPopulate(id, cardPopulateLimit, tabSearchOffset[id]);
     });
     
-    $(".toolbar").on("click", "#btnChangeProduct", function(){       
-        $("#dialogChangeProduct").append("<p>Do you want to switch products from <b>"+boardProduct+ "</b> to <b>"+$(".toolbar select[name='boardProduct']").val()+"</b>?(This will reload the page)</p>");
-        $("#dialogChangeProduct").dialog("open");
+    $(".toolbar").on("click", "#btnChangeProduct", function() {  
+        //if we have a product already selected, let's check to make sure they want to change
+        if (boardProduct.length) {
+            $("#dialogChangeProduct").empty().append("<p>Do you want to switch products from <b>"+boardProduct+ "</b> to <b>"+$(".toolbar select[name='boardProduct']").val()+"</b>?(This will reload the page)</p>");
+            $("#dialogChangeProduct").dialog("open");    
+        } else {
+            //otherwise, just change it
+            changeBoardProduct($(".toolbar select[name='boardProduct']").val());
+        }
+        
     });
     
     $(".toolbar select[name='boardProduct']").change(function(){
@@ -787,9 +794,10 @@ $(document).ready(function() {
         
         if (product != boardProduct)
         {
-            var btn = $("<button id='btnChangeProduct'>").text("Change Products").button().css("font-size", "12px");
-            
-            $(".toolbar select[name='boardProduct']").after(btn);
+            if ($('#btnChangeProduct').length == 0) {
+                var btn = $("<button id='btnChangeProduct'>").text("Change Products").button().css("font-size", "12px");
+                $(".toolbar select[name='boardProduct']").after(btn);    
+            }            
         }
         else
         {
@@ -1835,14 +1843,13 @@ function dialogFields(fieldVals)
     }
     else {
         //If fieldValues is null then we know that we are in the add card dialog and consequently we want to ensure that all fields are empty(including the comments)
-        $("#Details input, #Details textarea, #Details select:not([name=cf_whichcolumn])").each(function(){
-            var firstOpt = $(" .option", $(this)).first().text();
-            
+        $("#Details select:not([name=cf_whichcolumn])").each(function(){
+            var firstOpt = $("option", $(this)).first().text();
             $(this).val(firstOpt);
         });    
 
         //We want the default value for Status for a new card to be "OPEN", not unconfirmed
-        //$("#Details select[name=bug_status]").val("OPEN");
+        $("#Details select[name=bug_status]").val("OPEN");
 
         //Sets the default priority to medium
         //$("#Details select[name=priority]").val("Medium");
@@ -1933,7 +1940,8 @@ function editCard(fieldVals) {
         $("#Comments #accordion div, #Comments #accordion .header").remove();
 
         //Clears every input values
-        $("#Details input, #Details textarea, #Details select").val("");       
+        $("#Details input, #Details select").val("");       
+        $("#Details textarea").empty();
 
         //Clears the attachments
         $("#attachmentTable tbody").empty();   
@@ -1965,7 +1973,7 @@ function addCard() {
     $("#dialogAddEditCard").dialog( "option", "title", "Add Card" );              
 
     var label = $('<label for="commentReplyText">').text("Description:");
-    var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all" style="height: 250px;" name="description">').attr("title", "Hold shift and enter to submit comment or click send");
+    var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all" style="height: 250px;" name="description"></textarea>').attr("title", "Hold shift and enter to submit comment or click send");
     var comm = $('<div class="commDiv">').append(text);                      
     $("label[for=Comments],#Comments").hide();
     $("#detailsRight").prepend(label,comm); 
@@ -2672,7 +2680,7 @@ function postComments(card){
 
         //Now we want to add the comment textbox
         var header = $('<h3 class="header">').text("Comment:");
-        var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all" name="description">').attr("title", "Hold shift and enter to submit comment or click send");
+        var text = $('<textarea id="commentReplyText" class="text ui-widget-content ui-corner-all" name="description"></textarea>').attr("title", "Hold shift and enter to submit comment or click send");
         var button = $("<button id='btnCommentSubmit'>Send</button>");
         var comm = $('<div class="commDiv">').append(text,button);                      
         $("#Comments #accordion").prepend(header,comm);
@@ -2896,10 +2904,29 @@ function sortColumn(colId, sortkey, order)
         order = "asc";
     }      
 
-    $('>li', col).tsort('div',{
-        data:sortkey, 
-        order:order
-    });
+
+    if (sortkey == "priority" && order == "asc") {
+        $('>li', col).tsort('div',{
+            sortFunction:function(a,b) {
+                if (a.s == b.s) return 0;
+                return (prioSortKey[a.e.children().data("priority")] > prioSortKey[b.e.children().data("priority")]) ? -1 : 1;
+            }
+        });
+    } else if (sortkey == "priority" && order == "desc") {
+        $('>li', col).tsort('div',{
+            sortFunction:function(a,b) {
+                if (a.s == b.s) return 0;
+                return (prioSortKey[a.e.children().data("priority")] > prioSortKey[b.e.children().data("priority")]) ? 1 : -1;
+            }
+        });
+    } else {
+        $('>li', col).tsort('div',{
+            data:sortkey, 
+            order:order
+        });    
+    }
+
+    
 }
 
 function boardCardPopulate(){
@@ -3601,19 +3628,53 @@ function getNames(productIds){
             }
             else
             {
+                $("select[name=boardProduct]").empty();
+                var valid_bp = false;
+                var closest_match = "";
+                
                 for (var i in data.result.products)
                 {
                     var name = data.result.products[i].name;
+                    if (boardProduct == name) {
+                        valid_bp = true;
+                    } else if (boardProduct.toLowerCase() == name.toLowerCase()) {
+                        closest_match = name;
+                    }
 
                     //create an option element with a value and the inner html being the name
                     var option = $("<option>").val(name).html(name);
 
                     //append the option to the <select>
-                    if (name != boardProduct)
-                    {
-                        $("select[name=boardProduct]").append(option);     
-                    }                               
-                }                                                                
+                    $("select[name=boardProduct]").append(option);     
+                }
+                
+                if (valid_bp) {
+                    $("select[name=boardProduct]").val(boardProduct);
+                } else {
+                    //we have an invalid boardProduct selected.  Handle it!
+                    if (closest_match != "") {
+                        boardProduct = closest_match
+                        $("select[name=boardProduct]").val(boardProduct);
+                    } else {
+                        if (boardProduct.length) {
+                            $("#dialogChangeProduct").empty().append("<p>You selected an invalid product: <strong>"+boardProduct+"</strong>.  Do you want to switch products from <strong>"+boardProduct+ "</strong> to <strong>"+$(".toolbar select[name='boardProduct']").val()+"</strong>?  Otherwise, choose your product from the left menu.</p>");
+                            $("#dialogChangeProduct").dialog("open");
+                        }
+                        
+                        var btn = $("<button id='btnChangeProduct'>").text("Change Products").button().css("font-size", "12px");
+                        $(".toolbar select[name='boardProduct']").after(btn);
+                        
+                        $('#flashyNotice').html("<div>Change your product</div>")
+                                .position({of: "#product", my: "left center", at: "right center", offset: "10 0"})
+                                .show()
+                                .queue(function(next) {
+                                    $(this).animate({left: "+=10"}, 300).animate({left: "-=10"}, 300).delay(400);
+                                    $(this).queue(arguments.callee);
+                                    next();
+                                });
+                    }
+                }
+                
             }
 
             //Then we want to remove the loading screen
@@ -3860,6 +3921,11 @@ function appendCard(cards, col, status)
             }
                      
             continue;        
+        }
+        
+        //make sure we don't get duplicate cards
+        if ($("#"+card.attr("id")).length) {
+            $("#"+card.attr("id")).parent().remove();
         }
         
         //make sure that we move this card's LI if it has one, and create one if it doesn't
@@ -4847,29 +4913,14 @@ function updateBoard()
 {
     clearTimeout(updateTimer);
     
-    var now = new Date().getTime() - 40000;
-    now = new Date(now);
+    console.log("Checking for updates at: " + new Date());
     
-    var year = now.getFullYear();
-    
-    var day =  padtoTwo(now.getDate());  
-    
-    var month =  padtoTwo(now.getMonth() + 1);        
-    
-    var time = padtoTwo(now.getHours()) + ":" + padtoTwo(now.getMinutes()) + ":" + padtoTwo(now.getSeconds());
-                   
-    var isoTime = year + "-" + month + "-" + day + "T" + time + ".000Z";
-    
-    console.log(time);
-    
-    //Finds all bugs that have been changed in the last 30 seconds 
+    //Finds all bugs that have been changed in the last 40 seconds (30+ extra to cover delay)
     $.ajax({
-        url: "ajax_POST.php",
+        url: "ajax_bug_auto_updater.php",
         type: "POST",       
         data:  {
-            "method": "Bug.search",
-            "product": boardProduct,
-            "last_change_time": isoTime            
+            "product": boardProduct
         },
         dataType: "json",
         success: function(data){
