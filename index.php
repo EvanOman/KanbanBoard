@@ -13,30 +13,34 @@ session_write_close();
         <title>Eckhardt Optics Kanban Board</title>
         <link rel="icon" type="image/png" href="images/eckopIcon.png" />
         <link  id="jqueryCss" type="text/css" href="themes/black-tie/jquery-ui.css" rel="stylesheet" />        
-        <link type="text/css" href="menu_black.css" rel="stylesheet" />
+        <link type="text/css" href="css/menu_black.css" rel="stylesheet" />
+        <link rel="stylesheet" media="screen" type="text/css" href="css/colorpicker.css" />
+        <link type="text/css" href="css/index.css" rel="stylesheet" />
+        
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
         <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
-        <script type="text/javascript" src="jquery-1.7.2.js"></script>
-        <script type="text/javascript" src="jquery.ui.core.js"></script>
-        <script type="text/javascript" src="jquery.ui.widget.js"></script>
-        <script type="text/javascript" src="jquery.ui.mouse.js"></script>
-        <script type="text/javascript" src="jquery.ui.sortable.js"></script>
-        <script type="text/javascript" src="jquery.ui.button.js"></script>
-        <script type="text/javascript" src="jquery.ui.draggable.js"></script>
-        <script type="text/javascript" src="jquery.ui.position.js"></script>
-        <script type="text/javascript" src="jquery.ui.resizable.js"></script>
-        <script type="text/javascript" src="jquery.ui.dialog.js"></script>
-        <script type="text/javascript" src="jquery.ui.datepicker.js"></script>
-        <script type="text/javascript" src="jquery.ui.tabs.js"></script>    
-        <script type="text/javascript" src="mbMenu.js"></script>
-        <script type="text/javascript" src="jquery.metadata.js"></script>
-        <script type="text/javascript" src="jquery.hoverIntent.js"></script>
-        <script type="text/javascript" src="jquery.json-2.3.js"></script>
-        <link rel="stylesheet" media="screen" type="text/css" href="css/colorpicker.css" />
+        
+        <script type="text/javascript" src="js/jquery-1.7.2.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.core.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.widget.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.mouse.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.sortable.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.button.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.draggable.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.position.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.resizable.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.dialog.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.datepicker.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.tabs.js"></script>    
+        <script type="text/javascript" src="js/mbMenu.js"></script>
+        <script type="text/javascript" src="js/jquery.metadata.js"></script>
+        <script type="text/javascript" src="js/jquery.hoverIntent.js"></script>
+        <script type="text/javascript" src="js/jquery.json-2.3.js"></script>
         <script type="text/javascript" src="js/colorpicker.js"></script>
-        <script type="text/javascript" src="jquery.tinysort.min.js"></script>
-        <script type="text/javascript" src="Kanban.js"></script>
-        <link type="text/css" href="index.css" rel="stylesheet" />
+        <script type="text/javascript" src="js/jquery.tinysort.min.js"></script>
+        <script type="text/javascript" src="js/kanban.js"></script>
+        
+        
 
         <script type="text/javascript">  
             var timeOffset = "<?php echo date("O"); ?>"; 

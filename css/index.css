@@ -186,19 +186,19 @@ div#bugs-contain table td, div#bugs-contain table th {
     width: 100%;
 }
 .calIcon, .sizeIcon{
-    background-image: url('images/icons/Calendar.png');
+    background-image: url('../images/icons/Calendar.png');
     background-size: 100%;
     text-align: center;
     line-height: 35px;
 }
 .calIconWeek{
-    background-image: url('images/icons/CalendarWeek.png') !important;
+    background-image: url('../images/icons/CalendarWeek.png') !important;
 }
 .calIconNeg{
-    background-image: url('images/icons/Calendar.Neg.png') !important;
+    background-image: url('../images/icons/Calendar.Neg.png') !important;
 } 
 .sizeIcon{
-    background-image: url('images/Size.png') !important;
+    background-image: url('../images/Size.png') !important;
     color: white;
     overflow: hidden;
 }
@@ -291,7 +291,7 @@ widget visible when the dialog is open*/
     height:     100%;
     width:      100%;
     background: rgba( 255, 255, 255, .8 ) 
-        url('images/ajax-loader.gif') 
+        url('../images/ajax-loader.gif') 
         50% 30% 
         no-repeat;
 }
@@ -545,7 +545,7 @@ div.loading{
     display: none;
     position: absolute;
     
-    background-image: url("images/leftarrow_big.png");
+    background-image: url("../images/leftarrow_big.png");
     background-repeat: no-repeat;
     background-position: left center;
 }

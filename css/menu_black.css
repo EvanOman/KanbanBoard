@@ -28,7 +28,7 @@
 }
 
 .rootVoices td.rootVoice.selected{
-  background: black url("images/bgnd_sel_4.png");
+  background: black url("../images/bgnd_sel_4.png");
   padding:8px;
   color:#ffffff;
   cursor: pointer;
@@ -145,7 +145,7 @@
 }
 .menuContainer .selected td{
   background-color:#f3f3f3;
-  background-image:url("images/bgnd_sel_2.jpg")
+  background-image:url("../images/bgnd_sel_2.jpg")
 }
 .menuContainer .selected td a{
   color:#000;
@@ -157,12 +157,12 @@
   text-shadow:#999 1px 1px 1px;
 }
 .menuContainer .subMenuOpener{
-  background-image:url("images/menuArrow_w.gif");
+  background-image:url("../images/menuArrow_w.gif");
   background-repeat:no-repeat;
   background-position:right;
 }
 .menuContainer .selected .subMenuOpener{
-  background-image:url("images/menuArrow.gif");
+  background-image:url("../images/menuArrow.gif");
   background-repeat:no-repeat;
   background-position:right;
 }
@@ -172,7 +172,7 @@
 .boxMenu{
   color:#f3f3f3;
   border-top:8px solid black;
-  background:url("images/box_top.png") repeat-x;
+  background:url("../images/box_top.png") repeat-x;
 }
 .boxMenu h4{
   white-space:nowrap;
@@ -189,7 +189,7 @@
   border-right:1px solid #999;
 }
 .boxMenu td:hover{
-  background:url(images/box_menu_over.png);
+  background:url("../images/box_menu_over.png");
   -moz-box-shadow:#666 2px 2px 4px;
   -webkit-box-shadow:#666 2px 2px 4px;
 }
@@ -221,7 +221,7 @@
 .boxMenu a:hover{
   color:#000;
   text-shadow:#fff 2px 2px 1px;
-  background-image:url("images/bgnd_sel_2.jpg");
+  background-image:url("../images/bgnd_sel_2.jpg");
   -moz-box-shadow:#666 2px 2px 4px;
   -webkit-box-shadow:#666 2px 2px 4px;
 }

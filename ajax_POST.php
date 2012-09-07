@@ -2,11 +2,6 @@
 session_start();
 
 session_write_close();
-error_reporting(E_ALL);
-  ini_set('display_errors', true); 
-
-/*$mill = substr(microtime(true),strlen(microtime(true)) - 4 ,4);
-$time['Start Post'] =  date("s").'.'.$mill;*/
 
 if (!class_exists('DateTime'))
     require_once('DateTime.class.php');

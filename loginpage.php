@@ -1,12 +1,8 @@
-<!--
-To change this template, choose Tools | Templates
-and open the template in the editor.
--->
 <?php
 session_start();
 
 if (isset($_SESSION["login"]) && isset($_SESSION["password"])) {
-    die(header("location: Index.php"));
+    die(header("location: index.php"));
 }
 
 session_write_close();
@@ -18,16 +14,16 @@ session_write_close();
         <title>Log in</title>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">        
         <link  type="text/css" href="themes/black-tie/jquery-ui.css" rel="stylesheet" />    
-        <script type="text/javascript" src="jquery-1.7.2.js"></script>
-        <script type="text/javascript" src="jquery.ui.core.js"></script>
-        <script type="text/javascript" src="jquery.ui.widget.js"></script>        
-        <script type="text/javascript" src="jquery.ui.dialog.js"></script>   
-        <script type="text/javascript" src="jquery.ui.mouse.js"></script>
-        <script type="text/javascript" src="jquery.ui.draggable.js"></script>
-        <script type="text/javascript" src="jquery.ui.resizable.js"></script>
-        <script type="text/javascript" src="jquery.ui.position.js"></script>
-        <script type="text/javascript" src="jquery.ui.button.js"></script>
-        <link type="text/css" href="index.css" rel="stylesheet" />
+        <script type="text/javascript" src="js/jquery-1.7.2.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.core.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.widget.js"></script>        
+        <script type="text/javascript" src="js/jquery.ui.dialog.js"></script>   
+        <script type="text/javascript" src="js/jquery.ui.mouse.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.draggable.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.resizable.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.position.js"></script>
+        <script type="text/javascript" src="js/jquery.ui.button.js"></script>
+        <link type="text/css" href="css/index.css" rel="stylesheet" />
         <style type="text/css">
             #dialogLogin{
                 width: auto;
