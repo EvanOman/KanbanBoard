@@ -31,7 +31,7 @@ var jobMap = {};
 var prioSortKey = {};
 var limitWIP ={};
 
-colDivChar = "";
+var colDivChar = "";
 
 //USed to store form data in case the user submits a bad value to the server
 var cardChangeData = [];
@@ -95,15 +95,22 @@ var cardPopulateLimit = 5000;
 //Stores the current offset for each tabcolumn(to prevent overload)
 var tabSearchOffset = {};
 
-//Sets the default theme to hot-sneaks
-//$("#jqueryCss").attr("href", "themes/hot-sneaks/jquery-ui.css");
+//the theme we're using
 var theme;
+
+//store the user id => array of column sort keys which the user wants updates from
+var col_subscriptions = {};
+var csq = {};
 
 //Pulls down the .ini settings and sets variables accordingly 
 function initialize()
 {            
     $.ajax({
-        url: "ajax_get_options.php",
+        url: "ajax_get_ini.php",
+        type: "POST",  
+        data:{
+            "filename": "kanban.ini"
+        },
         dataType: "json",                    
         success: function(data){                                                
             if (data.error)
@@ -166,11 +173,90 @@ function initialize()
             alert("There was an error:" + textStatus);
         }
     });
+    
+    $.ajax({
+        url: "ajax_get_ini.php",
+        type: "POST",  
+        data:{
+            "filename": "subscriptions.ini"
+        },
+        dataType: "json",                    
+        success: function(data){                                                
+            if (data.error)
+            {
+                alert(data.error);
+            }
+            else if (!data.success)
+            {
+                alert("No response from subscriptions.ini getter.");
+            }
+            else 
+            {  
+                if (!$.isEmptyObject(data.options))
+                {
+                    col_subscriptions = data.options.column_subscriptions;
+                }
+                else
+                {
+                   alert("No valid response from subscriptions.ini getter.");
+                }
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert("There was an error:" + textStatus);
+        }
+    });
 }
 
 //Here we call initialize so it is the first function to fire
 initialize();  
 
+
+function addToColSubQueue(btn, sortkey, next) {
+    $.ajax({
+        url: "ajax_save_subscriptions.php",
+        type: "POST",  
+        data:{
+            "col_sortkey": sortkey
+        },
+        beforeSend: function() {
+            
+        },
+        dataType: "json",                    
+        success: function(data){                                                
+            if (data.error)
+            {
+                alert(data.error);
+            }
+            else if (!data.success)
+            {
+                alert("No response from subscriptions.ini setter.");
+            }
+            else 
+            {  
+                if (data.error) {
+                    alert(data.error);
+                }
+                else if (!data.success)
+                {
+                    alert("No valid response from subscriptions.ini getter.");
+                } else {
+                    if (data.added) {
+                        btn.addClass('ui-state-highlight');
+                        btn.attr('title', "Click to unsubscribe.");
+                    } else {
+                        btn.removeClass('ui-state-highlight');
+                        btn.attr('title', "Click to Subscribe!");
+                    }
+                }
+                next();
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert("There was an error:" + textStatus);
+        }
+    });
+}
 
 /*---------------------------------------------------------------------------BEGIN DOCUMENT READY ------------------------------------------------------------------------*/
 $(document).ready(function() {
@@ -376,8 +462,8 @@ $(document).ready(function() {
                             //get the value
                             var colName = data.result.fields[j].values[k].name;
                             var columnID = data.result.fields[j].values[k].sort_key;                            
-                            colSortKeyMap[colName] = "column_"+columnID;                            
-                            
+                            colSortKeyMap[colName] = "column_"+columnID;
+                                                        
                             if (colName != "---")
                             {
                                 var anc = $("<a>").html(colName).attr("value", colSortKeyMap[colName]);                            
@@ -387,7 +473,20 @@ $(document).ready(function() {
                             }                                               
                         } 
                         //Starts the column appending process
-                        buildBoardHelper();                                                
+                        buildBoardHelper();
+                        $('span.subscribe_button').hover(
+                            function() {$(this).addClass('ui-state-hover');}, 
+                            function() {$(this).removeClass('ui-state-hover');}
+                        ).click(function() {
+                            var sortkey = $(this).parent().next().attr("id").substring(7);
+                            var btn = $(this);
+                            
+                            $(csq).queue(function(next) {
+                                addToColSubQueue(btn, sortkey, next);
+                            });
+                            
+                            
+                        });
                     }
                     
                     if ( fieldType == 2 || fieldType == 3)
@@ -437,9 +536,9 @@ $(document).ready(function() {
             cursorAt: {
                 top: 15
             },
-            cancel: "li:has(.loading),  li.swimlane",
+            cancel: "li:has(.loading)",
             //The items parameter expects only a selector which prevents the use of Jquery so here I have made a(likely very inefficent) selector which selects every li with a card in it that isn't loading
-            items: "li:has(.card):not(:has(.loading)), li.swimlane",
+            items: "li:has(.card):not(:has(.loading))",
             start: function(event, ui)
             {
                 //If the element is part of a selected group we need to hide the selected elements because we are moving
@@ -503,9 +602,12 @@ $(document).ready(function() {
                     $(ui.sender).sortable('cancel');                       
                 }
                 else
-                {                   
-                    //Updates the card's stored position
-                    updatePosition(col.attr("id"),cardId );
+                {       
+                    //we only need to update the position if this is a singly moved card; otherwise we handle them all together.
+                    if (!sortingArray.length) {
+                        //Updates the card's stored position
+                        updatePosition(col.attr("id"),cardId );    
+                    }                    
                                 
                     $(document).trigger("columnChange", [$(ui.sender).attr("id"), $(this).attr("id")]); 
                     
@@ -2183,6 +2285,7 @@ function  ajaxCreateCard(){
                 
                 //Checks to make sure we arent exceeding anything
                 columnWIPCheck(postData["cf_whichcolumn"]);
+                sendColumnUpdateEmail(postData["cf_whichcolumn"], [id]);
             }
 
         },
@@ -2407,7 +2510,8 @@ function updatePosition(column, cardIds)
                     });
                     
                     card.removeClass("loading");
-                }                                                                                                           
+                } 
+                sendColumnUpdateEmail(colSortKeyMap[bugzillaColumn], cardIds);
             }
 
         },
@@ -3844,7 +3948,7 @@ function displayHandler(card) {
     }                               
 }
 
-//Moves a cardf from one column to another  or adding a new card to a column taking into account the possibility of no column assignment
+//Moves a card from one column to another  or adding a new card to a column taking into account the possibility of no column assignment
 function appendCard(cards, col, status) 
 {   
     
@@ -3941,7 +4045,7 @@ function appendCard(cards, col, status)
         
         //make sure we don't get duplicate cards
         if ($("#"+card.attr("id")).length) {
-            $("#"+card.attr("id")).parent().remove();
+            $("#"+card.attr("id")).parent().detach();
         }
         
         //make sure that we move this card's LI if it has one, and create one if it doesn't
@@ -3990,9 +4094,51 @@ function appendCard(cards, col, status)
     }
     
     
-    //This line removes any li's that don't have a card in them
-    //JE - it also takes way too long.  We should make sure there aren't any LI's without cards in them whenever we mess with them.
-    //$(".column li:not(:has(.card)), .tablists li:not(:has(.card))").remove();       
+}
+
+function sendColumnUpdateEmail(col_id, cardIDs) {
+    var summaries = [];
+    
+    for (x in cardIDs) {
+        var card = $("#"+cardIDs[x]);
+        summaries.push(card.data("summary"));        
+    }
+    
+    
+    $.ajax({
+        url: "ajax_column_email.php",
+        type: "POST",
+        data: { 
+            "product": boardProduct,
+            "ids": cardIDs,                     
+            "summaries": summaries,
+            "col_name": getColumnPrintableName(col_id),
+            "col_id": col_id.substring(7)
+        },
+        dataType: "json",
+        success: function(data, status){
+            if (data.error)
+            {
+                alert("Could not send column card update e-mails: " + data.error);
+            }
+            else if (!data.success)
+            {
+                alert("Did not get a return value from sending column update e-mails.");
+            }
+            else 
+            {
+                //alert("Successfully e-mailed!");
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            alert("There was an error:" + textStatus);
+        }
+    });    
+}
+
+function getColumnPrintableName(id) {
+    var name = reverseKeyLookup(colSortKeyMap, id);
+    return name.replace(colDivChar, "&rarr;");
 }
 
 /**
@@ -4739,8 +4885,18 @@ function buildBoard(nest, fullName)
         }
                     
         if (nest[index].length != undefined && nest[index].length == 0)
-        {                        
-            html +=  "<div class=\"columnCon \"><div class=\"banners ui-widget-header\"><span>"+index+"</span><span class='wipDisplay'>"+limitWIP[name]+"</span></div><ul id=\""+colSortKeyMap[name]+"\" class=\"column cmVoice {cMenu: \'contextMenuColumn\'}\" > </ul> </div>";   
+        {      
+            var col_sortkey = colSortKeyMap[name].substring(7);
+            var subscribed = reverseKeyLookup(col_subscriptions[userID], col_sortkey) != -1
+            
+            html += "<div class=\"columnCon \"><div class=\"banners ui-widget-header\"><span>"+index+"</span><span class='wipDisplay'>"+limitWIP[name]+"</span>";
+            html += "<span class=\"ui-state-default ";
+            if (subscribed) html += "ui-state-highlight";
+            html += " subscribe_button\" title=\"";
+            if (!subscribed) html += "Click to Subscribe!";
+            else html += "Click to unsubscribe.";
+            html += "\"><span class=\"ui-icon ui-icon-star\"></span></span>";
+            html += "</div><ul id=\""+colSortKeyMap[name]+"\" class=\"column cmVoice {cMenu: \'contextMenuColumn\'}\" > </ul> </div>";   
         }
         else
         {

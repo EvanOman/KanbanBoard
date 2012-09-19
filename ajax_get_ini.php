@@ -20,10 +20,12 @@ section 4, provided you include this license notice and a URL
 through which recipients can access the Corresponding Source.
  */
 
-$options = parse_ini_file("kanban.ini", true);
+$filename = filter_input(INPUT_POST, 'filename', FILTER_SANITIZE_STRING);
+
+$options = parse_ini_file($filename, true);
 
 if ($options === false){
-     die(json_encode(array("success"=>false, "error"=>"Failed to read kanban.ini file")));
+     die(json_encode(array("success"=>false, "error"=>"Failed to read $filename file")));
 }
 else{
     die(json_encode(array("success"=>true, "options"=>$options)));

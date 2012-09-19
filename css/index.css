@@ -578,3 +578,9 @@ div.loading{
     padding: 20px;
     font-size: 2em;
 }
+
+span.subscribe_button {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+}

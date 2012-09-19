@@ -36,7 +36,7 @@ $product = $_POST["product"];
 //Sets the method parameter 
 $method = "User.login";
 
-//If we have been sent a suer name and password we know that we want to send it to bugzilla
+//If we have been sent a user name and password we know that we want to send it to bugzilla
 if ($password != null && $login != null) {
 //Here we instantiate a new BugzillaXML object with the passed in method
     $bugzilla = new BugzillaXML($method);
@@ -66,10 +66,29 @@ if ($password != null && $login != null) {
         $_SESSION["product"] = $product;
 
         $return = array("result" => $return);
+        
+        function get_emails() {
+            $data = file_get_contents("emails.php");
+            $start = strpos($data, "/*")+2;
+            $d = json_decode(substr($data, $start, strrpos($data, "*/") - $start), true);
+            if ($d === false) {
+                return array();
+            } else {
+                return $d;
+            }
+        }
+        $emails = get_emails();
+        $emails[$_SESSION["userID"]] = $login;
+        
+        $email_file = array();
+        $email_file[] = "<?php /*";
+        $email_file[] = json_encode($emails);
+        $email_file[] = "*/ ?>";
+
+        file_put_contents("emails.php", implode("\n", $email_file), LOCK_EX);
+
 
         echo json_encode($return);
-
-        echo $_SESSION["username"];
     } else {
 
         //Puts the PHP response in a format that the AJAX call can easily parse

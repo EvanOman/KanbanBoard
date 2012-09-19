@@ -19,5 +19,14 @@ that code without the copy of the GNU GPL normally required by
 section 4, provided you include this license notice and a URL
 through which recipients can access the Corresponding Source.
  */
-define("BUGZILLA_URL", "http://software-pc/Bugzilla4.2(LambdaResearch)/xmlrpc.cgi");
+define("BUGZILLA_URL", "http://bugzilla/xmlrpc.cgi");
+
+//setup your SMTP connection details here
+define("SMTP_HOST", "mail.yourserver.com");
+define("SMTP_PORT", 26);
+define("SMTP_USER", "username");
+define("SMTP_PASS", "password");
+
+define("EMAIL_FROM_ADDRESS", "address");
+define("EMAIL_FROM_NAME", "from name");
 ?>

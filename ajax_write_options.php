@@ -61,7 +61,7 @@ foreach ($_POST["prioMap"] as $name => $icon) {
 $jobMap = array();
 foreach ($_POST["jobMap"] as $name => $color) {
     $name = filter_var($name, FILTER_SANITIZE_STRING);
-    //Here we sanitizer the color as a string because it coming in as rgb
+    //Here we sanitize the color as a string because it coming in as rgb
     $color = filter_var($color, FILTER_SANITIZE_STRING);
     $jobMap[$name] = $color;
 }
