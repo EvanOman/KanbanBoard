@@ -4238,7 +4238,7 @@ function makeColumnOptions(name)
     
     $(" option", defSelect).first().remove();
     
-    var defLabel = $("<label style='margin-top: 10px;' class='searchLabel'>Defualt</label>");        
+    var defLabel = $("<label style='margin-top: 10px;' class='searchLabel'>Default</label>");        
     
     div.append(label, select, defLabel, defSelect);        
     $("#defaultColumnDiv").append(div);         
