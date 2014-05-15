@@ -22,7 +22,8 @@ through which recipients can access the Corresponding Source.
 
 $filename = filter_input(INPUT_POST, 'filename', FILTER_SANITIZE_STRING);
 
-$options = parse_ini_file($filename, true);
+require_once('class.inifile.php');
+$options = IniFile::load($filename, true);
 
 if ($options === false){
      die(json_encode(array("success"=>false, "error"=>"Failed to read $filename file")));
