@@ -31,6 +31,7 @@ session_write_close();
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html>
     <head>
+        <!--THis is a change-->
         <title>Eckhardt Optics Kanban Board</title>
         <link rel="icon" type="image/png" href="images/eckopIcon.png" />
         <link  id="jqueryCss" type="text/css" href="themes/black-tie/jquery-ui.css" rel="stylesheet" />        
